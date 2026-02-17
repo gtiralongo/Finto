@@ -537,14 +537,38 @@ button.btn-primary:hover {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 2rem;
+    margin-bottom: 2.5rem;
+    gap: 1.5rem;
 }
 
 #view-title {
-    font-size: 1.75rem;
+    font-size: 2rem;
     font-weight: 700;
     color: #fff;
     margin: 0;
+}
+
+.dashboard-filters {
+    display: flex;
+    gap: 0.8rem;
+}
+
+.filter-select {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+    padding: 10px 16px;
+    border-radius: 14px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: auto;
+}
+
+.filter-select:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
 }
 
 .header-right {
@@ -553,34 +577,12 @@ button.btn-primary:hover {
     align-items: center;
 }
 
-.filter-select {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--border);
-    color: white;
-    padding: 8px 12px;
-    border-radius: 10px;
-    font-size: 0.85rem;
-    cursor: pointer;
-    width: auto;
-    font-family: inherit;
-    transition: all 0.2s;
-}
-
-.filter-select:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.2);
-}
-
 .filter-select:focus {
     border-color: var(--primary);
     outline: none;
     box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
 }
 
-.dashboard-filters {
-    display: flex;
-    gap: 8px;
-}
 
 .btn-primary-sm {
     background: var(--primary);
@@ -683,34 +685,26 @@ button.btn-primary:hover {
 }
 
 .chart-card {
-    background: var(--card-bg);
-    border-radius: 20px;
-    padding: 1.5rem;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.02);
+    backdrop-filter: blur(16px);
+    border-radius: 24px;
+    padding: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
+    transition: transform 0.3s ease, border-color 0.3s ease;
 }
 
-.card-header {
-    margin-bottom: 1.5rem;
+.chart-card:hover {
+    border-color: rgba(99, 102, 241, 0.3);
 }
 
-.card-header h3 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #fff;
-    margin: 0;
-}
-
-.chart-wrapper {
-    height: 300px;
-    position: relative;
-}
-
-/* Recent Activity */
 .recent-activity {
-    background: var(--card-bg);
-    border-radius: 20px;
-    padding: 1.5rem;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.02);
+    backdrop-filter: blur(16px);
+    border-radius: 24px;
+    padding: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
 }
 
 .section-header {

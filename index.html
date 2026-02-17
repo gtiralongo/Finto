@@ -47,8 +47,14 @@
                 <a href="#" class="nav-item active" data-view="dashboard">
                     <span class="icon">📊</span> Dashboard
                 </a>
+                <a href="#" class="nav-item" data-view="income">
+                    <span class="icon">📈</span> Ingresos
+                </a>
+                <a href="#" class="nav-item" data-view="expense">
+                    <span class="icon">�</span> Gastos
+                </a>
                 <a href="#" class="nav-item" data-view="transactions">
-                    <span class="icon">💸</span> Transacciones
+                    <span class="icon">📜</span> Historial
                 </a>
                 <div class="nav-spacer"></div>
                 <button id="logout-btn-side" class="nav-item logout">
@@ -137,37 +143,80 @@
                 </div>
             </div>
 
-            <div id="transactions-view" class="view-section" style="display: none;">
+            <!-- New Income View -->
+            <div id="income-view" class="view-section" style="display: none;">
                 <section class="transaction-section">
                     <div class="card-header">
-                        <h2>Registrar Movimiento</h2>
+                        <h2>Registrar Ingreso</h2>
                     </div>
-                    <form id="form">
+                    <form id="income-form">
                         <div class="form-grid">
                             <div class="form-group">
                                 <label>Descripción</label>
-                                <input type="text" id="text" placeholder="¿En qué gastaste?" required>
+                                <input type="text" id="income-text" placeholder="Ej. Sueldo, Venta..." required>
                             </div>
                             <div class="form-group">
                                 <label>Monto</label>
-                                <input type="number" id="amount" placeholder="Monto (ej. -50)" step="0.01" required>
+                                <input type="number" id="income-amount" placeholder="Ej. 150000" step="0.01" min="0.01"
+                                    required>
                             </div>
                             <div class="form-group">
                                 <label>Fecha</label>
-                                <input type="date" id="date" required>
+                                <input type="date" id="income-date" required>
                             </div>
                             <div class="form-group">
                                 <label>Plataforma</label>
-                                <input type="text" id="platform" placeholder="Belo, Personal Pay..." required>
+                                <input type="text" id="income-platform" placeholder="Belo, Santander..." required>
                             </div>
                         </div>
-                        <button type="submit" class="btn-primary">Confirmar Transacción</button>
+                        <button type="submit" class="btn-primary">Confirmar Ingreso</button>
                     </form>
                 </section>
+                <section class="history-section">
+                    <h2>Historial de Ingresos</h2>
+                    <ul id="income-list" class="list"></ul>
+                </section>
+            </div>
 
+            <!-- New Expense View -->
+            <div id="expense-view" class="view-section" style="display: none;">
+                <section class="transaction-section">
+                    <div class="card-header">
+                        <h2>Registrar Gasto</h2>
+                    </div>
+                    <form id="expense-form">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Descripción</label>
+                                <input type="text" id="expense-text" placeholder="Ej. Super, Alquiler..." required>
+                            </div>
+                            <div class="form-group">
+                                <label>Monto</label>
+                                <input type="number" id="expense-amount" placeholder="Ej. 5000" step="0.01" min="0.01"
+                                    required>
+                            </div>
+                            <div class="form-group">
+                                <label>Fecha</label>
+                                <input type="date" id="expense-date" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Plataforma</label>
+                                <input type="text" id="expense-platform" placeholder="Personal Pay, Belo..." required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-primary">Confirmar Gasto</button>
+                    </form>
+                </section>
+                <section class="history-section">
+                    <h2>Historial de Gastos</h2>
+                    <ul id="expense-list" class="list"></ul>
+                </section>
+            </div>
+
+            <div id="transactions-view" class="view-section" style="display: none;">
                 <section class="history-section">
                     <div class="history-header">
-                        <h2>Historial de Movimientos</h2>
+                        <h2>Historial Completo</h2>
                         <div class="filters">
                             <button class="filter-btn active" data-filter="all">Todas</button>
                             <button class="filter-btn" data-filter="income">Ingresos</button>
@@ -188,11 +237,18 @@
                 <span class="icon">📊</span>
                 <span class="label">Panel</span>
             </a>
-            <a href="#" class="mobile-nav-item" data-view="transactions">
-                <span class="icon">💸</span>
-                <span class="label">Movs</span>
+            <a href="#" class="mobile-nav-item" data-view="income">
+                <span class="icon">📈</span>
+                <span class="label">Ingresos</span>
             </a>
-            <button id="add-transaction-fab" class="fab-btn">+</button>
+            <a href="#" class="mobile-nav-item" data-view="expense">
+                <span class="icon">�</span>
+                <span class="label">Gastos</span>
+            </a>
+            <a href="#" class="mobile-nav-item" data-view="transactions">
+                <span class="icon">📜</span>
+                <span class="label">Historial</span>
+            </a>
         </nav>
     </div>
 
