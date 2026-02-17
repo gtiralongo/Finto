@@ -14,6 +14,9 @@ const filterBtns = document.querySelectorAll('.filter-btn');
 const navItems = document.querySelectorAll('.nav-item, .mobile-nav-item, .view-all');
 const viewSections = document.querySelectorAll('.view-section');
 const viewTitle = document.getElementById('view-title');
+const filterYear = document.getElementById('filter-year');
+const filterMonth = document.getElementById('filter-month');
+const dashboardFilters = document.getElementById('dashboard-filters');
 
 const initialMovements = [
   { date: '2026-02-16', amount: -44000.00, text: 'Teatro Mari', platform: 'Personal Pay' },
@@ -142,9 +145,43 @@ function addTransactionDOM(transaction, targetList) {
   targetList.appendChild(item);
 }
 
+// Helper to get transactions filtered by Year and Month for Dashboard
+function getDashboardFilteredTransactions() {
+  return transactions.filter(t => {
+    const tDate = new Date(t.date + 'T00:00:00');
+    const tYear = tDate.getFullYear().toString();
+    const tMonth = (tDate.getMonth() + 1).toString().padStart(2, '0');
+
+    const yearMatch = filterYear.value === 'all' || tYear === filterYear.value;
+    const monthMatch = filterMonth.value === 'all' || tMonth === filterMonth.value;
+
+    return yearMatch && monthMatch;
+  });
+}
+
+function populateYearFilter() {
+  const years = [...new Set(transactions.map(t => new Date(t.date + 'T00:00:00').getFullYear()))].sort((a, b) => b - a);
+  const currentSelection = filterYear.value;
+
+  filterYear.innerHTML = '<option value="all">Año: Todos</option>';
+  years.forEach(year => {
+    const option = document.createElement('option');
+    option.value = year;
+    option.textContent = year;
+    filterYear.appendChild(option);
+  });
+
+  if (years.includes(parseInt(currentSelection))) {
+    filterYear.value = currentSelection;
+  }
+}
+
 // Update the balance, income and expense
 function updateValues() {
-  const amounts = transactions.map(transaction => transaction.amount);
+  const dashboardViewActive = document.getElementById('dashboard-view').style.display !== 'none';
+  const displayTransactions = dashboardViewActive ? getDashboardFilteredTransactions() : transactions;
+
+  const amounts = displayTransactions.map(transaction => transaction.amount);
   const total = amounts.reduce((acc, item) => (acc += item), 0);
   const income = amounts.filter(item => item > 0).reduce((acc, item) => (acc += item), 0);
   const expense = Math.abs(amounts.filter(item => item < 0).reduce((acc, item) => (acc += item), 0));
@@ -285,21 +322,6 @@ filterBtns.forEach(btn => {
 document.getElementById('add-transaction-btn').addEventListener('click', () => {
   document.querySelector('[data-view="transactions"]').click();
 });
-document.getElementById('add-transaction-fab').addEventListener('click', () => {
-  document.querySelector('[data-view="transactions"]').click();
-});
-
-document.getElementById('sync-history-btn').addEventListener('click', () => {
-  if (confirm('¿Quieres cargar los 39 movimientos oficiales? Esto sincronizará tu cuenta con el historial completo.')) {
-    // Generate new IDs and load the full initial list
-    transactions = initialMovements.map(m => ({ ...m, id: generateID() }));
-    updateValues();
-    updateLocalStorage(); // Push to Firestore
-    init();
-    alert('Historial sincronizado con éxito.');
-  }
-});
-
 dateInput.valueAsDate = new Date();
 form.addEventListener('submit', addTransaction);
 init();

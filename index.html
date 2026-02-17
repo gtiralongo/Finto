@@ -50,9 +50,6 @@
                 <a href="#" class="nav-item" data-view="transactions">
                     <span class="icon">💸</span> Transacciones
                 </a>
-                <button id="sync-history-btn" class="nav-item">
-                    <span class="icon">🔄</span> Sincronizar Historial
-                </button>
                 <div class="nav-spacer"></div>
                 <button id="logout-btn-side" class="nav-item logout">
                     <span class="icon">🚪</span> Salir
@@ -67,6 +64,26 @@
                     <h2 id="view-title">Dashboard</h2>
                 </div>
                 <div class="header-right">
+                    <div id="dashboard-filters" class="dashboard-filters" style="display: flex;">
+                        <select id="filter-year" class="filter-select">
+                            <option value="all">Año: Todos</option>
+                        </select>
+                        <select id="filter-month" class="filter-select">
+                            <option value="all">Mes: Todos</option>
+                            <option value="01">Enero</option>
+                            <option value="02">Febrero</option>
+                            <option value="03">Marzo</option>
+                            <option value="04">Abril</option>
+                            <option value="05">Mayo</option>
+                            <option value="06">Junio</option>
+                            <option value="07">Julio</option>
+                            <option value="08">Agosto</option>
+                            <option value="09">Septiembre</option>
+                            <option value="10">Octubre</option>
+                            <option value="11">Noviembre</option>
+                            <option value="12">Diciembre</option>
+                        </select>
+                    </div>
                     <button id="add-transaction-btn" class="btn-primary-sm">+ Nueva</button>
                     <button id="logout-btn" class="logout-btn-mobile">Cerrar Sesión</button>
                 </div>
