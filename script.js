@@ -289,13 +289,14 @@ document.getElementById('add-transaction-fab').addEventListener('click', () => {
   document.querySelector('[data-view="transactions"]').click();
 });
 
-document.getElementById('reset-data-btn').addEventListener('click', () => {
-  if (confirm('¿Quieres cargar los 39 movimientos de muestra? Esto sobrescribirá tus datos actuales.')) {
+document.getElementById('sync-history-btn').addEventListener('click', () => {
+  if (confirm('¿Quieres cargar los 39 movimientos oficiales? Esto sincronizará tu cuenta con el historial completo.')) {
+    // Generate new IDs and load the full initial list
     transactions = initialMovements.map(m => ({ ...m, id: generateID() }));
     updateValues();
-    updateLocalStorage();
+    updateLocalStorage(); // Push to Firestore
     init();
-    alert('Datos cargados con éxito.');
+    alert('Historial sincronizado con éxito.');
   }
 });
 
