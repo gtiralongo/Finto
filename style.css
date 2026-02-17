@@ -147,6 +147,11 @@ select {
     transition: all 0.3s ease;
 }
 
+option {
+    background-color: var(--bg-dark);
+    color: white;
+}
+
 input:focus,
 select:focus {
     outline: none;
@@ -548,6 +553,22 @@ button.btn-primary:hover {
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
     transition: transform 0.3s ease, border-color 0.3s ease;
+}
+
+.card-header {
+    margin-bottom: 1.5rem;
+}
+
+.card-header h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.chart-wrapper {
+    position: relative;
+    height: 320px;
+    width: 100%;
 }
 
 .chart-card:hover {

@@ -287,10 +287,42 @@ function updateCharts() {
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+            titleColor: '#fff',
+            bodyColor: '#fff',
+            padding: 12,
+            cornerRadius: 10,
+            displayColors: true
+          }
+        },
         scales: {
-          x: { ticks: { color: '#94a3b8' }, grid: { display: false } },
-          y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+          x: {
+            ticks: { color: '#94a3b8', font: { size: 11 } },
+            grid: { display: false }
+          },
+          y: {
+            beginAtZero: true,
+            ticks: {
+              color: '#94a3b8',
+              font: { size: 10 },
+              callback: (value) => '$' + value.toLocaleString()
+            },
+            grid: { color: 'rgba(255,255,255,0.05)', borderDash: [5, 5] }
+          }
+        },
+        interaction: {
+          intersect: false,
+          mode: 'index',
+        },
+        datasets: {
+          bar: {
+            maxBarThickness: 40,
+            categoryPercentage: 0.6,
+            barPercentage: 0.8
+          }
         }
       }
     });
