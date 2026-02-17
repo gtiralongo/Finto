@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Finto | Gestión de Gastos Premium</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
@@ -17,6 +18,7 @@
     <div id="auth-overlay" class="overlay">
         <div class="auth-card container">
             <header>
+                <img src="logo.svg" alt="Finto Logo" class="auth-logo">
                 <h1>Finto</h1>
                 <p>Inicia sesión para gestionar tus gastos</p>
             </header>
@@ -39,7 +41,7 @@
         <aside class="sidebar">
             <div class="sidebar-header">
                 <div class="logo">
-                    <span class="logo-icon">F</span>
+                    <img src="logo.svg" alt="Finto Logo" class="logo-img">
                     <h1>Finto</h1>
                 </div>
             </div>
@@ -51,7 +53,7 @@
                     <span class="icon">📈</span> Ingresos
                 </a>
                 <a href="#" class="nav-item" data-view="expense">
-                    <span class="icon">�</span> Gastos
+                    <span class="icon">📉</span> Gastos
                 </a>
                 <a href="#" class="nav-item" data-view="transactions">
                     <span class="icon">📜</span> Historial
@@ -242,7 +244,7 @@
                 <span class="label">Ingresos</span>
             </a>
             <a href="#" class="mobile-nav-item" data-view="expense">
-                <span class="icon">�</span>
+                <span class="icon">📉</span>
                 <span class="label">Gastos</span>
             </a>
             <a href="#" class="mobile-nav-item" data-view="transactions">
@@ -251,8 +253,6 @@
             </a>
         </nav>
     </div>
-
-    <!-- Modal for new transaction (optional/future) -->
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="firebase-config.js"></script>
