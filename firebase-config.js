@@ -73,12 +73,17 @@ function updateLocalStorage() {
 
 function loadUserTransactions(uid) {
     db.collection('users').doc(uid).get().then(doc => {
-        if (doc.exists) {
-            transactions = doc.data().transactions || [];
+        const cloudTransactions = doc.exists ? doc.data().transactions : null;
+
+        // Si no hay datos en la nube o la lista está vacía, cargar los iniciales
+        if (!cloudTransactions || cloudTransactions.length === 0) {
+            transactions = initialMovements.map(m => ({
+                ...m,
+                id: Math.floor(Math.random() * 10000000)
+            }));
+            updateLocalStorage(); // Guardar en Firestore para que persistan
         } else {
-            // First time user: load initial movements
-            transactions = initialMovements.map(m => ({ ...m, id: Math.floor(Math.random() * 10000000) }));
-            updateLocalStorage(); // Sync these to Firestore immediately
+            transactions = cloudTransactions;
         }
         init();
     });

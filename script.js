@@ -288,6 +288,16 @@ document.getElementById('add-transaction-fab').addEventListener('click', () => {
   document.querySelector('[data-view="transactions"]').click();
 });
 
+document.getElementById('reset-data-btn').addEventListener('click', () => {
+  if (confirm('¿Quieres cargar los 39 movimientos de muestra? Esto sobrescribirá tus datos actuales.')) {
+    transactions = initialMovements.map(m => ({ ...m, id: generateID() }));
+    updateValues();
+    updateLocalStorage();
+    init();
+    alert('Datos cargados con éxito.');
+  }
+});
+
 dateInput.valueAsDate = new Date();
 form.addEventListener('submit', addTransaction);
 init();
