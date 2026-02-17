@@ -57,7 +57,8 @@ const initialMovements = [
   { date: '2026-01-02', amount: -11500.00, text: 'Tarjeta - Tuenti', platform: 'Personal Pay' }
 ];
 
-let transactions = [];
+// Set transactions to the full history by default
+let transactions = initialMovements.map(m => ({ ...m, id: Math.floor(Math.random() * 100000000) }));
 let currentFilter = 'all';
 
 // Navigation Logic
