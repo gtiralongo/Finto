@@ -727,6 +727,31 @@ button.btn-primary:hover {
         grid-template-columns: 1fr !important;
     }
 
+    /* Fix balance card overflow on mobile */
+    .top-stats {
+        gap: 1rem;
+    }
+
+    .balance-card {
+        padding: 1.5rem;
+        overflow: hidden;
+    }
+
+    .balance-amount {
+        font-size: 2rem;
+        word-break: break-all;
+        line-height: 1.2;
+    }
+
+    .stat-box {
+        padding: 1rem 1.25rem;
+    }
+
+    .stat-box.income p,
+    .stat-box.expense p {
+        font-size: 1.2rem;
+    }
+
     .main-content {
         width: 100%;
         max-width: 100vw;
