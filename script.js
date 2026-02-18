@@ -4,11 +4,6 @@ const money_plus = document.getElementById('money-plus');
 const money_minus = document.getElementById('money-minus');
 const list = document.getElementById('list'); // Main list
 const recentList = document.getElementById('recent-list'); // Dashboard list
-const form = document.getElementById('form');
-const text = document.getElementById('text');
-const amount = document.getElementById('amount');
-const dateInput = document.getElementById('date');
-const platformInput = document.getElementById('platform');
 const emptyMsg = document.getElementById('empty-msg');
 const filterBtns = document.querySelectorAll('.filter-btn');
 const navItems = document.querySelectorAll('.nav-item, .mobile-nav-item, .view-all');
@@ -17,6 +12,12 @@ const viewTitle = document.getElementById('view-title');
 const filterYear = document.getElementById('filter-year');
 const filterMonth = document.getElementById('filter-month');
 const dashboardFilters = document.getElementById('dashboard-filters');
+
+// Form elements
+const incomeForm = document.getElementById('income-form');
+const expenseForm = document.getElementById('expense-form');
+const incomeList = document.getElementById('income-list');
+const expenseList = document.getElementById('expense-list');
 
 const initialMovements = [
   { date: '2026-02-16', amount: -44000.00, text: 'Teatro Mari', platform: 'Personal Pay' },
@@ -191,9 +192,24 @@ function updateValues() {
   const income = amounts.filter(item => item > 0).reduce((acc, item) => (acc += item), 0);
   const expense = Math.abs(amounts.filter(item => item < 0).reduce((acc, item) => (acc += item), 0));
 
+  // Credit = total income across ALL time (not filtered)
+  const allIncome = transactions.filter(t => t.amount > 0).reduce((acc, t) => acc + t.amount, 0);
+  const allExpense = Math.abs(transactions.filter(t => t.amount < 0).reduce((acc, t) => acc + t.amount, 0));
+  const creditAvailable = allIncome - allExpense;
+
   balance.innerText = `$${total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
   money_plus.innerText = `+$${income.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
   money_minus.innerText = `-$${expense.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+
+  const creditAvailableEl = document.getElementById('credit-available');
+  const creditTotalEl = document.getElementById('credit-total');
+  if (creditAvailableEl) {
+    creditAvailableEl.innerText = `$${creditAvailable.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+    creditAvailableEl.style.color = creditAvailable >= 0 ? 'var(--income)' : 'var(--expense)';
+  }
+  if (creditTotalEl) {
+    creditTotalEl.innerText = `$${allIncome.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+  }
 }
 
 // Remove transaction
@@ -329,11 +345,7 @@ function updateCharts() {
   }
 }
 
-// Elements for new forms
-const incomeForm = document.getElementById('income-form');
-const expenseForm = document.getElementById('expense-form');
-const incomeList = document.getElementById('income-list');
-const expenseList = document.getElementById('expense-list');
+// Form listeners setup
 
 // Update init to handle new lists
 function init() {
@@ -388,10 +400,10 @@ function createTransactionFromForm(textVal, amountVal, sign, dateVal, platformVa
 if (incomeForm) {
   incomeForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    const text = incomeForm.querySelector('.income-text').value;
-    const amount = incomeForm.querySelector('.income-amount').value;
-    const date = incomeForm.querySelector('.income-date').value;
-    const platform = incomeForm.querySelector('.income-platform').value;
+    const text = incomeForm.querySelector('#income-text').value;
+    const amount = incomeForm.querySelector('#income-amount').value;
+    const date = incomeForm.querySelector('#income-date').value;
+    const platform = incomeForm.querySelector('#income-platform').value;
     createTransactionFromForm(text, amount, 1, date, platform);
     incomeForm.reset();
   });
@@ -400,10 +412,10 @@ if (incomeForm) {
 if (expenseForm) {
   expenseForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    const text = expenseForm.querySelector('.expense-text').value;
-    const amount = expenseForm.querySelector('.expense-amount').value;
-    const date = expenseForm.querySelector('.expense-date').value;
-    const platform = expenseForm.querySelector('.expense-platform').value;
+    const text = expenseForm.querySelector('#expense-text').value;
+    const amount = expenseForm.querySelector('#expense-amount').value;
+    const date = expenseForm.querySelector('#expense-date').value;
+    const platform = expenseForm.querySelector('#expense-platform').value;
     createTransactionFromForm(text, amount, -1, date, platform);
     expenseForm.reset();
   });
@@ -434,7 +446,9 @@ filterMonth.addEventListener('change', () => {
   updateCharts();
 });
 
-document.querySelector('.income-date') && (document.querySelector('.income-date').valueAsDate = new Date());
-document.querySelector('.expense-date') && (document.querySelector('.expense-date').valueAsDate = new Date());
+const incDateEl = document.getElementById('income-date');
+const expDateEl = document.getElementById('expense-date');
+if (incDateEl) incDateEl.valueAsDate = new Date();
+if (expDateEl) expDateEl.valueAsDate = new Date();
 
 init();
