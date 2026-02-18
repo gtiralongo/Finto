@@ -25,8 +25,20 @@ const googleLoginBtn = document.getElementById('google-login');
 auth.onAuthStateChanged(user => {
     if (user) {
         authOverlay.style.display = 'none';
-        mainApp.style.display = 'flex'; // Use flex for the layout
+        mainApp.style.display = 'flex';
         loadUserTransactions(user.uid);
+
+        // Update sidebar user info
+        const sidebarEmail = document.getElementById('sidebar-email');
+        const sidebarAvatar = document.getElementById('sidebar-avatar');
+        if (sidebarEmail) {
+            const displayName = user.displayName || user.email || 'Usuario';
+            sidebarEmail.innerText = displayName.length > 20 ? displayName.substring(0, 20) + '…' : displayName;
+        }
+        if (sidebarAvatar) {
+            const initial = (user.displayName || user.email || 'U')[0].toUpperCase();
+            sidebarAvatar.innerText = initial;
+        }
     } else {
         authOverlay.style.display = 'flex';
         mainApp.style.display = 'none';

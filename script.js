@@ -1,24 +1,33 @@
-// Elements
+// ===== DOM ELEMENTS =====
 const balance = document.getElementById('balance');
 const money_plus = document.getElementById('money-plus');
 const money_minus = document.getElementById('money-minus');
-const list = document.getElementById('list'); // Main list
-const recentList = document.getElementById('recent-list'); // Dashboard list
+const savingsRate = document.getElementById('savings-rate');
+const incomeCount = document.getElementById('income-count');
+const expenseCount = document.getElementById('expense-count');
+const savingsLabel = document.getElementById('savings-label');
+
+const list = document.getElementById('list');                 // History list
+const recentList = document.getElementById('recent-list');   // Dashboard mini list
 const emptyMsg = document.getElementById('empty-msg');
-const filterBtns = document.querySelectorAll('.filter-btn');
-const navItems = document.querySelectorAll('.nav-item, .mobile-nav-item, .view-all');
+
+const navItems = document.querySelectorAll('.nav-item, .mobile-nav-item, .btn-link');
 const viewSections = document.querySelectorAll('.view-section');
 const viewTitle = document.getElementById('view-title');
+const headerSubtitle = document.getElementById('header-subtitle');
+
 const filterYear = document.getElementById('filter-year');
 const filterMonth = document.getElementById('filter-month');
 const dashboardFilters = document.getElementById('dashboard-filters');
 
-// Form elements
 const incomeForm = document.getElementById('income-form');
 const expenseForm = document.getElementById('expense-form');
 const incomeList = document.getElementById('income-list');
 const expenseList = document.getElementById('expense-list');
 
+const searchInput = document.getElementById('search-input');
+
+// ===== INITIAL DATA =====
 const initialMovements = [
   { date: '2026-02-16', amount: -44000.00, text: 'Teatro Mari', platform: 'Personal Pay' },
   { date: '2026-02-14', amount: -37043.67, text: 'Super', platform: 'Personal Pay' },
@@ -32,7 +41,7 @@ const initialMovements = [
   { date: '2026-02-06', amount: -316016.01, text: 'Tarjeta - Resumen', platform: 'Santander' },
   { date: '2026-02-06', amount: -50000.00, text: 'Clau', platform: 'Belo' },
   { date: '2026-02-04', amount: -35000.00, text: 'Federico Gabriel Dante Cingolani', platform: 'Belo' },
-  { date: '2026-02-03', amount: -33891.00, text: 'Tarjeta - La esquina da las aceitunas', platform: 'Personal Pay' },
+  { date: '2026-02-03', amount: -33891.00, text: 'Tarjeta - La esquina de las aceitunas', platform: 'Personal Pay' },
   { date: '2026-02-03', amount: -11500.00, text: 'Tarjeta - Tuenti', platform: 'Personal Pay' },
   { date: '2026-02-02', amount: -550.00, text: 'Tarjeta - Pedidos Ya', platform: 'Personal Pay' },
   { date: '2026-02-02', amount: -14048.00, text: 'Tarjeta - Pedidos Ya', platform: 'Personal Pay' },
@@ -53,7 +62,6 @@ const initialMovements = [
   { date: '2026-01-09', amount: -63560.00, text: 'Pago - Chacarita', platform: 'Buepp' },
   { date: '2026-01-09', amount: -558000.00, text: 'Tarjeta - Resumen', platform: 'Santander' },
   { date: '2026-01-08', amount: -45155.09, text: 'Tarjeta - Carrefour', platform: 'Personal Pay' },
-  { date: '2026-01-08', amount: 0.00, text: 'transferencia confirmada', platform: 'Santander' },
   { date: '2026-01-07', amount: -8625.00, text: 'Jose Nicolas Bocles', platform: 'Personal Pay' },
   { date: '2026-01-07', amount: -8000.00, text: 'Alberto Miguel Gnisci', platform: 'Personal Pay' },
   { date: '2026-01-06', amount: -2500.00, text: 'Marcelo Javier Tcherkassky', platform: 'LB Finanzas' },
@@ -61,106 +69,90 @@ const initialMovements = [
   { date: '2026-01-02', amount: -11500.00, text: 'Tarjeta - Tuenti', platform: 'Personal Pay' }
 ];
 
-// Set transactions to the full history by default
 let transactions = initialMovements.map(m => ({ ...m, id: Math.floor(Math.random() * 100000000) }));
 let currentFilter = 'all';
+let currentSearchQuery = '';
 
-// Navigation Logic
+// ===== HELPERS =====
+function fmt(amount) {
+  return '$' + Math.abs(amount).toLocaleString('es-AR', { minimumFractionDigits: 2 });
+}
+
+function fmtDate(dateStr) {
+  return new Date(dateStr + 'T00:00:00').toLocaleDateString('es-AR');
+}
+
+function generateID() {
+  return Math.floor(Math.random() * 100000000);
+}
+
+// ===== NAVIGATION =====
+const viewTitles = {
+  'dashboard': ['Dashboard', 'Resumen financiero'],
+  'transactions-form': ['Movimientos', 'Registrar ingresos y gastos'],
+  'history': ['Historial', 'Todos los movimientos']
+};
+
 navItems.forEach(item => {
   item.addEventListener('click', (e) => {
     e.preventDefault();
     const view = item.getAttribute('data-view');
     if (!view) return;
-
-    // Update active state
-    navItems.forEach(nav => nav.classList.remove('active'));
-    document.querySelectorAll(`[data-view="${view}"]`).forEach(nav => nav.classList.add('active'));
-
-    // Switch views
-    viewSections.forEach(section => section.style.display = 'none');
-    document.getElementById(`${view}-view`).style.display = 'block';
-
-    // Update title
-    viewTitle.innerText = view.charAt(0).toUpperCase() + view.slice(1);
-
-    // Toggle Dashboard Filters
-    if (view === 'dashboard') {
-      dashboardFilters.style.display = 'flex';
-      populateYearFilter();
-      updateCharts();
-    } else {
-      dashboardFilters.style.display = 'none';
-    }
+    switchView(view);
   });
 });
 
-// Add transaction
-function addTransaction(e) {
-  e.preventDefault();
+function switchView(view) {
+  // Update active nav
+  navItems.forEach(nav => nav.classList.remove('active'));
+  document.querySelectorAll(`[data-view="${view}"]`).forEach(nav => nav.classList.add('active'));
 
-  if (text.value.trim() === '' || amount.value.trim() === '' || dateInput.value === '' || platformInput.value === '') {
-    alert('Por favor completa todos los campos');
-  } else {
-    const transaction = {
-      id: generateID(),
-      text: text.value,
-      amount: +amount.value,
-      date: dateInput.value,
-      platform: platformInput.value
-    };
+  // Switch sections
+  viewSections.forEach(section => section.style.display = 'none');
+  const targetView = document.getElementById(`${view}-view`);
+  if (targetView) targetView.style.display = 'block';
 
-    transactions.push(transaction);
+  // Update title
+  const titles = viewTitles[view] || [view, ''];
+  viewTitle.innerText = titles[0];
+  if (headerSubtitle) headerSubtitle.innerText = titles[1];
 
-    updateValues();
-    updateLocalStorage();
-    init();
+  // Toggle dashboard filters
+  if (dashboardFilters) {
+    dashboardFilters.style.display = view === 'dashboard' ? 'flex' : 'none';
+  }
 
-    form.reset();
-    dateInput.valueAsDate = new Date();
+  if (view === 'dashboard') {
+    populateYearFilter();
+    updateDashboard();
+  }
 
-    // Auto switch to dashboard to see results
-    document.querySelector('[data-view="dashboard"]').click();
+  if (view === 'transactions-form') {
+    updateFormSideStats();
   }
 }
 
-// Generate random ID
-function generateID() {
-  return Math.floor(Math.random() * 100000000);
-}
+// ===== FORM TABS =====
+const formTabs = document.querySelectorAll('.form-tab');
+formTabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    formTabs.forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
 
-// Add transactions to DOM list
-function addTransactionDOM(transaction, targetList) {
-  const sign = transaction.amount < 0 ? '-' : '+';
-  const item = document.createElement('li');
-  item.classList.add(transaction.amount < 0 ? 'minus' : 'plus');
+    const tabName = tab.getAttribute('data-tab');
+    document.getElementById('expense-panel').style.display = tabName === 'expense' ? 'grid' : 'none';
+    document.getElementById('income-panel').style.display = tabName === 'income' ? 'grid' : 'none';
+  });
+});
 
-  const formattedDate = new Date(transaction.date + 'T00:00:00').toLocaleDateString('es-AR');
-
-  item.innerHTML = `
-    <div class="item-main">
-        <span class="item-desc">${transaction.text}</span>
-        <span class="item-amount">${sign}$${Math.abs(transaction.amount).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
-    </div>
-    <div class="item-details">
-        <span>${formattedDate}</span>
-        <span class="platform-tag">${transaction.platform}</span>
-    </div>
-    <button class="delete-btn" onclick="removeTransaction(${transaction.id})">✕</button>
-  `;
-
-  targetList.appendChild(item);
-}
-
-// Helper to get transactions filtered by Year and Month for Dashboard
+// ===== FILTER HELPERS =====
 function getDashboardFilteredTransactions() {
   return transactions.filter(t => {
     const tDate = new Date(t.date + 'T00:00:00');
     const tYear = tDate.getFullYear().toString();
     const tMonth = (tDate.getMonth() + 1).toString().padStart(2, '0');
-
     const yearMatch = filterYear.value === 'all' || tYear === filterYear.value;
     const monthMatch = filterMonth.value === 'all' || tMonth === filterMonth.value;
-
     return yearMatch && monthMatch;
   });
 }
@@ -168,79 +160,54 @@ function getDashboardFilteredTransactions() {
 function populateYearFilter() {
   const years = [...new Set(transactions.map(t => new Date(t.date + 'T00:00:00').getFullYear()))].sort((a, b) => b - a);
   const currentSelection = filterYear.value;
-
-  filterYear.innerHTML = '<option value="all">Año: Todos</option>';
+  filterYear.innerHTML = '<option value="all">Todos los años</option>';
   years.forEach(year => {
     const option = document.createElement('option');
     option.value = year;
     option.textContent = year;
     filterYear.appendChild(option);
   });
-
-  if (years.includes(parseInt(currentSelection))) {
-    filterYear.value = currentSelection;
-  }
+  if (years.includes(parseInt(currentSelection))) filterYear.value = currentSelection;
 }
 
-// Update the balance, income and expense
-function updateValues() {
-  const dashboardViewActive = document.getElementById('dashboard-view').style.display !== 'none';
-  const displayTransactions = dashboardViewActive ? getDashboardFilteredTransactions() : transactions;
+// ===== KPI UPDATE =====
+function updateKPIs(displayTransactions) {
+  const amounts = displayTransactions.map(t => t.amount);
+  const total = amounts.reduce((acc, item) => acc + item, 0);
+  const income = amounts.filter(i => i > 0).reduce((acc, i) => acc + i, 0);
+  const expense = Math.abs(amounts.filter(i => i < 0).reduce((acc, i) => acc + i, 0));
 
-  const amounts = displayTransactions.map(transaction => transaction.amount);
-  const total = amounts.reduce((acc, item) => (acc += item), 0);
-  const income = amounts.filter(item => item > 0).reduce((acc, item) => (acc += item), 0);
-  const expense = Math.abs(amounts.filter(item => item < 0).reduce((acc, item) => (acc += item), 0));
+  const incomes = displayTransactions.filter(t => t.amount > 0);
+  const expenses = displayTransactions.filter(t => t.amount < 0);
 
-  // Credit = total income across ALL time (not filtered)
-  const allIncome = transactions.filter(t => t.amount > 0).reduce((acc, t) => acc + t.amount, 0);
-  const allExpense = Math.abs(transactions.filter(t => t.amount < 0).reduce((acc, t) => acc + t.amount, 0));
-  const creditAvailable = allIncome - allExpense;
+  balance.innerText = fmt(total);
+  balance.style.color = total >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
 
-  balance.innerText = `$${total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
-  money_plus.innerText = `+$${income.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
-  money_minus.innerText = `-$${expense.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+  money_plus.innerText = '+' + fmt(income);
+  money_minus.innerText = '-' + fmt(expense);
 
-  const creditAvailableEl = document.getElementById('credit-available');
-  const creditTotalEl = document.getElementById('credit-total');
-  if (creditAvailableEl) {
-    creditAvailableEl.innerText = `$${creditAvailable.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
-    creditAvailableEl.style.color = creditAvailable >= 0 ? 'var(--income)' : 'var(--expense)';
+  if (incomeCount) incomeCount.innerText = `${incomes.length} movimiento${incomes.length !== 1 ? 's' : ''}`;
+  if (expenseCount) expenseCount.innerText = `${expenses.length} movimiento${expenses.length !== 1 ? 's' : ''}`;
+
+  // Savings rate
+  const rate = income > 0 ? Math.round(((income - expense) / income) * 100) : 0;
+  if (savingsRate) {
+    savingsRate.innerText = rate + '%';
+    savingsRate.style.color = rate >= 0 ? 'var(--savings)' : 'var(--expense-light)';
   }
-  if (creditTotalEl) {
-    creditTotalEl.innerText = `$${allIncome.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
-  }
+  if (savingsLabel) savingsLabel.innerText = 'del total ingresado';
 }
 
-// Remove transaction
-function removeTransaction(id) {
-  transactions = transactions.filter(transaction => transaction.id !== id);
-  updateLocalStorage();
-  init();
-}
-
-// Firebase sync
-function updateLocalStorage() {
-  const user = auth.currentUser;
-  if (user) {
-    db.collection('users').doc(user.uid).set({
-      transactions: transactions
-    }).catch(err => console.error("Error saving transactions:", err));
-  }
-}
-
+// ===== CHARTS =====
 let platformChartInstance = null;
 let monthlyChartInstance = null;
 
-function updateCharts() {
+function updateCharts(displayTransactions) {
   const platformCanvas = document.getElementById('platformChart');
   const monthlyCanvas = document.getElementById('monthlyChart');
-
   if (!platformCanvas || !monthlyCanvas) return;
 
-  const displayTransactions = getDashboardFilteredTransactions();
-
-  // Expenses only for platform chart
+  // Platform Doughnut
   const expenses = displayTransactions.filter(t => t.amount < 0);
   const platformData = {};
   expenses.forEach(t => {
@@ -249,6 +216,7 @@ function updateCharts() {
 
   const platformLabels = Object.keys(platformData);
   const platformValues = Object.values(platformData);
+  const palette = ['#7c3aed', '#10b981', '#f43f5e', '#f59e0b', '#06b6d4', '#ec4899', '#8b5cf6', '#14b8a6'];
 
   if (platformChartInstance) platformChartInstance.destroy();
   if (platformLabels.length > 0) {
@@ -258,24 +226,43 @@ function updateCharts() {
         labels: platformLabels,
         datasets: [{
           data: platformValues,
-          backgroundColor: ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'],
-          borderWidth: 0
+          backgroundColor: palette,
+          borderWidth: 0,
+          hoverOffset: 8
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 }, usePointStyle: true } }
+          legend: {
+            position: 'bottom',
+            labels: {
+              color: '#64748b',
+              font: { size: 10, family: 'Inter' },
+              usePointStyle: true,
+              pointStyleWidth: 8,
+              padding: 12
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(6,9,20,0.95)',
+            titleColor: '#f1f5f9',
+            bodyColor: '#94a3b8',
+            padding: 12,
+            cornerRadius: 10,
+            callbacks: {
+              label: (ctx) => ` ${ctx.label}: $${ctx.parsed.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`
+            }
+          }
         },
-        cutout: '75%'
+        cutout: '72%'
       }
     });
   }
 
-  // Monthly Chart
+  // Monthly Bar Chart
   const monthlyData = {};
-  // If year is selected, show all months of that year. If "all" years, show all available months.
   displayTransactions.forEach(t => {
     const month = t.date.substring(0, 7);
     if (!monthlyData[month]) monthlyData[month] = { income: 0, expense: 0 };
@@ -286,7 +273,10 @@ function updateCharts() {
   const sortedMonths = Object.keys(monthlyData).sort();
   const monthLabels = sortedMonths.map(m => {
     const [year, month] = m.split('-');
-    return new Date(year, month - 1).toLocaleString('es-ES', { month: 'short', year: filterYear.value === 'all' ? '2-digit' : undefined });
+    return new Date(year, month - 1).toLocaleString('es-ES', {
+      month: 'short',
+      year: filterYear.value === 'all' ? '2-digit' : undefined
+    });
   });
 
   if (monthlyChartInstance) monthlyChartInstance.destroy();
@@ -296,8 +286,20 @@ function updateCharts() {
       data: {
         labels: monthLabels,
         datasets: [
-          { label: 'Ingresos', data: sortedMonths.map(m => monthlyData[m].income), backgroundColor: '#10b981', borderRadius: 6 },
-          { label: 'Gastos', data: sortedMonths.map(m => monthlyData[m].expense), backgroundColor: '#ef4444', borderRadius: 6 }
+          {
+            label: 'Ingresos',
+            data: sortedMonths.map(m => monthlyData[m].income),
+            backgroundColor: 'rgba(16, 185, 129, 0.8)',
+            borderRadius: 8,
+            borderSkipped: false
+          },
+          {
+            label: 'Gastos',
+            data: sortedMonths.map(m => monthlyData[m].expense),
+            backgroundColor: 'rgba(244, 63, 94, 0.8)',
+            borderRadius: 8,
+            borderSkipped: false
+          }
         ]
       },
       options: {
@@ -306,81 +308,237 @@ function updateCharts() {
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: 'rgba(15, 23, 42, 0.9)',
-            titleColor: '#fff',
-            bodyColor: '#fff',
-            padding: 12,
-            cornerRadius: 10,
-            displayColors: true
+            backgroundColor: 'rgba(6,9,20,0.95)',
+            titleColor: '#f1f5f9',
+            bodyColor: '#94a3b8',
+            padding: 14,
+            cornerRadius: 12,
+            displayColors: true,
+            callbacks: {
+              label: (ctx) => ` ${ctx.dataset.label}: $${ctx.parsed.y.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`
+            }
           }
         },
         scales: {
           x: {
-            ticks: { color: '#94a3b8', font: { size: 11 } },
-            grid: { display: false }
+            ticks: { color: '#64748b', font: { size: 11, family: 'Inter' } },
+            grid: { display: false },
+            border: { display: false }
           },
           y: {
             beginAtZero: true,
             ticks: {
-              color: '#94a3b8',
-              font: { size: 10 },
-              callback: (value) => '$' + value.toLocaleString()
+              color: '#64748b',
+              font: { size: 10, family: 'Inter' },
+              callback: (v) => '$' + (v / 1000).toFixed(0) + 'k'
             },
-            grid: { color: 'rgba(255,255,255,0.05)', borderDash: [5, 5] }
+            grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false },
+            border: { display: false }
           }
         },
-        interaction: {
-          intersect: false,
-          mode: 'index',
-        },
-        datasets: {
-          bar: {
-            maxBarThickness: 40,
-            categoryPercentage: 0.6,
-            barPercentage: 0.8
-          }
-        }
+        interaction: { intersect: false, mode: 'index' },
+        datasets: { bar: { maxBarThickness: 36, categoryPercentage: 0.6, barPercentage: 0.85 } }
       }
     });
   }
 }
 
-// Form listeners setup
+// ===== PLATFORM BARS =====
+function updatePlatformBars(displayTransactions) {
+  const platformBarsEl = document.getElementById('platform-bars');
+  if (!platformBarsEl) return;
 
-// Update init to handle new lists
-function init() {
-  list.innerHTML = '';
-  recentList.innerHTML = '';
-  if (incomeList) incomeList.innerHTML = '';
-  if (expenseList) expenseList.innerHTML = '';
+  const expenses = displayTransactions.filter(t => t.amount < 0);
+  const platformData = {};
+  expenses.forEach(t => {
+    platformData[t.platform] = (platformData[t.platform] || 0) + Math.abs(t.amount);
+  });
 
-  // Sort transactions by date
-  const sortedTransactions = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+  const sorted = Object.entries(platformData).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  const maxVal = sorted[0]?.[1] || 1;
 
-  // Populate recent list (first 5)
-  sortedTransactions.slice(0, 5).forEach(t => addTransactionDOM(t, recentList));
+  const colors = ['#7c3aed', '#10b981', '#f43f5e', '#f59e0b', '#06b6d4', '#ec4899'];
 
-  // Specific lists
-  const incomes = sortedTransactions.filter(t => t.amount > 0);
-  const expenses = sortedTransactions.filter(t => t.amount < 0);
+  platformBarsEl.innerHTML = sorted.map(([name, val], i) => `
+    <div class="platform-bar-item">
+      <div class="platform-bar-label">
+        <span class="platform-bar-name">${name}</span>
+        <span class="platform-bar-amount">${fmt(val)}</span>
+      </div>
+      <div class="platform-bar-track">
+        <div class="platform-bar-fill" style="width: ${(val / maxVal * 100).toFixed(1)}%; background: ${colors[i % colors.length]};"></div>
+      </div>
+    </div>
+  `).join('');
 
-  if (incomeList) incomes.forEach(t => addTransactionDOM(t, incomeList));
-  if (expenseList) expenses.forEach(t => addTransactionDOM(t, expenseList));
-
-  // Populate full list with filters
-  let filteredTransactions = sortedTransactions;
-  if (currentFilter === 'income') filteredTransactions = incomes;
-  if (currentFilter === 'expense') filteredTransactions = expenses;
-
-  filteredTransactions.forEach(t => addTransactionDOM(t, list));
-
-  updateValues();
-  updateCharts();
-
-  emptyMsg.style.display = filteredTransactions.length === 0 ? 'block' : 'none';
+  if (sorted.length === 0) {
+    platformBarsEl.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem; text-align:center; padding: 1rem 0;">Sin datos para mostrar</p>';
+  }
 }
 
-// Add transaction Unified logic
+// ===== RECENT LIST =====
+function updateRecentList(displayTransactions) {
+  if (!recentList) return;
+  recentList.innerHTML = '';
+  const sorted = [...displayTransactions].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 6);
+
+  if (sorted.length === 0) {
+    recentList.innerHTML = '<li style="color: var(--text-muted); font-size: 0.85rem; padding: 1rem; text-align:center;">Sin movimientos</li>';
+    return;
+  }
+
+  sorted.forEach(t => {
+    const sign = t.amount < 0 ? 'minus' : 'plus';
+    const li = document.createElement('li');
+    li.innerHTML = `
+      <span class="mini-dot ${sign}"></span>
+      <div class="mini-info">
+        <div class="mini-desc">${t.text}</div>
+        <div class="mini-date">${fmtDate(t.date)} · ${t.platform}</div>
+      </div>
+      <span class="mini-amount ${sign}">${t.amount < 0 ? '-' : '+'}${fmt(t.amount)}</span>
+    `;
+    recentList.appendChild(li);
+  });
+}
+
+// ===== DASHBOARD UPDATE =====
+function updateDashboard() {
+  const displayTransactions = getDashboardFilteredTransactions();
+  updateKPIs(displayTransactions);
+  updateCharts(displayTransactions);
+  updatePlatformBars(displayTransactions);
+  updateRecentList(displayTransactions);
+}
+
+// ===== HISTORY LIST =====
+function renderHistoryList() {
+  if (!list) return;
+  list.innerHTML = '';
+
+  let filtered = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  if (currentFilter === 'income') filtered = filtered.filter(t => t.amount > 0);
+  if (currentFilter === 'expense') filtered = filtered.filter(t => t.amount < 0);
+
+  if (currentSearchQuery) {
+    const q = currentSearchQuery.toLowerCase();
+    filtered = filtered.filter(t =>
+      t.text.toLowerCase().includes(q) ||
+      t.platform.toLowerCase().includes(q)
+    );
+  }
+
+  // Update summary
+  const historyCount = document.getElementById('history-count');
+  const historyTotal = document.getElementById('history-total');
+  if (historyCount) historyCount.innerText = `${filtered.length} movimiento${filtered.length !== 1 ? 's' : ''}`;
+  if (historyTotal) {
+    const total = filtered.reduce((acc, t) => acc + t.amount, 0);
+    historyTotal.innerText = `Total: ${total >= 0 ? '+' : ''}${fmt(total)}`;
+    historyTotal.style.color = total >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
+  }
+
+  if (filtered.length === 0) {
+    if (emptyMsg) emptyMsg.style.display = 'block';
+    return;
+  }
+  if (emptyMsg) emptyMsg.style.display = 'none';
+
+  filtered.forEach(t => addTransactionToHistory(t));
+}
+
+function addTransactionToHistory(t) {
+  const sign = t.amount < 0 ? 'minus' : 'plus';
+  const li = document.createElement('li');
+  li.classList.add(sign);
+  li.innerHTML = `
+    <div class="tx-type-dot ${sign}">${t.amount < 0 ? '↓' : '↑'}</div>
+    <div class="tx-info">
+      <div class="tx-desc">${t.text}</div>
+      <div class="tx-meta">
+        <span class="tx-date">${fmtDate(t.date)}</span>
+        <span class="tx-platform">${t.platform}</span>
+      </div>
+    </div>
+    <span class="tx-amount ${sign}">${t.amount < 0 ? '-' : '+'}${fmt(t.amount)}</span>
+    <button class="delete-btn" onclick="removeTransaction(${t.id})">✕</button>
+  `;
+  list.appendChild(li);
+}
+
+// ===== FORM SIDE STATS =====
+function updateFormSideStats() {
+  const now = new Date();
+  const thisMonth = now.getMonth();
+  const thisYear = now.getFullYear();
+
+  const sorted = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  // Expenses
+  const allExpenses = sorted.filter(t => t.amount < 0);
+  const expMonth = allExpenses.filter(t => {
+    const d = new Date(t.date + 'T00:00:00');
+    return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
+  });
+  const expYear = allExpenses.filter(t => new Date(t.date + 'T00:00:00').getFullYear() === thisYear);
+
+  const expMonthTotal = expMonth.reduce((acc, t) => acc + Math.abs(t.amount), 0);
+  const expYearTotal = expYear.reduce((acc, t) => acc + Math.abs(t.amount), 0);
+  const expMonthsCount = [...new Set(allExpenses.map(t => t.date.substring(0, 7)))].length || 1;
+  const expAvg = allExpenses.reduce((acc, t) => acc + Math.abs(t.amount), 0) / expMonthsCount;
+
+  const fmtEl = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = fmt(val); };
+  fmtEl('form-expense-month', expMonthTotal);
+  fmtEl('form-expense-year', expYearTotal);
+  fmtEl('form-expense-avg', expAvg);
+
+  // Incomes
+  const allIncomes = sorted.filter(t => t.amount > 0);
+  const incMonth = allIncomes.filter(t => {
+    const d = new Date(t.date + 'T00:00:00');
+    return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
+  });
+  const incYear = allIncomes.filter(t => new Date(t.date + 'T00:00:00').getFullYear() === thisYear);
+
+  const incMonthTotal = incMonth.reduce((acc, t) => acc + t.amount, 0);
+  const incYearTotal = incYear.reduce((acc, t) => acc + t.amount, 0);
+  const incMonthsCount = [...new Set(allIncomes.map(t => t.date.substring(0, 7)))].length || 1;
+  const incAvg = allIncomes.reduce((acc, t) => acc + t.amount, 0) / incMonthsCount;
+
+  fmtEl('form-income-month', incMonthTotal);
+  fmtEl('form-income-year', incYearTotal);
+  fmtEl('form-income-avg', incAvg);
+
+  // Mini lists
+  if (expenseList) {
+    expenseList.innerHTML = '';
+    allExpenses.slice(0, 5).forEach(t => {
+      const li = document.createElement('li');
+      li.innerHTML = `
+        <span class="mini-dot minus"></span>
+        <div class="mini-info"><div class="mini-desc">${t.text}</div><div class="mini-date">${fmtDate(t.date)}</div></div>
+        <span class="mini-amount minus">-${fmt(t.amount)}</span>
+      `;
+      expenseList.appendChild(li);
+    });
+  }
+
+  if (incomeList) {
+    incomeList.innerHTML = '';
+    allIncomes.slice(0, 5).forEach(t => {
+      const li = document.createElement('li');
+      li.innerHTML = `
+        <span class="mini-dot plus"></span>
+        <div class="mini-info"><div class="mini-desc">${t.text}</div><div class="mini-date">${fmtDate(t.date)}</div></div>
+        <span class="mini-amount plus">+${fmt(t.amount)}</span>
+      `;
+      incomeList.appendChild(li);
+    });
+  }
+}
+
+// ===== ADD TRANSACTION =====
 function createTransactionFromForm(textVal, amountVal, sign, dateVal, platformVal) {
   const transaction = {
     id: generateID(),
@@ -389,66 +547,96 @@ function createTransactionFromForm(textVal, amountVal, sign, dateVal, platformVa
     date: dateVal,
     platform: platformVal
   };
-
   transactions.push(transaction);
   updateLocalStorage();
-  init();
-  document.querySelector('[data-view="dashboard"]').click();
+  updateFormSideStats();
+  updateDashboard();
+  renderHistoryList();
 }
 
-// Listeners for new forms
-if (incomeForm) {
-  incomeForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const text = incomeForm.querySelector('#income-text').value;
-    const amount = incomeForm.querySelector('#income-amount').value;
-    const date = incomeForm.querySelector('#income-date').value;
-    const platform = incomeForm.querySelector('#income-platform').value;
-    createTransactionFromForm(text, amount, 1, date, platform);
-    incomeForm.reset();
-  });
+// ===== REMOVE TRANSACTION =====
+function removeTransaction(id) {
+  transactions = transactions.filter(t => t.id !== id);
+  updateLocalStorage();
+  renderHistoryList();
+  updateDashboard();
+  updateFormSideStats();
 }
 
+// ===== FIREBASE SYNC =====
+// updateLocalStorage is defined in firebase-config.js
+
+// ===== FORM LISTENERS =====
 if (expenseForm) {
   expenseForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    const text = expenseForm.querySelector('#expense-text').value;
-    const amount = expenseForm.querySelector('#expense-amount').value;
-    const date = expenseForm.querySelector('#expense-date').value;
-    const platform = expenseForm.querySelector('#expense-platform').value;
+    const text = document.getElementById('expense-text').value;
+    const amount = document.getElementById('expense-amount').value;
+    const date = document.getElementById('expense-date').value;
+    const platform = document.getElementById('expense-platform').value;
+    if (!text || !amount || !date || !platform) return;
     createTransactionFromForm(text, amount, -1, date, platform);
     expenseForm.reset();
+    document.getElementById('expense-date').valueAsDate = new Date();
+    // Show success feedback
+    const btn = expenseForm.querySelector('.btn-submit');
+    btn.innerText = '✓ Gasto registrado';
+    setTimeout(() => { btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg> Confirmar Gasto'; }, 2000);
   });
 }
 
-// Listeners
-document.getElementById('add-transaction-btn').addEventListener('click', () => {
-  // By default, go to expenses for "+ Nueva"
-  document.querySelector('[data-view="expense"]').click();
-});
+if (incomeForm) {
+  incomeForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = document.getElementById('income-text').value;
+    const amount = document.getElementById('income-amount').value;
+    const date = document.getElementById('income-date').value;
+    const platform = document.getElementById('income-platform').value;
+    if (!text || !amount || !date || !platform) return;
+    createTransactionFromForm(text, amount, 1, date, platform);
+    incomeForm.reset();
+    document.getElementById('income-date').valueAsDate = new Date();
+    const btn = incomeForm.querySelector('.btn-submit');
+    btn.innerText = '✓ Ingreso registrado';
+    setTimeout(() => { btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg> Confirmar Ingreso'; }, 2000);
+  });
+}
 
-filterBtns.forEach(btn => {
-  btn.addEventListener('click', () => {
-    filterBtns.forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    currentFilter = btn.dataset.filter;
-    init();
+// ===== FILTER PILLS (History) =====
+const filterPills = document.querySelectorAll('.pill');
+filterPills.forEach(pill => {
+  pill.addEventListener('click', () => {
+    filterPills.forEach(p => p.classList.remove('active'));
+    pill.classList.add('active');
+    currentFilter = pill.dataset.filter;
+    renderHistoryList();
   });
 });
 
-filterYear.addEventListener('change', () => {
-  updateValues();
-  updateCharts();
-});
+// ===== SEARCH =====
+if (searchInput) {
+  searchInput.addEventListener('input', () => {
+    currentSearchQuery = searchInput.value.trim();
+    renderHistoryList();
+  });
+}
 
-filterMonth.addEventListener('change', () => {
-  updateValues();
-  updateCharts();
-});
+// ===== DASHBOARD FILTERS =====
+filterYear.addEventListener('change', () => updateDashboard());
+filterMonth.addEventListener('change', () => updateDashboard());
 
-const incDateEl = document.getElementById('income-date');
+// ===== SET DEFAULT DATES =====
 const expDateEl = document.getElementById('expense-date');
-if (incDateEl) incDateEl.valueAsDate = new Date();
+const incDateEl = document.getElementById('income-date');
 if (expDateEl) expDateEl.valueAsDate = new Date();
+if (incDateEl) incDateEl.valueAsDate = new Date();
+
+// ===== INIT =====
+function init() {
+  populateYearFilter();
+  updateDashboard();
+  renderHistoryList();
+  updateFormSideStats();
+}
 
 init();
