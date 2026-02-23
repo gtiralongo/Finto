@@ -27,55 +27,15 @@ const expenseList = document.getElementById('expense-list');
 
 const searchInput = document.getElementById('search-input');
 
-// ===== INITIAL DATA =====
-const initialMovements = [
-  { date: '2026-02-16', amount: -44000.00, text: 'Teatro Mari', platform: 'Personal Pay' },
-  { date: '2026-02-14', amount: -37043.67, text: 'Super', platform: 'Personal Pay' },
-  { date: '2026-02-10', amount: -9500.00, text: 'Futbol', platform: 'Belo' },
-  { date: '2026-02-10', amount: -45003.28, text: 'Tarjeta - Personal', platform: 'Personal Pay' },
-  { date: '2026-02-10', amount: -8485.00, text: 'Tarjeta - Dia', platform: 'Personal Pay' },
-  { date: '2026-02-07', amount: -7000.00, text: 'Flores', platform: 'Belo' },
-  { date: '2026-02-06', amount: -15180.00, text: 'Súper Dia', platform: 'Personal Pay' },
-  { date: '2026-02-06', amount: -15980.00, text: 'ABL - Condarco', platform: 'Buepp' },
-  { date: '2026-02-06', amount: -11240.00, text: 'ABL - Lafuente', platform: 'Buepp' },
-  { date: '2026-02-06', amount: -316016.01, text: 'Tarjeta - Resumen', platform: 'Santander' },
-  { date: '2026-02-06', amount: -50000.00, text: 'Clau', platform: 'Belo' },
-  { date: '2026-02-04', amount: -35000.00, text: 'Federico Gabriel Dante Cingolani', platform: 'Belo' },
-  { date: '2026-02-03', amount: -33891.00, text: 'Tarjeta - La esquina de las aceitunas', platform: 'Personal Pay' },
-  { date: '2026-02-03', amount: -11500.00, text: 'Tarjeta - Tuenti', platform: 'Personal Pay' },
-  { date: '2026-02-02', amount: -550.00, text: 'Tarjeta - Pedidos Ya', platform: 'Personal Pay' },
-  { date: '2026-02-02', amount: -14048.00, text: 'Tarjeta - Pedidos Ya', platform: 'Personal Pay' },
-  { date: '2026-01-30', amount: -60000.00, text: 'Azar Pedro', platform: 'Personal Pay' },
-  { date: '2026-01-29', amount: -4900.00, text: 'Adrian Walter Bersano', platform: 'LB Finanzas' },
-  { date: '2026-01-27', amount: -99102.68, text: 'Tarjeta', platform: 'Personal Pay' },
-  { date: '2026-01-23', amount: -50000.00, text: 'Azar Pedro', platform: 'LB Finanzas' },
-  { date: '2026-01-19', amount: -28750.00, text: 'Pago - Varios', platform: 'Buepp' },
-  { date: '2026-01-16', amount: -16637.80, text: 'Tarjeta', platform: 'Personal Pay' },
-  { date: '2026-01-16', amount: -16637.80, text: 'Tarjeta - Metrogas', platform: 'Personal Pay' },
-  { date: '2026-01-15', amount: -12602.86, text: 'ABL - Lafuente', platform: 'Buepp' },
-  { date: '2026-01-15', amount: -8840.00, text: 'Tarjeta - Cenat/ansv', platform: 'Personal Pay' },
-  { date: '2026-01-15', amount: -70600.00, text: 'Tarjeta - Lo de Charly', platform: 'Personal Pay' },
-  { date: '2026-01-13', amount: -25050.00, text: 'Tarjeta - Zeiter Srl', platform: 'Personal Pay' },
-  { date: '2026-01-12', amount: -38064.50, text: 'Tarjeta - Personal/Flow', platform: 'Personal Pay' },
-  { date: '2026-01-10', amount: -661.00, text: 'Tarjeta - Pedidos Ya', platform: 'Personal Pay' },
-  { date: '2026-01-10', amount: -25339.00, text: 'Tarjeta - Pedidos Ya', platform: 'Personal Pay' },
-  { date: '2026-01-09', amount: -63560.00, text: 'Pago - Chacarita', platform: 'Buepp' },
-  { date: '2026-01-09', amount: -558000.00, text: 'Tarjeta - Resumen', platform: 'Santander' },
-  { date: '2026-01-08', amount: -45155.09, text: 'Tarjeta - Carrefour', platform: 'Personal Pay' },
-  { date: '2026-01-07', amount: -8625.00, text: 'Jose Nicolas Bocles', platform: 'Personal Pay' },
-  { date: '2026-01-07', amount: -8000.00, text: 'Alberto Miguel Gnisci', platform: 'Personal Pay' },
-  { date: '2026-01-06', amount: -2500.00, text: 'Marcelo Javier Tcherkassky', platform: 'LB Finanzas' },
-  { date: '2026-01-05', amount: -1250.00, text: 'Tarjeta - Personal', platform: 'Personal Pay' },
-  { date: '2026-01-02', amount: -11500.00, text: 'Tarjeta - Tuenti', platform: 'Personal Pay' }
-];
-
-let transactions = initialMovements.map(m => ({ ...m, id: Math.floor(Math.random() * 100000000) }));
+// ===== STATE =====
+let transactions = [];
 let currentFilter = 'all';
 let currentSearchQuery = '';
 
 // ===== HELPERS =====
 function fmt(amount) {
-  return '$' + Math.abs(amount).toLocaleString('es-AR', { minimumFractionDigits: 2 });
+  const formatted = Math.abs(amount).toLocaleString('es-AR', { minimumFractionDigits: 2 });
+  return amount < 0 ? `-$${formatted}` : `$${formatted}`;
 }
 
 function fmtDate(dateStr) {
@@ -201,6 +161,7 @@ function updateKPIs(displayTransactions) {
 // ===== CHARTS =====
 let platformChartInstance = null;
 let monthlyChartInstance = null;
+let balanceEvolutionChartInstance = null;
 
 function updateCharts(displayTransactions) {
   const platformCanvas = document.getElementById('platformChart');
@@ -343,36 +304,75 @@ function updateCharts(displayTransactions) {
   }
 }
 
-// ===== PLATFORM BARS =====
-function updatePlatformBars(displayTransactions) {
-  const platformBarsEl = document.getElementById('platform-bars');
-  if (!platformBarsEl) return;
+// ===== BALANCE EVOLUTION CHART =====
+function updateBalanceEvolutionChart(displayTransactions) {
+  const canvas = document.getElementById('balanceEvolutionChart');
+  if (!canvas) return;
 
-  const expenses = displayTransactions.filter(t => t.amount < 0);
-  const platformData = {};
-  expenses.forEach(t => {
-    platformData[t.platform] = (platformData[t.platform] || 0) + Math.abs(t.amount);
+  // Group by date and calculate cumulative balance
+  const sorted = [...displayTransactions].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const evolution = {};
+  let runningBalance = 0;
+
+  sorted.forEach(t => {
+    runningBalance += t.amount;
+    evolution[t.date] = runningBalance;
   });
 
-  const sorted = Object.entries(platformData).sort((a, b) => b[1] - a[1]).slice(0, 6);
-  const maxVal = sorted[0]?.[1] || 1;
+  const labels = Object.keys(evolution);
+  const data = Object.values(evolution);
 
-  const colors = ['#7c3aed', '#10b981', '#f43f5e', '#f59e0b', '#06b6d4', '#ec4899'];
-
-  platformBarsEl.innerHTML = sorted.map(([name, val], i) => `
-    <div class="platform-bar-item">
-      <div class="platform-bar-label">
-        <span class="platform-bar-name">${name}</span>
-        <span class="platform-bar-amount">${fmt(val)}</span>
-      </div>
-      <div class="platform-bar-track">
-        <div class="platform-bar-fill" style="width: ${(val / maxVal * 100).toFixed(1)}%; background: ${colors[i % colors.length]};"></div>
-      </div>
-    </div>
-  `).join('');
-
-  if (sorted.length === 0) {
-    platformBarsEl.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem; text-align:center; padding: 1rem 0;">Sin datos para mostrar</p>';
+  if (balanceEvolutionChartInstance) balanceEvolutionChartInstance.destroy();
+  if (labels.length > 0) {
+    balanceEvolutionChartInstance = new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels: labels.map(d => fmtDate(d)),
+        datasets: [{
+          label: 'Evolución de Saldo',
+          data: data,
+          borderColor: '#8b5cf6',
+          backgroundColor: 'rgba(139, 92, 246, 0.1)',
+          fill: true,
+          tension: 0.4,
+          pointRadius: 0,
+          pointHitRadius: 10,
+          borderWidth: 3
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(6,9,20,0.95)',
+            titleColor: '#f1f5f9',
+            bodyColor: '#94a3b8',
+            padding: 12,
+            cornerRadius: 10,
+            callbacks: {
+              label: (ctx) => ` Saldo: $${ctx.parsed.y.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`
+            }
+          }
+        },
+        scales: {
+          x: {
+            display: false,
+            grid: { display: false }
+          },
+          y: {
+            ticks: {
+              color: '#64748b',
+              font: { size: 10 },
+              callback: (v) => '$' + (v / 1000).toFixed(0) + 'k'
+            },
+            grid: { color: 'rgba(255,255,255,0.04)' },
+            border: { display: false }
+          }
+        }
+      }
+    });
   }
 }
 
@@ -396,7 +396,7 @@ function updateRecentList(displayTransactions) {
         <div class="mini-desc">${t.text}</div>
         <div class="mini-date">${fmtDate(t.date)} · ${t.platform}</div>
       </div>
-      <span class="mini-amount ${sign}">${t.amount < 0 ? '-' : '+'}${fmt(t.amount)}</span>
+      <span class="mini-amount ${sign}">${t.amount > 0 ? '+' : ''}${fmt(t.amount)}</span>
     `;
     recentList.appendChild(li);
   });
@@ -407,7 +407,7 @@ function updateDashboard() {
   const displayTransactions = getDashboardFilteredTransactions();
   updateKPIs(displayTransactions);
   updateCharts(displayTransactions);
-  updatePlatformBars(displayTransactions);
+  updateBalanceEvolutionChart(displayTransactions);
   updateRecentList(displayTransactions);
 }
 
@@ -461,7 +461,7 @@ function addTransactionToHistory(t) {
         <span class="tx-platform">${t.platform}</span>
       </div>
     </div>
-    <span class="tx-amount ${sign}">${t.amount < 0 ? '-' : '+'}${fmt(t.amount)}</span>
+    <span class="tx-amount ${sign}">${t.amount > 0 ? '+' : ''}${fmt(t.amount)}</span>
     <button class="delete-btn" onclick="removeTransaction(${t.id})">✕</button>
   `;
   list.appendChild(li);

@@ -223,15 +223,15 @@
 
                 <!-- Progress Bar + Recent -->
                 <div class="bottom-grid">
-                    <div class="chart-card spending-breakdown">
+                    <div class="chart-card balance-evolution">
                         <div class="chart-card-header">
                             <div>
-                                <h3>Análisis de Gastos</h3>
-                                <p>Top plataformas del período</p>
+                                <h3>Evolución de Saldo</h3>
+                                <p>Tendencia del ahorro acumulado</p>
                             </div>
                         </div>
-                        <div id="platform-bars" class="platform-bars">
-                            <!-- Dynamic -->
+                        <div class="chart-wrapper">
+                            <canvas id="balanceEvolutionChart"></canvas>
                         </div>
                     </div>
                     <div class="chart-card recent-card">
