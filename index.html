@@ -87,9 +87,40 @@
                 </a>
             </nav>
             <div class="sidebar-footer">
-                <div class="user-info" id="sidebar-user-info">
+                <div class="user-info" id="sidebar-user-info" style="cursor: pointer; position: relative;">
                     <div class="user-avatar" id="sidebar-avatar">U</div>
                     <span class="user-email" id="sidebar-email">usuario</span>
+                    
+                    <!-- Settings Popover -->
+                    <div id="settings-popover" class="settings-popover">
+                        <div class="popover-header">
+                            <span>Configuración</span>
+                            <button id="close-settings" class="close-popover">✕</button>
+                        </div>
+                        <div class="popover-body">
+                            <div class="setting-item">
+                                <label>Tema Oscuro</label>
+                                <label class="switch">
+                                    <input type="checkbox" id="dark-mode-toggle">
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
+                            <div class="setting-item">
+                                <label>Nombre</label>
+                                <div class="input-inline">
+                                    <input type="text" id="settings-name" placeholder="Tu nombre">
+                                    <button id="save-settings-name" class="btn-icon">✓</button>
+                                </div>
+                            </div>
+                            <div class="setting-divider"></div>
+                            <button id="logout-settings" class="btn-logout-minimal">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+                                </svg>
+                                Cerrar Sesión
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 <button id="logout-btn-side" class="logout-btn">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

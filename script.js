@@ -631,6 +631,87 @@ const incDateEl = document.getElementById('income-date');
 if (expDateEl) expDateEl.valueAsDate = new Date();
 if (incDateEl) incDateEl.valueAsDate = new Date();
 
+// ===== SETTINGS LOGIC =====
+const sidebarUserInfo = document.getElementById('sidebar-user-info');
+const settingsPopover = document.getElementById('settings-popover');
+const closeSettingsBtn = document.getElementById('close-settings');
+const darkModeToggle = document.getElementById('dark-mode-toggle');
+const settingsNameInput = document.getElementById('settings-name');
+const saveSettingsNameBtn = document.getElementById('save-settings-name');
+const logoutSettingsBtn = document.getElementById('logout-settings');
+
+// Toggle Popover
+sidebarUserInfo.addEventListener('click', (e) => {
+  // Prevent toggle if clicking inside the popover itself (unless it's the close button)
+  if (e.target.closest('.settings-popover') && !e.target.closest('.close-popover')) {
+    return;
+  }
+  settingsPopover.classList.toggle('active');
+  
+  // Pre-fill name if available
+  const currentName = document.getElementById('sidebar-email').innerText;
+  if (currentName && !currentName.includes('@')) {
+      settingsNameInput.value = currentName;
+  }
+});
+
+// Close Button
+closeSettingsBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  settingsPopover.classList.remove('active');
+});
+
+// Click Outside to close
+document.addEventListener('click', (e) => {
+  if (!sidebarUserInfo.contains(e.target)) {
+    settingsPopover.classList.remove('active');
+  }
+});
+
+// Dark Mode Logic
+const isDarkMode = localStorage.getItem('theme') !== 'light';
+darkModeToggle.checked = !isDarkMode; // Switch is "Dark Mode Toggle", but logic is often inverted or straightforward
+// Wait, the toggle label is "Tema Oscuro". If checked, it should be dark.
+// But the app is dark by default. So if checked = Dark, unchecked = Light.
+darkModeToggle.checked = isDarkMode;
+if (!isDarkMode) document.body.classList.add('light-mode');
+
+darkModeToggle.addEventListener('change', () => {
+    if (darkModeToggle.checked) {
+        document.body.classList.remove('light-mode');
+        localStorage.setItem('theme', 'dark');
+    } else {
+        document.body.classList.add('light-mode');
+        localStorage.setItem('theme', 'light');
+    }
+});
+
+// Save Name Logic
+saveSettingsNameBtn.addEventListener('click', () => {
+    const newName = settingsNameInput.value.trim();
+    if (!newName) return;
+
+    const user = auth.currentUser;
+    if (user) {
+        user.updateProfile({
+            displayName: newName
+        }).then(() => {
+            // Update UI
+            document.getElementById('sidebar-email').innerText = newName;
+            document.getElementById('sidebar-avatar').innerText = newName[0].toUpperCase();
+            
+            // Visual feedback
+            saveSettingsNameBtn.innerText = '✓';
+            setTimeout(() => { saveSettingsNameBtn.innerText = '✓'; }, 2000);
+        }).catch(err => alert(err.message));
+    }
+});
+
+// Logout from settings
+logoutSettingsBtn.addEventListener('click', () => {
+    auth.signOut();
+});
+
 // ===== INIT =====
 function init() {
   populateYearFilter();
