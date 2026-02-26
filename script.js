@@ -518,7 +518,7 @@ function updateFormSideStats() {
       li.innerHTML = `
         <span class="mini-dot minus"></span>
         <div class="mini-info"><div class="mini-desc">${t.text}</div><div class="mini-date">${fmtDate(t.date)}</div></div>
-        <span class="mini-amount minus">-${fmt(t.amount)}</span>
+        <span class="mini-amount minus">${fmt(t.amount)}</span>
       `;
       expenseList.appendChild(li);
     });
@@ -647,11 +647,11 @@ sidebarUserInfo.addEventListener('click', (e) => {
     return;
   }
   settingsPopover.classList.toggle('active');
-  
+
   // Pre-fill name if available
   const currentName = document.getElementById('sidebar-email').innerText;
   if (currentName && !currentName.includes('@')) {
-      settingsNameInput.value = currentName;
+    settingsNameInput.value = currentName;
   }
 });
 
@@ -677,39 +677,39 @@ darkModeToggle.checked = isDarkMode;
 if (!isDarkMode) document.body.classList.add('light-mode');
 
 darkModeToggle.addEventListener('change', () => {
-    if (darkModeToggle.checked) {
-        document.body.classList.remove('light-mode');
-        localStorage.setItem('theme', 'dark');
-    } else {
-        document.body.classList.add('light-mode');
-        localStorage.setItem('theme', 'light');
-    }
+  if (darkModeToggle.checked) {
+    document.body.classList.remove('light-mode');
+    localStorage.setItem('theme', 'dark');
+  } else {
+    document.body.classList.add('light-mode');
+    localStorage.setItem('theme', 'light');
+  }
 });
 
 // Save Name Logic
 saveSettingsNameBtn.addEventListener('click', () => {
-    const newName = settingsNameInput.value.trim();
-    if (!newName) return;
+  const newName = settingsNameInput.value.trim();
+  if (!newName) return;
 
-    const user = auth.currentUser;
-    if (user) {
-        user.updateProfile({
-            displayName: newName
-        }).then(() => {
-            // Update UI
-            document.getElementById('sidebar-email').innerText = newName;
-            document.getElementById('sidebar-avatar').innerText = newName[0].toUpperCase();
-            
-            // Visual feedback
-            saveSettingsNameBtn.innerText = '✓';
-            setTimeout(() => { saveSettingsNameBtn.innerText = '✓'; }, 2000);
-        }).catch(err => alert(err.message));
-    }
+  const user = auth.currentUser;
+  if (user) {
+    user.updateProfile({
+      displayName: newName
+    }).then(() => {
+      // Update UI
+      document.getElementById('sidebar-email').innerText = newName;
+      document.getElementById('sidebar-avatar').innerText = newName[0].toUpperCase();
+
+      // Visual feedback
+      saveSettingsNameBtn.innerText = '✓';
+      setTimeout(() => { saveSettingsNameBtn.innerText = '✓'; }, 2000);
+    }).catch(err => alert(err.message));
+  }
 });
 
 // Logout from settings
 logoutSettingsBtn.addEventListener('click', () => {
-    auth.signOut();
+  auth.signOut();
 });
 
 // ===== INIT =====
