@@ -847,22 +847,30 @@ option {
 }
 
 .kpi-balance .kpi-icon-wrap {
-    background: rgba(124, 58, 237, 0.15);
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.2), rgba(124, 58, 237, 0.08));
+    border: 1px solid rgba(124, 58, 237, 0.15);
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.08);
     color: var(--primary-light);
 }
 
 .kpi-income .kpi-icon-wrap {
-    background: var(--income-bg);
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.08));
+    border: 1px solid rgba(16, 185, 129, 0.15);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.08);
     color: var(--income-light);
 }
 
 .kpi-expense .kpi-icon-wrap {
-    background: var(--expense-bg);
+    background: linear-gradient(135deg, rgba(244, 63, 94, 0.2), rgba(244, 63, 94, 0.08));
+    border: 1px solid rgba(244, 63, 94, 0.15);
+    box-shadow: 0 4px 12px rgba(244, 63, 94, 0.08);
     color: var(--expense-light);
 }
 
 .kpi-savings .kpi-icon-wrap {
-    background: var(--savings-bg);
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(245, 158, 11, 0.08));
+    border: 1px solid rgba(245, 158, 11, 0.15);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.08);
     color: var(--savings);
 }
 
