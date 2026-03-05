@@ -1,21 +1,39 @@
-/* ===== COCOS VIEW STYLES ===== */
 .cocos-summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
     margin-bottom: 2rem;
 }
 
-.cocos-total {
-    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+@media (max-width: 768px) {
+    .cocos-summary-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.cocos-total-ars,
+.cocos-total-usd {
     border: none;
     color: white;
 }
 
-.cocos-total .kpi-label {
+.cocos-total-ars {
+    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+}
+
+.cocos-total-usd {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+}
+
+.cocos-total-ars .kpi-label,
+.cocos-total-usd .kpi-label {
     color: rgba(255, 255, 255, 0.8);
 }
 
-.cocos-total h3 {
+.cocos-total-ars h3,
+.cocos-total-usd h3 {
     color: white !important;
-    font-size: 2.5rem;
+    font-size: 2.2rem;
 }
 
 .cocos-panels {
