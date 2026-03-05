@@ -25,7 +25,8 @@ const expenseForm = document.getElementById('expense-form');
 const incomeList = document.getElementById('income-list');
 const expenseList = document.getElementById('expense-list');
 
-const cocosTotalBalance = document.getElementById('cocos-total-balance');
+const cocosTotalArs = document.getElementById('cocos-total-ars');
+const cocosTotalUsd = document.getElementById('cocos-total-usd');
 const cocosForm = document.getElementById('cocos-form');
 const cocosPricesList = document.getElementById('cocos-prices-list');
 const cocosHistoryList = document.getElementById('cocos-history-list');
@@ -800,9 +801,10 @@ function calculateCocosBalances() {
   // Reset nominals for each fund
   for (let f in cocosFunds) cocosFunds[f].nominals = 0;
 
-  // Aggregate nominals from history
+  // Aggregate nominals and identify currency from history
   cocosHistory.forEach(op => {
     if (cocosFunds[op.fondo]) {
+      cocosFunds[op.fondo].currency = op.currency; // Determine currency based on history
       if (op.type === 'Suscripcion') {
         cocosFunds[op.fondo].nominals += op.nominales;
       } else {
@@ -811,14 +813,27 @@ function calculateCocosBalances() {
     }
   });
 
-  let totalBalance = 0;
+  let totalArs = 0;
+  let totalUsd = 0;
+
   for (let f in cocosFunds) {
     const balanceValue = cocosFunds[f].nominals * cocosFunds[f].price;
-    totalBalance += balanceValue;
+    const currency = cocosFunds[f].currency || 'ARS';
+
+    if (currency === 'USD') {
+      totalUsd += balanceValue;
+    } else {
+      totalArs += balanceValue;
+    }
+
     const el = document.getElementById(`balance-${f}`);
-    if (el) el.innerText = fmt(balanceValue);
+    if (el) {
+      el.innerText = currency === 'USD' ? `U$D ${balanceValue.toLocaleString('es-AR', { minimumFractionDigits: 2 })}` : fmt(balanceValue);
+    }
   }
-  if (cocosTotalBalance) cocosTotalBalance.innerText = fmt(totalBalance);
+
+  if (cocosTotalArs) cocosTotalArs.innerText = fmt(totalArs);
+  if (cocosTotalUsd) cocosTotalUsd.innerText = `U$D ${totalUsd.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
 }
 
 window.updateCocosPrice = function (ticker) {

@@ -1,17 +1,30 @@
 /* ===== COCOS PREMIUM DESIGNS ===== */
-.cocos-hero {
-    background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
-    padding: 3rem 2rem;
+.cocos-hero-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.cocos-hero-card {
+    padding: 2.5rem 2rem;
     border-radius: 20px;
-    margin-bottom: 2.5rem;
     position: relative;
     overflow: hidden;
     color: white;
     text-align: center;
-    box-shadow: 0 10px 30px rgba(37, 99, 235, 0.2);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
 }
 
-.cocos-hero::before {
+.cocos-hero-card.ars {
+    background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+}
+
+.cocos-hero-card.usd {
+    background: linear-gradient(135deg, #064e3b 0%, #10b981 100%);
+}
+
+.cocos-hero-card::before {
     content: '';
     position: absolute;
     top: -50%;
@@ -23,7 +36,7 @@
 }
 
 .cocos-hero-label {
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     text-transform: uppercase;
     letter-spacing: 2px;
     opacity: 0.8;
@@ -32,21 +45,25 @@
 }
 
 .cocos-hero-amount {
-    font-size: 4rem;
+    font-size: 2.5rem;
     font-weight: 800;
     margin: 0;
     letter-spacing: -1px;
 }
 
-.cocos-hero-badge {
-    display: inline-block;
-    padding: 0.5rem 1rem;
-    background: rgba(255, 255, 255, 0.15);
-    backdrop-filter: blur(5px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 50px;
-    font-size: 0.85rem;
-    margin-top: 1.5rem;
+.cocos-hero-tag {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    margin-top: -1.5rem;
+    margin-bottom: 2.5rem;
+    opacity: 0.6;
+}
+
+@media (max-width: 768px) {
+    .cocos-hero-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 .cocos-panels {
@@ -126,11 +143,89 @@
 }
 
 /* Custom Table Polish */
+.iol-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: auto;
+}
+
 .iol-table th {
     text-transform: uppercase;
     font-size: 0.75rem;
     letter-spacing: 1px;
     color: var(--text-muted);
+    text-align: left;
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.iol-table td {
+    padding: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+    white-space: nowrap;
+    /* Prevent wrapping for price/nominals */
+}
+
+/* Adjusting history table specifically to fill the card */
+#cocos-history-list tr td:last-child {
+    text-align: right;
+}
+
+#cocos-history-list tr td {
+    width: auto;
+}
+
+/* Distribute columns to fill space */
+.iol-table th:nth-child(1),
+.iol-table td:nth-child(1) {
+    width: 15%;
+}
+
+/* Fecha */
+.iol-table th:nth-child(2),
+.iol-table td:nth-child(2) {
+    width: 10%;
+}
+
+/* Tipo */
+.iol-table th:nth-child(3),
+.iol-table td:nth-child(3) {
+    width: 20%;
+}
+
+/* Fondo */
+.iol-table th:nth-child(4),
+.iol-table td:nth-child(4) {
+    width: 15%;
+}
+
+/* Nominales */
+.iol-table th:nth-child(5),
+.iol-table td:nth-child(5) {
+    width: 15%;
+}
+
+/* Monto */
+.iol-table th:nth-child(6),
+.iol-table td:nth-child(6) {
+    width: 10%;
+}
+
+/* Moneda */
+.iol-table th:nth-child(7),
+.iol-table td:nth-child(7) {
+    width: 15%;
+    text-align: right;
+}
+
+/* Centering specific columns for better balance */
+.iol-table th:nth-child(2),
+.iol-table td:nth-child(2),
+.iol-table th:nth-child(4),
+.iol-table td:nth-child(4),
+.iol-table th:nth-child(6),
+.iol-table td:nth-child(6) {
+    text-align: center;
 }
 
 body.light-mode .cocos-hero {

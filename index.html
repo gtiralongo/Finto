@@ -466,13 +466,21 @@
 
             <!-- ===== FONDOS COCOS VIEW ===== -->
             <div id="cocos-view" class="view-section" style="display: none;">
-                <div class="cocos-hero">
-                    <div class="cocos-hero-content">
-                        <span class="cocos-hero-label">Capital Consolidado</span>
-                        <h1 id="cocos-total-balance" class="cocos-hero-amount">$0,00</h1>
-                        <div class="cocos-hero-badge">Fondos Cocos Capital</div>
+                <div class="cocos-hero-grid">
+                    <div class="cocos-hero-card ars">
+                        <div class="cocos-hero-content">
+                            <span class="cocos-hero-label">Capital Total ARS</span>
+                            <h1 id="cocos-total-ars" class="cocos-hero-amount">$0,00</h1>
+                        </div>
+                    </div>
+                    <div class="cocos-hero-card usd">
+                        <div class="cocos-hero-content">
+                            <span class="cocos-hero-label">Capital Total USD</span>
+                            <h1 id="cocos-total-usd" class="cocos-hero-amount">U$D 0,00</h1>
+                        </div>
                     </div>
                 </div>
+                <div class="cocos-hero-tag">Fondos Cocos Capital</div>
 
                 <div class="cocos-panels">
                     <!-- Form Panel -->
@@ -556,7 +564,7 @@
                                     <th>Nominales</th>
                                     <th>Monto</th>
                                     <th>Moneda</th>
-                                    <th>Estado Actual</th>
+                                    <th>Acción</th>
                                 </tr>
                             </thead>
                             <tbody id="cocos-history-list">
