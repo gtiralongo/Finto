@@ -25,9 +25,7 @@ const expenseForm = document.getElementById('expense-form');
 const incomeList = document.getElementById('income-list');
 const expenseList = document.getElementById('expense-list');
 
-const searchInput = document.getElementById('search-input');
-const cocosTotalArs = document.getElementById('cocos-total-ars');
-const cocosTotalUsd = document.getElementById('cocos-total-usd');
+const cocosTotalBalance = document.getElementById('cocos-total-balance');
 const cocosForm = document.getElementById('cocos-form');
 const cocosPricesList = document.getElementById('cocos-prices-list');
 const cocosHistoryList = document.getElementById('cocos-history-list');
@@ -742,12 +740,7 @@ function updateCocosView() {
     snapshot.forEach(doc => {
       console.log("Processing fund:", doc.id, doc.data());
       const data = doc.data();
-      // Initialize if not exists, but don't overwrite currency yet
-      if (!cocosFunds[doc.id]) {
-        cocosFunds[doc.id] = { price: data.price || 0, nominals: 0, currency: 'ARS' };
-      } else {
-        cocosFunds[doc.id].price = data.price || 0;
-      }
+      cocosFunds[doc.id] = { price: data.price || 0, nominals: 0 };
 
       const lastUpdateStr = data.lastUpdated
         ? new Date(data.lastUpdated).toLocaleTimeString('es-AR', { hour: '2-digits', minute: '2-digits' })
@@ -807,10 +800,9 @@ function calculateCocosBalances() {
   // Reset nominals for each fund
   for (let f in cocosFunds) cocosFunds[f].nominals = 0;
 
-  // Aggregate nominals and identify fund currency from history
+  // Aggregate nominals from history
   cocosHistory.forEach(op => {
     if (cocosFunds[op.fondo]) {
-      cocosFunds[op.fondo].currency = op.currency; // Associate currency with the fund
       if (op.type === 'Suscripcion') {
         cocosFunds[op.fondo].nominals += op.nominales;
       } else {
@@ -819,27 +811,14 @@ function calculateCocosBalances() {
     }
   });
 
-  let totalArs = 0;
-  let totalUsd = 0;
-
+  let totalBalance = 0;
   for (let f in cocosFunds) {
     const balanceValue = cocosFunds[f].nominals * cocosFunds[f].price;
-    const currency = cocosFunds[f].currency || 'ARS';
-
-    if (currency === 'USD') {
-      totalUsd += balanceValue;
-    } else {
-      totalArs += balanceValue;
-    }
-
+    totalBalance += balanceValue;
     const el = document.getElementById(`balance-${f}`);
-    if (el) {
-      el.innerText = currency === 'USD' ? `U$D ${balanceValue.toLocaleString('es-AR', { minimumFractionDigits: 2 })}` : fmt(balanceValue);
-    }
+    if (el) el.innerText = fmt(balanceValue);
   }
-
-  if (cocosTotalArs) cocosTotalArs.innerText = fmt(totalArs);
-  if (cocosTotalUsd) cocosTotalUsd.innerText = `U$D ${totalUsd.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+  if (cocosTotalBalance) cocosTotalBalance.innerText = fmt(totalBalance);
 }
 
 window.updateCocosPrice = function (ticker) {
