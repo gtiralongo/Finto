@@ -8,6 +8,7 @@
     <meta name="description"
         content="Finto - Tu asistente financiero personal. Gestiona ingresos y gastos con estadísticas en tiempo real.">
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="cocos.css">
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
@@ -84,6 +85,12 @@
                             d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" />
                     </svg>
                     <span>Historial</span>
+                </a>
+                <a href="#" class="nav-item" data-view="cocos">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                    </svg>
+                    <span>Fondos Cocos</span>
                 </a>
             </nav>
             <div class="sidebar-footer">
@@ -456,6 +463,110 @@
                 </ul>
                 <p id="empty-msg" class="empty-msg" style="display:none;">Sin movimientos registrados.</p>
             </div>
+
+            <!-- ===== FONDOS COCOS VIEW ===== -->
+            <div id="cocos-view" class="view-section" style="display: none;">
+                <div class="cocos-summary-grid">
+                    <div class="kpi-card cocos-total">
+                        <div class="kpi-content">
+                            <span class="kpi-label">Capital Total Fondos</span>
+                            <h3 id="cocos-total-balance">$0,00</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cocos-panels">
+                    <!-- Form Panel -->
+                    <div class="form-card">
+                        <div class="form-card-header">
+                            <h2>Nueva Operación</h2>
+                            <p>Suscripción o Rescate</p>
+                        </div>
+                        <form id="cocos-form">
+                            <div class="form-grid-1">
+                                <div class="form-group">
+                                    <label>Fecha</label>
+                                    <input type="date" id="cocos-date" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Tipo</label>
+                                    <select id="cocos-type">
+                                        <option value="Suscripcion">Suscripción</option>
+                                        <option value="Rescate">Rescate</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Fondo</label>
+                                    <input type="text" id="cocos-fondo" placeholder="COCORMA, COCOSPPA..." required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Nominales</label>
+                                    <input type="number" id="cocos-nominales" step="0.0001" placeholder="0.0000"
+                                        required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Monto Initial / Operado ($)</label>
+                                    <input type="number" id="cocos-amount" step="0.01" placeholder="0.00" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Moneda</label>
+                                    <select id="cocos-currency">
+                                        <option value="ARS">ARS</option>
+                                        <option value="USD">USD</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn-primary" style="margin-top: 1rem;">Registrar
+                                Operación</button>
+                        </form>
+                    </div>
+
+                    <!-- Market Summary (Precios) -->
+                    <div class="chart-card">
+                        <div class="chart-card-header">
+                            <h3>Precios Actuales</h3>
+                        </div>
+                        <div class="table-container">
+                            <table class="iol-table" style="min-width: 100%;">
+                                <thead>
+                                    <tr>
+                                        <th>Fondo</th>
+                                        <th>Precio</th>
+                                        <th>Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cocos-prices-list">
+                                    <!-- Dynamic content -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-card" style="margin-top: 2rem;">
+                    <div class="chart-card-header">
+                        <h3>Historial de Operaciones Cocos</h3>
+                    </div>
+                    <div class="table-container">
+                        <table class="iol-table">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Tipo</th>
+                                    <th>Fondo</th>
+                                    <th>Nominales</th>
+                                    <th>Monto</th>
+                                    <th>Moneda</th>
+                                    <th>Estado Actual</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cocos-history-list">
+                                <!-- Dynamic content -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </main>
 
         <!-- Mobile Navigation -->
@@ -477,11 +588,11 @@
                 </svg>
                 <span>Nuevo</span>
             </a>
-            <a href="#" class="mobile-nav-item" data-view="history">
+            <a href="#" class="mobile-nav-item" data-view="cocos">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
+                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
                 </svg>
-                <span>Historial</span>
+                <span>Cocos</span>
             </a>
         </nav>
     </div>

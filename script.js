@@ -26,9 +26,15 @@ const incomeList = document.getElementById('income-list');
 const expenseList = document.getElementById('expense-list');
 
 const searchInput = document.getElementById('search-input');
+const cocosTotalBalance = document.getElementById('cocos-total-balance');
+const cocosForm = document.getElementById('cocos-form');
+const cocosPricesList = document.getElementById('cocos-prices-list');
+const cocosHistoryList = document.getElementById('cocos-history-list');
 
 // ===== STATE =====
 let transactions = [];
+let cocosFunds = {}; // { ticker: { price: 0, nominals: 0 } }
+let cocosHistory = [];
 let currentFilter = 'all';
 let currentSearchQuery = '';
 
@@ -50,7 +56,8 @@ function generateID() {
 const viewTitles = {
   'dashboard': ['Dashboard', 'Resumen financiero'],
   'transactions-form': ['Movimientos', 'Registrar ingresos y gastos'],
-  'history': ['Historial', 'Todos los movimientos']
+  'history': ['Historial', 'Todos los movimientos'],
+  'cocos': ['Fondos Cocos', 'Gestión de inversiones en Cocos']
 };
 
 navItems.forEach(item => {
@@ -89,6 +96,10 @@ function switchView(view) {
 
   if (view === 'transactions-form') {
     updateFormSideStats();
+  }
+
+  if (view === 'cocos') {
+    updateCocosView();
   }
 }
 
@@ -711,6 +722,133 @@ saveSettingsNameBtn.addEventListener('click', () => {
 logoutSettingsBtn.addEventListener('click', () => {
   auth.signOut();
 });
+
+// ===== COCOS LOGIC =====
+function updateCocosView() {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  // Real-time listener for Cocos Prices (Actual)
+  db.collection('cocos_funds').onSnapshot(snapshot => {
+    cocosFunds = {};
+    cocosPricesList.innerHTML = '';
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      cocosFunds[doc.id] = { price: data.price || 0, nominals: 0 };
+
+      const lastUpdateStr = data.lastUpdated
+        ? new Date(data.lastUpdated).toLocaleTimeString('es-AR', { hour: '2-digits', minute: '2-digits' })
+        : '--:--';
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>
+          <strong>${doc.id}</strong><br>
+          <small style="color:var(--text-soft); font-size:0.75rem; opacity:0.6;">Actualizado ${lastUpdateStr}</small>
+        </td>
+        <td>
+          <div class="mini-input-group">
+            <input type="number" step="0.0001" class="mini-input" value="${data.price || 0}" id="price-${doc.id}">
+            <button class="btn-mini" onclick="updateCocosPrice('${doc.id}')" title="Actualizar Manual">💾</button>
+          </div>
+        </td>
+        <td id="balance-${doc.id}" style="font-weight:700;">$0,00</td>
+      `;
+      cocosPricesList.innerHTML += tr.outerHTML;
+    });
+    calculateCocosBalances();
+  });
+
+  // Real-time listener for Cocos History
+  db.collection('cocos_history').orderBy('date', 'desc').onSnapshot(snapshot => {
+    cocosHistory = [];
+    cocosHistoryList.innerHTML = '';
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      cocosHistory.push({ id: doc.id, ...data });
+
+      const isSusc = data.type === 'Suscripcion';
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="mini-date">${fmtDate(data.date)}</td>
+        <td><span class="status-tag ${isSusc ? 'status-profit' : 'status-loss'}">${data.type === 'Suscripcion' ? 'Suscrip.' : 'Rescate'}</span></td>
+        <td><strong>${data.fondo}</strong></td>
+        <td>${data.nominales.toLocaleString('es-AR', { minimumFractionDigits: 4 })}</td>
+        <td>$${data.amount.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
+        <td>${data.currency}</td>
+        <td><button class="delete-btn" onclick="deleteCocosOp('${doc.id}')">✕</button></td>
+      `;
+      cocosHistoryList.appendChild(tr);
+    });
+    calculateCocosBalances();
+  });
+}
+
+function calculateCocosBalances() {
+  // Reset nominals for each fund
+  for (let f in cocosFunds) cocosFunds[f].nominals = 0;
+
+  // Aggregate nominals from history
+  cocosHistory.forEach(op => {
+    if (cocosFunds[op.fondo]) {
+      if (op.type === 'Suscripcion') {
+        cocosFunds[op.fondo].nominals += op.nominales;
+      } else {
+        cocosFunds[op.fondo].nominals -= op.nominales;
+      }
+    }
+  });
+
+  let totalBalance = 0;
+  for (let f in cocosFunds) {
+    const balance = cocosFunds[f].nominals * cocosFunds[f].price;
+    totalBalance += balance;
+    const el = document.getElementById(`balance-${f}`);
+    if (el) el.innerText = fmt(balance);
+  }
+  if (cocosTotalBalance) cocosTotalBalance.innerText = fmt(totalBalance);
+}
+
+window.updateCocosPrice = function (ticker) {
+  const price = parseFloat(document.getElementById(`price-${ticker}`).value);
+  if (isNaN(price)) return;
+  db.collection('cocos_funds').doc(ticker).set({ price: price }, { merge: true });
+};
+
+window.deleteCocosOp = function (id) {
+  if (confirm('¿Eliminar esta operación de Cocos?')) {
+    db.collection('cocos_history').doc(id).delete();
+  }
+};
+
+if (cocosForm) {
+  cocosForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const date = document.getElementById('cocos-date').value;
+    const type = document.getElementById('cocos-type').value;
+    const fondo = document.getElementById('cocos-fondo').value.toUpperCase();
+    const nominales = parseFloat(document.getElementById('cocos-nominales').value);
+    const amount = parseFloat(document.getElementById('cocos-amount').value);
+    const currency = document.getElementById('cocos-currency').value;
+
+    if (!date || !fondo || isNaN(nominales) || isNaN(amount)) return;
+
+    db.collection('cocos_history').add({
+      date, type, fondo, nominales, amount, currency,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).then(() => {
+      // Also ensure the fund exists in cocos_funds
+      db.collection('cocos_funds').doc(fondo).get().then(doc => {
+        if (!doc.exists) {
+          db.collection('cocos_funds').doc(fondo).set({ price: 1 }); // Default price
+        }
+      });
+      cocosForm.reset();
+      document.getElementById('cocos-date').valueAsDate = new Date();
+    });
+  });
+  document.getElementById('cocos-date').valueAsDate = new Date();
+}
 
 // ===== INIT =====
 function init() {
