@@ -156,7 +156,7 @@ function updateKPIs(displayTransactions) {
     savingsRate.innerText = rate + '%';
     savingsRate.style.color = rate >= 0 ? 'var(--savings)' : 'var(--expense-light)';
   }
-  if (savingsLabel) savingsLabel.innerText = `(${fmt(savingsAmount)}) de ahorro`;
+  if (savingsLabel) savingsLabel.innerText = 'del total ingresado';
 }
 
 // ===== CHARTS =====
@@ -310,20 +310,34 @@ function updateBalanceEvolutionChart(displayTransactions) {
   const canvas = document.getElementById('balanceEvolutionChart');
   if (!canvas) return;
 
-  // Group by date and calculate cumulative balance
-  const sorted = [...displayTransactions].sort((a, b) => new Date(a.date) - new Date(b.date));
+  // Use all transactions up to the end of the currently filtered period to show real evolution
+  const filtered = getDashboardFilteredTransactions();
+  let endDate = new Date();
 
-  // Calculate starting balance from all transactions BEFORE the current displayTransactions range
-  let runningBalance = 0;
-  if (sorted.length > 0) {
-    const firstPeriodDate = new Date(sorted[0].date + 'T00:00:00');
-    runningBalance = transactions
-      .filter(t => new Date(t.date + 'T00:00:00') < firstPeriodDate)
-      .reduce((acc, t) => acc + t.amount, 0);
+  if (filtered.length > 0) {
+    // End of the most recent transaction in the filtered set
+    const sortedFiltered = [...filtered].sort((a, b) => new Date(b.date) - new Date(a.date));
+    endDate = new Date(sortedFiltered[0].date + 'T23:59:59');
+  } else if (filterYear.value !== 'all' || filterMonth.value !== 'all') {
+    // End of the selected month/year
+    const year = filterYear.value === 'all' ? new Date().getFullYear() : parseInt(filterYear.value);
+    const month = filterMonth.value === 'all' ? 11 : parseInt(filterMonth.value) - 1;
+    endDate = new Date(year, month + 1, 0, 23, 59, 59);
+  }
+
+  // Get ALL transactions until that date
+  const history = transactions
+    .filter(t => new Date(t.date + 'T00:00:00') <= endDate)
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  if (history.length === 0) {
+    if (balanceEvolutionChartInstance) balanceEvolutionChartInstance.destroy();
+    return;
   }
 
   const evolution = {};
-  sorted.forEach(t => {
+  let runningBalance = 0;
+  history.forEach(t => {
     runningBalance += t.amount;
     evolution[t.date] = runningBalance;
   });
@@ -352,6 +366,14 @@ function updateBalanceEvolutionChart(displayTransactions) {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        layout: {
+          padding: {
+            left: -10,
+            right: 0,
+            top: 10,
+            bottom: 0
+          }
+        },
         plugins: {
           legend: { display: false },
           tooltip: {
