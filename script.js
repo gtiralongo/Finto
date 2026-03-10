@@ -150,12 +150,13 @@ function updateKPIs(displayTransactions) {
   if (expenseCount) expenseCount.innerText = `${expenses.length} movimiento${expenses.length !== 1 ? 's' : ''}`;
 
   // Savings rate
-  const rate = income > 0 ? Math.round(((income - expense) / income) * 100) : 0;
+  const savingsAmount = income - expense;
+  const rate = income > 0 ? Math.round((savingsAmount / income) * 100) : 0;
   if (savingsRate) {
     savingsRate.innerText = rate + '%';
     savingsRate.style.color = rate >= 0 ? 'var(--savings)' : 'var(--expense-light)';
   }
-  if (savingsLabel) savingsLabel.innerText = 'del total ingresado';
+  if (savingsLabel) savingsLabel.innerText = `(${fmt(savingsAmount)}) de ahorro`;
 }
 
 // ===== CHARTS =====
@@ -291,7 +292,7 @@ function updateCharts(displayTransactions) {
             ticks: {
               color: '#64748b',
               font: { size: 10, family: 'Inter' },
-              callback: (v) => '$' + (v / 1000).toFixed(0) + 'k'
+              callback: (v) => '$' + v.toLocaleString('es-AR', { maximumFractionDigits: 0 })
             },
             grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false },
             border: { display: false }
@@ -311,9 +312,17 @@ function updateBalanceEvolutionChart(displayTransactions) {
 
   // Group by date and calculate cumulative balance
   const sorted = [...displayTransactions].sort((a, b) => new Date(a.date) - new Date(b.date));
-  const evolution = {};
-  let runningBalance = 0;
 
+  // Calculate starting balance from all transactions BEFORE the current displayTransactions range
+  let runningBalance = 0;
+  if (sorted.length > 0) {
+    const firstPeriodDate = new Date(sorted[0].date + 'T00:00:00');
+    runningBalance = transactions
+      .filter(t => new Date(t.date + 'T00:00:00') < firstPeriodDate)
+      .reduce((acc, t) => acc + t.amount, 0);
+  }
+
+  const evolution = {};
   sorted.forEach(t => {
     runningBalance += t.amount;
     evolution[t.date] = runningBalance;
@@ -365,7 +374,7 @@ function updateBalanceEvolutionChart(displayTransactions) {
             ticks: {
               color: '#64748b',
               font: { size: 10 },
-              callback: (v) => '$' + (v / 1000).toFixed(0) + 'k'
+              callback: (v) => '$' + v.toLocaleString('es-AR', { maximumFractionDigits: 0 })
             },
             grid: { color: 'rgba(255,255,255,0.04)' },
             border: { display: false }
