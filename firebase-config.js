@@ -76,17 +76,22 @@ if (logoutBtnSide) logoutBtnSide.addEventListener('click', logoutHandler);
 function updateLocalStorage() {
     const user = auth.currentUser;
     if (user) {
-        // Sync with Firestore would go here
+        // Sync with Firestore
         db.collection('users').doc(user.uid).set({
-            transactions: transactions
+            transactions: transactions,
+            savings: savings,
+            deposits: deposits
         });
     }
 }
 
 function loadUserTransactions(uid) {
     db.collection('users').doc(uid).get().then(doc => {
-        // Load cloud transactions or default to empty array
-        transactions = (doc.exists && doc.data().transactions) ? doc.data().transactions : [];
+        // Load cloud data or default
+        const data = doc.exists ? doc.data() : {};
+        transactions = data.transactions || [];
+        savings = data.savings || [];
+        deposits = data.deposits || [];
         init();
     });
 }
