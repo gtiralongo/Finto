@@ -467,18 +467,19 @@ const saveForm = document.getElementById('savings-form');
 const saveAsset = document.getElementById('savings-asset');
 const savePlatform = document.getElementById('savings-platform');
 const saveQuantity = document.getElementById('savings-quantity');
-const savePrice = document.getElementById('savings-price');
+const saveAmount = document.getElementById('savings-amount');
 const saveDate = document.getElementById('savings-date');
-const saveTotalDisplay = document.getElementById('savings-total-display');
+const savePriceDisplay = document.getElementById('savings-price-display');
 const saveTableBody = document.querySelector('tbody'); // We'll find it by context if multiple
 let savingsAssetChartInstance = null;
 
-if (saveQuantity && savePrice) {
-  [saveQuantity, savePrice].forEach(input => {
+if (saveQuantity && saveAmount) {
+  [saveQuantity, saveAmount].forEach(input => {
     input.addEventListener('input', () => {
       const q = parseFloat(saveQuantity.value) || 0;
-      const p = parseFloat(savePrice.value) || 0;
-      saveTotalDisplay.value = fmt(q * p);
+      const a = parseFloat(saveAmount.value) || 0;
+      const p = q > 0 ? a / q : 0;
+      savePriceDisplay.value = fmt(p);
     });
   });
 }
@@ -486,19 +487,23 @@ if (saveQuantity && savePrice) {
 if (saveForm) {
   saveForm.addEventListener('submit', (e) => {
     e.preventDefault();
+    const q = parseFloat(saveQuantity.value) || 0;
+    const a = parseFloat(saveAmount.value) || 0;
+    const p = q > 0 ? a / q : 0;
+
     const item = {
       id: generateID(),
       asset: saveAsset.value.toUpperCase(),
       platform: savePlatform.value,
-      quantity: parseFloat(saveQuantity.value),
-      price: parseFloat(savePrice.value),
+      quantity: q,
+      price: p,
       date: saveDate.value
     };
     savings.push(item);
     updateLocalStorage();
     saveForm.reset();
     saveDate.valueAsDate = new Date();
-    saveTotalDisplay.value = '$0,00';
+    savePriceDisplay.value = '$0,00';
     updateSavingsUI();
     updateDashboard();
   });
@@ -527,13 +532,13 @@ function updateSavingsUI() {
             <td style="padding: 1rem; text-align: right;">${fmt(s.price)}</td>
             <td style="padding: 1rem; text-align: right; font-weight: 700;">${fmt(total)}</td>
             <td style="padding: 1rem;">${s.platform}</td>
-            <td style="padding: 1rem; display: flex; gap: 8px;">
+            <td style="padding: 1.25rem 1rem; display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
                 <button class="btn-icon" onclick="openEditModal(${s.id})">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px;">
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                     </svg>
                 </button>
-                <button class="btn-icon" onclick="removeSavings(${s.id})">✕</button>
+                <button class="delete-table-btn" onclick="removeSavings(${s.id})">✕</button>
             </td>
         `;
     tableBody.appendChild(tr);
@@ -633,7 +638,7 @@ function openEditModal(id) {
   document.getElementById('edit-savings-asset').value = item.asset;
   document.getElementById('edit-savings-platform').value = item.platform;
   document.getElementById('edit-savings-quantity').value = item.quantity;
-  document.getElementById('edit-savings-price').value = item.price;
+  document.getElementById('edit-savings-amount').value = (item.price * item.quantity).toFixed(2);
   document.getElementById('edit-savings-date').value = item.date;
 
   document.getElementById('edit-savings-modal').style.display = 'flex';
@@ -651,12 +656,16 @@ if (editSavingsForm) {
     const index = savings.findIndex(s => s.id === id);
 
     if (index !== -1) {
+      const q = parseFloat(document.getElementById('edit-savings-quantity').value) || 0;
+      const a = parseFloat(document.getElementById('edit-savings-amount').value) || 0;
+      const p = q > 0 ? a / q : 0;
+
       savings[index] = {
         id: id,
         asset: document.getElementById('edit-savings-asset').value,
         platform: document.getElementById('edit-savings-platform').value,
-        quantity: parseFloat(document.getElementById('edit-savings-quantity').value),
-        price: parseFloat(document.getElementById('edit-savings-price').value),
+        quantity: q,
+        price: p,
         date: document.getElementById('edit-savings-date').value
       };
       updateLocalStorage();
@@ -833,7 +842,7 @@ function updateFormSideStats() {
 }
 
 // ===== ADD TRANSACTION =====
-function createTransactionFromForm(textVal, amountVal, sign, dateVal, platformVal, isSaving = false, isDeposit = false) {
+function createTransactionFromForm(textVal, amountVal, sign, dateVal, platformVal, isSaving = false, isDeposit = false, qty = 1, targetPlatform = '') {
   const amount = sign * Math.abs(+amountVal);
   const transaction = {
     id: generateID(),
@@ -851,8 +860,8 @@ function createTransactionFromForm(textVal, amountVal, sign, dateVal, platformVa
       id: generateID(),
       asset: assetName,
       platform: platformVal || 'Binance',
-      quantity: 1,
-      price: Math.abs(amount),
+      quantity: qty || 1,
+      price: Math.abs(amount) / (qty || 1),
       date: dateVal
     });
     updateSavingsUI();
@@ -862,7 +871,7 @@ function createTransactionFromForm(textVal, amountVal, sign, dateVal, platformVa
   if (isDeposit && amount < 0) {
     deposits.push({
       id: generateID(),
-      account: platformVal || 'Personal Pay',
+      account: targetPlatform || platformVal || 'Personal Pay',
       amount: Math.abs(amount),
       date: dateVal
     });
@@ -875,33 +884,7 @@ function createTransactionFromForm(textVal, amountVal, sign, dateVal, platformVa
   renderHistoryList();
 }
 
-// ===== MIGRATION FOR PREVIOUS BTC AUTO =====
-function migrateExistingBtcAuto() {
-  const btcAuto = transactions.filter(t => t.text && /BTC.*AUTOMAT/i.test(t.text) && t.amount < 0);
-  let newlyAdded = 0;
 
-  btcAuto.forEach(t => {
-    // Evitar duplicados comparando fecha y monto exacto
-    const alreadyExists = savings.some(s => s.date === t.date && Math.abs((s.price * s.quantity) - Math.abs(t.amount)) < 1);
-    if (!alreadyExists) {
-      savings.push({
-        id: generateID(),
-        asset: 'BTC',
-        platform: t.platform || 'Binance',
-        quantity: 1,
-        price: Math.abs(t.amount),
-        date: t.date
-      });
-      newlyAdded++;
-    }
-  });
-
-  if (newlyAdded > 0) {
-    updateLocalStorage();
-    updateSavingsUI();
-    updateDashboard();
-  }
-}
 
 // ===== REMOVE TRANSACTION =====
 function removeTransaction(id) {
@@ -917,19 +900,41 @@ function removeTransaction(id) {
 
 // ===== FORM LISTENERS =====
 if (expenseForm) {
+  // Toggle conditional fields
+  const isSavingCheck = document.getElementById('expense-is-saving');
+  const isDepositCheck = document.getElementById('expense-is-deposit');
+  const savingField = document.getElementById('expense-saving-field');
+  const depositField = document.getElementById('expense-deposit-field');
+
+  if (isSavingCheck) {
+    isSavingCheck.addEventListener('change', () => {
+      savingField.style.display = isSavingCheck.checked ? 'block' : 'none';
+    });
+  }
+  if (isDepositCheck) {
+    isDepositCheck.addEventListener('change', () => {
+      depositField.style.display = isDepositCheck.checked ? 'block' : 'none';
+    });
+  }
+
   expenseForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const text = document.getElementById('expense-text').value;
     const amount = document.getElementById('expense-amount').value;
     const date = document.getElementById('expense-date').value;
     const platform = document.getElementById('expense-platform').value;
-    const isSaving = document.getElementById('expense-is-saving').checked;
-    const isDeposit = document.getElementById('expense-is-deposit').checked;
+    const isSaving = isSavingCheck.checked;
+    const isDeposit = isDepositCheck.checked;
+    const qty = parseFloat(document.getElementById('expense-qty').value) || 1;
+    const targetPlatform = document.getElementById('expense-deposit-target').value;
 
     if (!text || !amount || !date || !platform) return;
-    createTransactionFromForm(text, amount, -1, date, platform, isSaving, isDeposit);
+    createTransactionFromForm(text, amount, -1, date, platform, isSaving, isDeposit, qty, targetPlatform);
     expenseForm.reset();
     document.getElementById('expense-date').valueAsDate = new Date();
+    savingField.style.display = 'none';
+    depositField.style.display = 'none';
+    
     // Show success feedback
     const btn = expenseForm.querySelector('.btn-submit');
     btn.innerText = '✓ Gasto registrado';
@@ -1132,7 +1137,7 @@ function renderDepositsTable() {
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                     </svg>
                 </button>
-                <button class="delete-btn" onclick="removeDeposit(${d.id})">✕</button>
+                <button class="delete-table-btn" onclick="removeDeposit(${d.id})">✕</button>
             </td>
         `;
     depositsTableBody.appendChild(tr);
@@ -1467,9 +1472,6 @@ function init() {
     updateDepositsUI();
     if (deposits.length === 0) seedDeposits();
   }
-
-  // Migrate old BTC auto
-  migrateExistingBtcAuto();
 }
 
 init();

@@ -1202,6 +1202,24 @@ option {
     grid-template-columns: 1fr 340px;
     gap: 1.5rem;
     animation: fadeIn 0.3s ease;
+    align-items: start;
+}
+
+.fondeo-panel {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.tx-table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow-x: auto;
+    margin-top: 1rem;
+}
+
+.tx-table-wrap table {
+    min-width: 600px;
 }
 
 .form-card {
@@ -1614,6 +1632,48 @@ option {
     transform: translateY(-50%) scale(1.1);
 }
 
+/* ===== TABLE ACTION BUTTONS ===== */
+.delete-table-btn {
+    background: rgba(244, 63, 94, 0.1);
+    color: var(--expense);
+    border: none;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.delete-table-btn:hover {
+    background: var(--expense);
+    color: white;
+    transform: scale(1.1);
+}
+
+.btn-icon {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.btn-icon:hover {
+    background: var(--surface-hover);
+    color: var(--text);
+    border-color: var(--border-hover);
+}
+
 /* ===== EMPTY STATE ===== */
 .empty-msg {
     text-align: center;
@@ -1791,6 +1851,10 @@ option {
 
     .form-grid-2 {
         grid-template-columns: 1fr;
+    }
+
+    .tx-table-wrap {
+        border-radius: var(--radius-md);
     }
 
     .history-toolbar {

@@ -384,29 +384,38 @@
                                     <input type="text" id="expense-platform" placeholder="Personal Pay, Mercado Pago..."
                                         required>
                                 </div>
-                            </div>
-                            <!-- Tracking Options -->
-                            <div class="tracking-options-row">
-                                <label class="custom-toggle saving-toggle">
-                                    <input type="checkbox" id="expense-is-saving" hidden>
-                                    <div class="toggle-control"></div>
-                                    <div class="toggle-label">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-                                        </svg>
-                                        <span>Ahorro</span>
-                                    </div>
-                                </label>
-                                <label class="custom-toggle deposit-toggle">
-                                    <input type="checkbox" id="expense-is-deposit" hidden>
-                                    <div class="toggle-control"></div>
-                                    <div class="toggle-label">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
-                                        </svg>
-                                        <span>Fondeo</span>
-                                    </div>
-                                </label>
+                                <!-- Tracking Options -->
+                                <div class="tracking-options-row" style="grid-column: span 2;">
+                                    <label class="custom-toggle saving-toggle">
+                                        <input type="checkbox" id="expense-is-saving" hidden>
+                                        <div class="toggle-control"></div>
+                                        <div class="toggle-label">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                                            </svg>
+                                            <span>Ahorro</span>
+                                        </div>
+                                    </label>
+                                    <label class="custom-toggle deposit-toggle">
+                                        <input type="checkbox" id="expense-is-deposit" hidden>
+                                        <div class="toggle-control"></div>
+                                        <div class="toggle-label">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
+                                            </svg>
+                                            <span>Fondeo</span>
+                                        </div>
+                                    </label>
+                                </div>
+                                <!-- Conditional Fields -->
+                                <div id="expense-saving-field" class="form-group" style="display: none; grid-column: span 2;">
+                                    <label>Cantidad (Activo)</label>
+                                    <input type="number" id="expense-qty" placeholder="Ej. 0.0001 BTC" step="0.00000001">
+                                </div>
+                                <div id="expense-deposit-field" class="form-group" style="display: none; grid-column: span 2;">
+                                    <label>Plataforma Destino (Fondeo)</label>
+                                    <input type="text" id="expense-deposit-target" placeholder="Ej. IOL, Cocos, Binance...">
+                                </div>
                             </div>
                             <button type="submit" class="btn-submit btn-expense">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -531,7 +540,7 @@
 
             <!-- ===== SAVINGS VIEW ===== -->
             <div id="savings-view" class="view-section" style="display: none;">
-                <div class="form-panel" style="grid-template-columns: 1fr 340px;">
+                <div class="form-panel">
                     <div class="form-card investment-form-card"
                         style="border-top: 3px solid var(--primary); padding-top: 1.5rem;">
                         <form id="savings-form">
@@ -550,16 +559,16 @@
                                     <input type="number" id="savings-quantity" placeholder="0.00" step="any" required>
                                 </div>
                                 <div class="form-group">
-                                    <label>Precio Unitario ($)</label>
-                                    <input type="number" id="savings-price" placeholder="0.00" step="0.01" required>
+                                    <label>Monto Total ($)</label>
+                                    <input type="number" id="savings-amount" placeholder="0.00" step="0.01" required>
                                 </div>
                                 <div class="form-group">
                                     <label>Fecha</label>
                                     <input type="date" id="savings-date" required>
                                 </div>
                                 <div class="form-group">
-                                    <label>Total Calculado</label>
-                                    <input type="text" id="savings-total-display" value="$0,00" disabled
+                                    <label>Precio Unitario Calculado</label>
+                                    <input type="text" id="savings-price-display" value="$0,00" disabled
                                         style="background: rgba(255,255,255,0.03); opacity: 0.8;">
                                 </div>
                             </div>
@@ -604,8 +613,7 @@
                 <div class="history-toolbar" style="margin-top: 2rem;">
                     <h3>Detalle de Movimientos</h3>
                 </div>
-                <div class="table-container"
-                    style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; margin-top: 1rem;">
+                <div class="table-container tx-table-wrap">
                     <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
                         <thead>
                             <tr style="border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02);">
@@ -628,8 +636,7 @@
             <!-- ===== DEPOSITS VIEW ===== -->
             <div id="deposits-view" class="view-section" style="display: none;">
                 <!-- KPI Summary -->
-                <div class="kpi-grid" id="deposits-kpi-grid"
-                    style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-bottom: 2rem;">
+                <div class="kpi-grid" id="deposits-kpi-grid" style="margin-bottom: 2rem;">
                     <div class="kpi-card kpi-balance">
                         <div class="kpi-icon-wrap" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -645,8 +652,7 @@
                     </div>
                 </div>
 
-                <div class="form-panel"
-                    style="display: grid; grid-template-columns: 1fr 340px; gap: 2rem; max-width: 1200px; margin: 0 auto; align-items: start;">
+                <div class="form-panel fondeo-panel">
                     <div class="form-card">
                         <div class="form-card-header">
                             <div class="form-card-icon"
@@ -705,8 +711,7 @@
                 <div class="history-toolbar" style="margin-top: 3rem;">
                     <h3>Historial de Fondeos</h3>
                 </div>
-                <div class="table-container"
-                    style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; margin-top: 1rem;">
+                <div class="table-container tx-table-wrap">
                     <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
                         <thead>
                             <tr style="border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02);">
@@ -790,8 +795,8 @@
                             <input type="number" id="edit-savings-quantity" step="any" required>
                         </div>
                         <div class="form-group">
-                            <label>Precio Compra ($)</label>
-                            <input type="number" id="edit-savings-price" step="0.01" required>
+                            <label>Monto Total ($)</label>
+                            <input type="number" id="edit-savings-amount" step="0.01" required>
                         </div>
                     </div>
                     <div class="form-group">
