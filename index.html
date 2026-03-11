@@ -93,12 +93,6 @@
                     </svg>
                     <span>Mis Ahorros</span>
                 </a>
-                <a href="#" class="nav-item" data-view="deposits">
-                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M7 10l5 5 5-5M12 15V3M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>Fondeos</span>
-                </a>
             </nav>
             <div class="sidebar-footer">
                 <div class="user-info" id="sidebar-user-info" style="cursor: pointer; position: relative;">
@@ -225,23 +219,6 @@
                             <span class="kpi-trend" id="expense-count">0 movimientos</span>
                         </div>
                     </div>
-                </div>
-
-                <!-- Investment KPIs Row -->
-                <div class="kpi-grid investment-kpis">
-                    <div class="kpi-card kpi-deposits">
-                        <div class="kpi-icon-wrap">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M7 10l5 5 5-5M12 15V3M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                        </div>
-                        <div class="kpi-content">
-                            <span class="kpi-label">Capital Fondeado</span>
-                            <h3 id="total-deposits" class="kpi-value">$0,00</h3>
-                            <span class="kpi-trend">Total depositado</span>
-                        </div>
-                    </div>
                     <div class="kpi-card kpi-savings">
                         <div class="kpi-icon-wrap">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -260,6 +237,11 @@
                     </div>
                 </div>
 
+                <!-- Investment KPIs Row -->
+                <!-- <div class="kpi-grid investment-kpis">
+
+                </div> -->
+
                 <!-- Dashboard Analytics Grid -->
                 <div class="charts-grid">
                     <!-- 1. MOVIMIENTOS: Flujo de Caja -->
@@ -276,19 +258,6 @@
                         </div>
                         <div class="chart-wrapper">
                             <canvas id="monthlyChart"></canvas>
-                        </div>
-                    </div>
-
-                    <!-- 3. DISTRIBUCIÓN: Por Plataforma -->
-                    <div class="chart-card chart-side">
-                        <div class="chart-card-header">
-                            <div>
-                                <h3>Fondeos</h3>
-                                <p>Capital por plataforma</p>
-                            </div>
-                        </div>
-                        <div class="chart-wrapper donut-wrapper">
-                            <canvas id="platformChart"></canvas>
                         </div>
                     </div>
 
@@ -393,28 +362,16 @@
                                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                                 <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
                                             </svg>
-                                            <span>Ahorro</span>
-                                        </div>
-                                    </label>
-                                    <label class="custom-toggle deposit-toggle">
-                                        <input type="checkbox" id="expense-is-deposit" hidden>
-                                        <div class="toggle-control"></div>
-                                        <div class="toggle-label">
-                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
-                                            </svg>
-                                            <span>Fondeo</span>
+                                            <span>Ahorro (Activo)</span>
                                         </div>
                                     </label>
                                 </div>
                                 <!-- Conditional Fields -->
-                                <div id="expense-saving-field" class="form-group" style="display: none; grid-column: span 2;">
+                                <div id="expense-saving-field" class="form-group"
+                                    style="display: none; grid-column: span 2;">
                                     <label>Cantidad (Activo)</label>
-                                    <input type="number" id="expense-qty" placeholder="Ej. 0.0001 BTC" step="0.00000001">
-                                </div>
-                                <div id="expense-deposit-field" class="form-group" style="display: none; grid-column: span 2;">
-                                    <label>Plataforma Destino (Fondeo)</label>
-                                    <input type="text" id="expense-deposit-target" placeholder="Ej. IOL, Cocos, Binance...">
+                                    <input type="number" id="expense-qty" placeholder="Ej. 0.0001 BTC"
+                                        step="0.00000001">
                                 </div>
                             </div>
                             <button type="submit" class="btn-submit btn-expense">
@@ -600,6 +557,14 @@
                                 <canvas id="savingsAssetChart"></canvas>
                             </div>
                         </div>
+                        <div class="chart-card" style="padding: 1rem; margin-top: 1rem;">
+                            <h4
+                                style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 1rem;">
+                                Distribución por Cantidad</h4>
+                            <div style="height: 180px;">
+                                <canvas id="savingsQtyChart"></canvas>
+                            </div>
+                        </div>
                         <div class="recent-form-list" style="margin-top: 1rem;">
                             <h4>Detalle Activos</h4>
                             <div id="savings-asset-summary" class="mini-list"
@@ -620,7 +585,7 @@
                                 <th style="padding: 1rem;">Fecha</th>
                                 <th style="padding: 1rem;">Activo</th>
                                 <th style="padding: 1rem; text-align: right;">Cantidad</th>
-                                <th style="padding: 1rem; text-align: right;">Precio</th>
+                                <th style="padding: 1rem; text-align: right;">Precio Unit.</th>
                                 <th style="padding: 1rem; text-align: right;">Total</th>
                                 <th style="padding: 1rem;">Plataforma</th>
                                 <th style="padding: 1rem;">Acciones</th>
@@ -633,100 +598,6 @@
                 </div>
             </div>
 
-            <!-- ===== DEPOSITS VIEW ===== -->
-            <div id="deposits-view" class="view-section" style="display: none;">
-                <!-- KPI Summary -->
-                <div class="kpi-grid" id="deposits-kpi-grid" style="margin-bottom: 2rem;">
-                    <div class="kpi-card kpi-balance">
-                        <div class="kpi-icon-wrap" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
-                            </svg>
-                        </div>
-                        <div class="kpi-content">
-                            <span class="kpi-label">Capital Total Fondeado</span>
-                            <h3 id="deposits-total-balance" class="kpi-value">$0,00</h3>
-                            <span class="kpi-trend" style="color: var(--text-muted)">Dinero total inyectado al
-                                sistema</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-panel fondeo-panel">
-                    <div class="form-card">
-                        <div class="form-card-header">
-                            <div class="form-card-icon"
-                                style="background: rgba(124, 58, 237, 0.1); color: var(--primary-light);">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
-                                </svg>
-                            </div>
-                            <div>
-                                <h2>Registrar Fondeo</h2>
-                                <p>Agrega capital de inversión a una plataforma</p>
-                            </div>
-                        </div>
-                        <form id="deposit-form">
-                            <div class="form-grid-2">
-                                <div class="form-group">
-                                    <label>Cuenta / Plataforma</label>
-                                    <input type="text" id="deposit-account" placeholder="IOL, Cocos, Binance..."
-                                        required>
-                                </div>
-                                <div class="form-group">
-                                    <label>Monto ($)</label>
-                                    <input type="number" id="deposit-amount" placeholder="0.00" step="0.01" required>
-                                </div>
-                                <div class="form-group">
-                                    <label>Fecha</label>
-                                    <input type="date" id="deposit-date" required>
-                                </div>
-                            </div>
-                            <button type="submit" class="btn-submit btn-primary"
-                                style="margin-top: 1.5rem; width: 100%;">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M12 5v14M5 12l7 7 7-7" />
-                                </svg>
-                                Confirmar Fondeo
-                            </button>
-                        </form>
-                    </div>
-
-                    <!-- Side Stats for Deposits -->
-                    <div class="form-side-stats">
-                        <div class="side-stat-card">
-                            <span class="side-stat-label">Distribución de Fondeos</span>
-                            <div id="deposits-platform-cards"
-                                style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1rem;">
-                                <!-- Dynamic platform cards -->
-                                <div
-                                    style="color: var(--text-muted); font-size: 0.82rem; text-align: center; padding: 1rem;">
-                                    Cargando cuentas...
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="history-toolbar" style="margin-top: 3rem;">
-                    <h3>Historial de Fondeos</h3>
-                </div>
-                <div class="table-container tx-table-wrap">
-                    <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
-                        <thead>
-                            <tr style="border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02);">
-                                <th style="padding: 1rem;">Fecha</th>
-                                <th style="padding: 1rem;">Cuenta / Plataforma</th>
-                                <th style="padding: 1rem; text-align: right;">Monto</th>
-                                <th style="padding: 1rem; text-align: center;">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="deposits-table-body">
-                            <!-- Dynamic content -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
         </main>
 
         <!-- Mobile Navigation -->
@@ -812,36 +683,6 @@
         </div>
     </div>
 
-    <!-- Edit Deposit Modal -->
-    <div id="edit-deposit-modal" class="modal-overlay" style="display: none;">
-        <div class="modal-card">
-            <div class="modal-header">
-                <h3>Editar Fondeo</h3>
-                <button type="button" class="btn-icon" onclick="closeEditDepositModal()">✕</button>
-            </div>
-            <div class="modal-body">
-                <form id="edit-deposit-form">
-                    <input type="hidden" id="edit-deposit-id">
-                    <div class="form-group">
-                        <label>Cuenta / Plataforma</label>
-                        <input type="text" id="edit-deposit-account" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Monto ($)</label>
-                        <input type="number" id="edit-deposit-amount" step="0.01" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Fecha</label>
-                        <input type="date" id="edit-deposit-date" required>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn-secondary" onclick="closeEditDepositModal()">Cancelar</button>
-                        <button type="submit" class="btn-primary">Guardar Cambios</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="firebase-config.js"></script>
