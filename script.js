@@ -176,10 +176,12 @@ function updateKPIs(displayTransactions, displaySavings) {
 let monthlyChartInstance = null;
 let balanceEvolutionChartInstance = null;
 let dashSavingsChartInstance = null;
+let dashSavingsQtyChartInstance = null;
 
 function updateCharts(displayTransactions, displaySavings) {
   const monthlyCanvas = document.getElementById('monthlyChart');
   const dashSavingsCanvas = document.getElementById('dashSavingsChart');
+  const dashSavingsQtyCanvas = document.getElementById('dashSavingsQtyChart');
 
   if (!monthlyCanvas) return;
   const palette = ['#7c3aed', '#10b981', '#f43f5e', '#f59e0b', '#06b6d4', '#ec4899', '#8b5cf6', '#14b8a6'];
@@ -298,6 +300,48 @@ function updateCharts(displayTransactions, displaySavings) {
               backgroundColor: 'rgba(6,9,20,0.95)',
               callbacks: {
                 label: (ctx) => ` ${ctx.label}: $${ctx.parsed.toLocaleString('es-AR')}`
+              }
+            }
+          },
+          cutout: '72%'
+        }
+      });
+    }
+  }
+
+  // Portfolio Quantities Distribution
+  if (dashSavingsQtyCanvas) {
+    const assetsQtyData = {};
+    (displaySavings || savings).forEach(s => {
+      assetsQtyData[s.asset] = (assetsQtyData[s.asset] || 0) + s.quantity;
+    });
+
+    const labels = Object.keys(assetsQtyData);
+    const values = Object.values(assetsQtyData);
+
+    if (dashSavingsQtyChartInstance) dashSavingsQtyChartInstance.destroy();
+
+    if (labels.length > 0) {
+      dashSavingsQtyChartInstance = new Chart(dashSavingsQtyCanvas, {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: values,
+            backgroundColor: palette,
+            borderWidth: 0,
+            hoverOffset: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: 'rgba(6,9,20,0.95)',
+              callbacks: {
+                label: (ctx) => ` ${ctx.label}: ${ctx.parsed.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} uds.`
               }
             }
           },
@@ -469,7 +513,7 @@ function updateSavingsUI() {
     // Treat s.price as the TOTAL amount
     const total = s.price;
     const unitPrice = s.quantity > 0 ? s.price / s.quantity : 0;
-    
+
     totalValue += total;
     assetsData[s.asset] = (assetsData[s.asset] || 0) + total;
     assetsQtyData[s.asset] = (assetsQtyData[s.asset] || 0) + s.quantity;
@@ -906,7 +950,7 @@ if (expenseForm) {
     expenseForm.reset();
     document.getElementById('expense-date').valueAsDate = new Date();
     if (savingField) savingField.style.display = 'none';
-    
+
     // Show success feedback
     const btn = expenseForm.querySelector('.btn-submit');
     btn.innerText = '✓ Gasto registrado';

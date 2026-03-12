@@ -261,16 +261,29 @@
                         </div>
                     </div>
 
-                    <!-- 4. ACTIVOS: Por Activo -->
+                    <!-- Portfolio: Por Activo -->
                     <div class="chart-card chart-side">
                         <div class="chart-card-header">
                             <div>
-                                <h3>Portfolio (Activos)</h3>
-                                <p>Distribución de tenencias</p>
+                                <h3>Portfolio (Inversión total)</h3>
+                                <p>Distribución por valor monetario</p>
                             </div>
                         </div>
                         <div class="chart-wrapper donut-wrapper">
                             <canvas id="dashSavingsChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Portfolio: Por Cantidad (Movido desde Ahorros) -->
+                    <div class="chart-card chart-side">
+                        <div class="chart-card-header">
+                            <div>
+                                <h3>Portfolio (Cantidades)</h3>
+                                <p>Distribución por cantidad de activos</p>
+                            </div>
+                        </div>
+                        <div class="chart-wrapper donut-wrapper">
+                            <canvas id="dashSavingsQtyChart"></canvas>
                         </div>
                     </div>
                 </div>
@@ -548,22 +561,6 @@
                             <span class="side-stat-label">Ahorrado este mes</span>
                             <span class="side-stat-value" id="savings-stat-month"
                                 style="color: var(--text);">$0,00</span>
-                        </div>
-                        <div class="chart-card" style="padding: 1rem; margin-top: 1rem;">
-                            <h4
-                                style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 1rem;">
-                                Distribución Visual</h4>
-                            <div style="height: 180px;">
-                                <canvas id="savingsAssetChart"></canvas>
-                            </div>
-                        </div>
-                        <div class="chart-card" style="padding: 1rem; margin-top: 1rem;">
-                            <h4
-                                style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 1rem;">
-                                Distribución por Cantidad</h4>
-                            <div style="height: 180px;">
-                                <canvas id="savingsQtyChart"></canvas>
-                            </div>
                         </div>
                         <div class="recent-form-list" style="margin-top: 1rem;">
                             <h4>Detalle Activos</h4>
