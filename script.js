@@ -135,7 +135,11 @@ function getDashboardFilteredSavings() {
 }
 
 function populateYearFilter() {
-  const years = [...new Set(transactions.map(t => new Date(t.date + 'T00:00:00').getFullYear()))].sort((a, b) => b - a);
+  const allDates = [
+    ...transactions.map(t => t.date),
+    ...savings.map(s => s.date)
+  ].filter(d => d);
+  const years = [...new Set(allDates.map(d => new Date(d + 'T00:00:00').getFullYear()))].sort((a, b) => b - a);
   const currentSelection = filterYear.value;
   filterYear.innerHTML = '<option value="all">Todos los años</option>';
   years.forEach(year => {
@@ -146,6 +150,7 @@ function populateYearFilter() {
   });
   if (years.includes(parseInt(currentSelection))) filterYear.value = currentSelection;
 }
+
 
 // ===== KPI UPDATE =====
 function updateKPIs(displayTransactions, displaySavings) {
@@ -563,9 +568,23 @@ function updateSavingsUI() {
     Object.entries(assetsData)
       .sort((a, b) => b[1] - a[1])
       .forEach(([asset, val]) => {
+        const qty = assetsQtyData[asset] || 0;
         const item = document.createElement('div');
-        item.style.cssText = 'display:flex; justify-content:space-between; padding:8px 12px; background:rgba(255,255,255,0.03); border-radius:8px; align-items:center;';
-        item.innerHTML = `<span style="font-weight:700;">${asset}</span> <span style="font-size:0.85rem; color:var(--text-soft);">${fmt(val)}</span>`;
+        item.style.cssText = 'display:flex; justify-content:space-between; padding:12px 16px; background:rgba(255,255,255,0.03); border-radius:12px; align-items:center; border: 1px solid rgba(255,255,255,0.05); transition: all 0.2s ease;';
+        item.innerHTML = `
+          <div style="display:flex; flex-direction:column; gap: 4px;">
+            <span style="font-weight:700; color: var(--text); font-size: 1rem; letter-spacing: 0.5px;">${asset}</span>
+            <div style="display:flex; align-items:center; gap: 6px;">
+              <span style="font-size:0.75rem; color:var(--primary-light); background: rgba(124, 58, 237, 0.1); padding: 2px 8px; border-radius: 4px; font-weight: 600;">
+                ${qty.toLocaleString('es-AR', { maximumFractionDigits: 8 })} uds.
+              </span>
+            </div>
+          </div>
+          <div style="text-align: right;">
+            <span style="font-size:1rem; font-weight:800; color:var(--text);">${fmt(val)}</span>
+            <p style="font-size:0.65rem; color:var(--text-muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px;">Total Ahorrado</p>
+          </div>
+        `;
         summaryEl.appendChild(item);
       });
   }
@@ -742,7 +761,6 @@ function updateRecentList(displayTransactions) {
   });
 }
 
-// ===== DASHBOARD UPDATE =====
 function updateDashboard() {
   const displayTransactions = getDashboardFilteredTransactions();
   const displaySavings = getDashboardFilteredSavings();
@@ -849,18 +867,16 @@ function updateFormSideStats() {
 
   fmtEl('form-income-month', incMonthTotal);
   fmtEl('form-income-year', incYearTotal);
-  fmtEl('form-income-avg', incAvg);
-
   // Mini lists
   if (expenseList) {
     expenseList.innerHTML = '';
     allExpenses.slice(0, 5).forEach(t => {
       const li = document.createElement('li');
       li.innerHTML = `
-        <span class="mini-dot minus"></span>
-        <div class="mini-info"><div class="mini-desc">${t.text}</div><div class="mini-date">${fmtDate(t.date)}</div></div>
-        <span class="mini-amount minus">${fmt(t.amount)}</span>
-      `;
+          <span class="mini-dot minus"></span>
+          <div class="mini-info"><div class="mini-desc">${t.text}</div><div class="mini-date">${fmtDate(t.date)}</div></div>
+          <span class="mini-amount minus">${fmt(t.amount)}</span>
+        `;
       expenseList.appendChild(li);
     });
   }
@@ -870,14 +886,15 @@ function updateFormSideStats() {
     allIncomes.slice(0, 5).forEach(t => {
       const li = document.createElement('li');
       li.innerHTML = `
-        <span class="mini-dot plus"></span>
-        <div class="mini-info"><div class="mini-desc">${t.text}</div><div class="mini-date">${fmtDate(t.date)}</div></div>
-        <span class="mini-amount plus">+${fmt(t.amount)}</span>
-      `;
+          <span class="mini-dot plus"></span>
+          <div class="mini-info"><div class="mini-desc">${t.text}</div><div class="mini-date">${fmtDate(t.date)}</div></div>
+          <span class="mini-amount plus">+${fmt(t.amount)}</span>
+        `;
       incomeList.appendChild(li);
     });
   }
 }
+
 
 // ===== ADD TRANSACTION =====
 function createTransactionFromForm(textVal, amountVal, sign, dateVal, platformVal, isSaving = false, isDeposit = false, qty = 1, targetPlatform = '') {
