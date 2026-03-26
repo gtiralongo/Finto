@@ -99,6 +99,33 @@ body.light-mode .filter-select {
     box-shadow: var(--shadow-sm);
 }
 
+/* Asset Summary Grid */
+.asset-grid-summary {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 8px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+}
+
+.asset-grid-summary::-webkit-scrollbar {
+    width: 6px;
+}
+
+.asset-grid-summary::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 10px;
+}
+
+@media (min-width: 1400px) {
+    .asset-grid-summary {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
 body.light-mode input,
 body.light-mode select {
     background: #ffffff;

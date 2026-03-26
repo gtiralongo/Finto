@@ -28,8 +28,9 @@ const expenseList = document.getElementById('expense-list');
 const searchInput = document.getElementById('search-input');
 
 // ===== STATE =====
-let transactions = [];
-let savings = [];
+let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
+let savings = JSON.parse(localStorage.getItem('savings')) || [];
+let closedTrades = JSON.parse(localStorage.getItem('closedTrades')) || [];
 let currentFilter = 'all';
 let currentSearchQuery = '';
 
@@ -40,7 +41,31 @@ function fmt(amount) {
 }
 
 function fmtDate(dateStr) {
-  return new Date(dateStr + 'T00:00:00').toLocaleDateString('es-AR');
+  if (!dateStr) return '---';
+  // Handle DD/MM/YYYY
+  if (dateStr.includes('/')) {
+    const parts = dateStr.split('/');
+    if (parts.length === 3) {
+      if (parts[0].length === 4) return new Date(parts.join('-') + 'T12:00:00').toLocaleDateString('es-AR');
+      return new Date(parts[2], parts[1] - 1, parts[0]).toLocaleDateString('es-AR');
+    }
+  }
+  return new Date(dateStr + 'T12:00:00').toLocaleDateString('es-AR');
+}
+
+function parseCSVNumber(val) {
+  if (!val) return 0;
+  // Remove currency symbols and non-numeric except , and .
+  let clean = val.replace(/[^\d,.-]/g, '');
+  
+  // Detect if it uses comma as decimal: e.g. "1.234,56" or "1234,56"
+  if (clean.includes(',') && (!clean.includes('.') || clean.indexOf('.') < clean.indexOf(','))) {
+    clean = clean.replace(/\./g, '').replace(',', '.');
+  } else {
+    // Standard format/plain dots e.g. "1,234.56" or "1234.56"
+    clean = clean.replace(/,/g, '');
+  }
+  return parseFloat(clean) || 0;
 }
 
 function generateID() {
@@ -108,6 +133,19 @@ formTabs.forEach(tab => {
     const tabName = tab.getAttribute('data-tab');
     document.getElementById('expense-panel').style.display = tabName === 'expense' ? 'grid' : 'none';
     document.getElementById('income-panel').style.display = tabName === 'income' ? 'grid' : 'none';
+  });
+});
+
+// Internal Tabs (Investments)
+const internalTabs = document.querySelectorAll('[data-tab-internal]');
+internalTabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    internalTabs.forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+
+    const panelName = tab.getAttribute('data-tab-internal');
+    document.getElementById('portfolio-panel').style.display = panelName === 'portfolio' ? 'block' : 'none';
+    document.getElementById('trades-panel').style.display = panelName === 'trades' ? 'block' : 'none';
   });
 });
 
@@ -479,6 +517,48 @@ if (saveQuantity && saveAmount) {
   });
 }
 
+// Sale Modal Preview Logic
+const saleQtyInput = document.getElementById('sale-savings-quantity');
+const saleAmountInput = document.getElementById('sale-savings-amount');
+const saleCurrencySelect = document.getElementById('sale-savings-currency');
+const pnlPreview = document.getElementById('pnl-preview');
+const pnlAmountDisplay = document.getElementById('pnl-amount-display');
+const pnlPercentDisplay = document.getElementById('pnl-percent-display');
+
+function updateSalePNL() {
+  const id = parseInt(document.getElementById('sale-savings-id').value);
+  const item = savings.find(s => s.id === id);
+  if (!item) return;
+
+  const sellQty = parseFloat(saleQtyInput.value) || 0;
+  const sellAmount = parseFloat(saleAmountInput.value) || 0;
+
+  if (sellQty > 0 && sellAmount > 0) {
+    const costBasisPerUnit = item.price / item.quantity;
+    const costOfSoldPortion = costBasisPerUnit * sellQty;
+    const pnl = sellAmount - costOfSoldPortion;
+    const pnlPercent = (pnl / costOfSoldPortion) * 100;
+
+    pnlPreview.style.display = 'block';
+    pnlAmountDisplay.innerText = fmt(pnl);
+    pnlPercentDisplay.innerText = (pnl >= 0 ? '+' : '') + pnlPercent.toFixed(2) + '%';
+    
+    const color = pnl >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
+    pnlAmountDisplay.style.color = color;
+    pnlPercentDisplay.style.color = color;
+    pnlPreview.style.borderColor = pnl >= 0 ? 'var(--income)' : 'var(--expense)';
+    pnlPreview.style.background = pnl >= 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(244, 63, 94, 0.1)';
+  } else {
+    pnlPreview.style.display = 'none';
+  }
+}
+
+if (saleQtyInput && saleAmountInput) {
+  [saleQtyInput, saleAmountInput].forEach(input => {
+    input.addEventListener('input', updateSalePNL);
+  });
+}
+
 if (saveForm) {
   saveForm.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -492,6 +572,7 @@ if (saveForm) {
       platform: savePlatform.value,
       quantity: q,
       price: a, // now stores Total Amount
+      currency: document.getElementById('savings-currency').value || 'ARS',
       date: saveDate.value
     };
     savings.push(item);
@@ -501,6 +582,82 @@ if (saveForm) {
     savePriceDisplay.value = '$0,00';
     updateSavingsUI();
     updateDashboard();
+  });
+}
+
+function openSaleModal(id) {
+  const item = savings.find(s => s.id === id);
+  if (!item) return;
+
+  document.getElementById('sale-savings-id').value = item.id;
+  document.getElementById('sale-asset-name').innerText = item.asset;
+  document.getElementById('sale-max-qty').innerText = `${item.quantity} uds.`;
+  
+  const costBasis = item.price / item.quantity;
+  document.getElementById('sale-cost-basis').innerText = `${fmt(costBasis)} (${item.currency})`;
+  
+  document.getElementById('sale-savings-quantity').value = item.quantity;
+  document.getElementById('sale-savings-amount').value = '';
+  document.getElementById('sale-savings-currency').value = item.currency;
+  document.getElementById('sale-savings-date').valueAsDate = new Date();
+  
+  document.getElementById('pnl-preview').style.display = 'none';
+  document.getElementById('sale-savings-modal').style.display = 'flex';
+}
+
+function closeSaleModal() {
+  document.getElementById('sale-savings-modal').style.display = 'none';
+}
+
+const saleForm = document.getElementById('sale-savings-form');
+if (saleForm) {
+  saleForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const id = parseInt(document.getElementById('sale-savings-id').value);
+    const sellQty = parseFloat(document.getElementById('sale-savings-quantity').value);
+    const sellAmount = parseFloat(document.getElementById('sale-savings-amount').value);
+    const sellDate = document.getElementById('sale-savings-date').value;
+    const sellCurrency = document.getElementById('sale-savings-currency').value;
+
+    const index = savings.findIndex(s => s.id === id);
+    if (index === -1) return;
+
+    const item = savings[index];
+    
+    // Calculate PNL for history text
+    const costBasisPerUnit = item.price / item.quantity;
+    const costOfSoldPortion = costBasisPerUnit * sellQty;
+    const pnl = sellAmount - costOfSoldPortion;
+    const pnlPercent = (pnl / costOfSoldPortion) * 100;
+
+    // 1. Record the Sale as a Closed Trade (NOT as general income)
+    const closedTrade = {
+      id: generateID(),
+      asset: item.asset,
+      quantitySold: sellQty,
+      receivedAmount: sellAmount,
+      costBasis: costOfSoldPortion,
+      pnl: pnl,
+      pnlPercent: pnlPercent,
+      date: sellDate,
+      platform: item.platform,
+      currency: item.currency // Use original purchase currency
+    };
+    closedTrades.push(closedTrade);
+
+    // 2. Update Savings (Active Portfolio)
+    if (sellQty >= item.quantity) {
+      savings.splice(index, 1);
+    } else {
+      const remainingRatio = (item.quantity - sellQty) / item.quantity;
+      item.price = item.price * remainingRatio;
+      item.quantity = item.quantity - sellQty;
+    }
+
+    updateLocalStorage();
+    updateSavingsUI();
+    updateDashboard();
+    closeSaleModal();
   });
 }
 
@@ -530,9 +687,14 @@ function updateSavingsUI() {
             <td style="padding: 1rem; font-weight: 700; color: var(--primary-light);">${s.asset}</td>
             <td style="padding: 1rem; text-align: right;">${s.quantity}</td>
             <td style="padding: 1rem; text-align: right;">${fmt(unitPrice)}</td>
-            <td style="padding: 1rem; text-align: right; font-weight: 700;">${fmt(total)}</td>
+            <td style="padding: 1rem; text-align: right; font-weight: 700;">${fmt(total)} (${s.currency || 'ARS'})</td>
             <td style="padding: 1rem;">${s.platform}</td>
             <td style="padding: 1.25rem 1rem; display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
+                <button class="btn-icon" style="color: var(--income-light);" onclick="openSaleModal(${s.id})" title="Informar Venta">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px;">
+                        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                    </svg>
+                </button>
                 <button class="btn-icon" onclick="openEditModal(${s.id})">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px;">
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
@@ -548,50 +710,117 @@ function updateSavingsUI() {
   const totalEl = document.getElementById('savings-stat-total');
   if (totalEl) totalEl.innerText = fmt(totalValue);
 
-  const monthEl = document.getElementById('savings-stat-month');
-  if (monthEl) {
-    const thisMonth = new Date().getMonth();
-    const thisYear = new Date().getFullYear();
-    const monthTotal = savings
-      .filter(s => {
-        const d = new Date(s.date + 'T12:00:00');
-        return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
-      })
-      .reduce((acc, s) => acc + (s.price), 0);
-    monthEl.innerText = fmt(monthTotal);
+  const pnlEl = document.getElementById('savings-stat-pnl');
+  if (pnlEl) {
+    const pnlByCurrency = {};
+    closedTrades.forEach(t => {
+      const cur = t.currency || 'ARS';
+      pnlByCurrency[cur] = (pnlByCurrency[cur] || 0) + t.pnl;
+    });
+
+    const pnlStrings = Object.entries(pnlByCurrency).map(([cur, val]) => {
+      const formatted = Math.abs(val).toLocaleString('es-AR', { minimumFractionDigits: 0 });
+      const symbol = cur === 'USD' ? 'U$D' : '$';
+      return `${val >= 0 ? '+' : '-'}${symbol}${formatted}`;
+    });
+
+    pnlEl.innerText = pnlStrings.join(' / ') || '$0';
+    
+    // Color based on total sum if mixed, or first if single
+    const totalSum = Object.values(pnlByCurrency).reduce((a, b) => a + b, 0);
+    pnlEl.style.color = totalSum >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
   }
 
   // Summary List
   const summaryEl = document.getElementById('savings-asset-summary');
+  const countBadge = document.getElementById('asset-count-badge');
+  
   if (summaryEl) {
     summaryEl.innerHTML = '';
-    Object.entries(assetsData)
-      .sort((a, b) => b[1] - a[1])
-      .forEach(([asset, val]) => {
+    const assetsEntries = Object.entries(assetsData).sort((a, b) => b[1] - a[1]);
+    
+    if (countBadge) countBadge.innerText = `${assetsEntries.length} activo${assetsEntries.length !== 1 ? 's' : ''}`;
+
+    assetsEntries.forEach(([asset, val]) => {
         const qty = assetsQtyData[asset] || 0;
         const item = document.createElement('div');
-        item.style.cssText = 'display:flex; justify-content:space-between; padding:12px 16px; background:rgba(255,255,255,0.03); border-radius:12px; align-items:center; border: 1px solid rgba(255,255,255,0.05); transition: all 0.2s ease;';
+        item.style.cssText = 'display:flex; justify-content:space-between; padding:10px 14px; background:rgba(255,255,255,0.03); border-radius:12px; align-items:center; border: 1px solid rgba(255,255,255,0.05);';
         item.innerHTML = `
-          <div style="display:flex; flex-direction:column; gap: 4px;">
-            <span style="font-weight:700; color: var(--text); font-size: 1rem; letter-spacing: 0.5px;">${asset}</span>
-            <div style="display:flex; align-items:center; gap: 6px;">
-              <span style="font-size:0.75rem; color:var(--primary-light); background: rgba(124, 58, 237, 0.1); padding: 2px 8px; border-radius: 4px; font-weight: 600;">
-                ${qty.toLocaleString('es-AR', { maximumFractionDigits: 8 })} uds.
-              </span>
-            </div>
+          <div style="display:flex; flex-direction:column; gap: 2px;">
+            <span style="font-weight:700; color: var(--text); font-size: 0.9rem;">${asset}</span>
+            <span style="font-size:0.7rem; color:var(--primary-light); background: rgba(124, 58, 237, 0.1); padding: 1px 6px; border-radius: 4px; width: fit-content;">
+                ${qty.toLocaleString('es-AR', { maximumFractionDigits: 4 })} uds.
+            </span>
           </div>
           <div style="text-align: right;">
-            <span style="font-size:1rem; font-weight:800; color:var(--text);">${fmt(val)}</span>
-            <p style="font-size:0.65rem; color:var(--text-muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px;">Total Ahorrado</p>
+            <span style="font-size:0.9rem; font-weight:800; color:var(--text);">${fmt(val)}</span>
           </div>
         `;
         summaryEl.appendChild(item);
       });
   }
 
+  // Render Closed Trades Table
+  renderClosedTradesTable();
+
   // Visual Chart
   updateSavingsAssetChart(assetsData);
   updateSavingsQtyChart(assetsQtyData);
+}
+
+function renderClosedTradesTable() {
+  const tableBody = document.getElementById('closed-trades-body');
+  if (!tableBody) return;
+  tableBody.innerHTML = '';
+
+  const sorted = [...closedTrades].sort((a, b) => new Date(b.date) - new Date(a.date));
+  let totalCashARS = 0;
+  let totalCashUSD = 0;
+
+  sorted.forEach(t => {
+    const isUSD = (t.currency === 'USD');
+    if (isUSD) totalCashUSD += t.receivedAmount;
+    else totalCashARS += t.receivedAmount;
+
+    const tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid var(--border)';
+    const pnlColor = t.pnl >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
+    const symbol = isUSD ? 'U$D ' : '$';
+    
+    tr.innerHTML = `
+      <td style="padding: 1rem;">${fmtDate(t.date)}</td>
+      <td style="padding: 1rem; font-weight: 700;">${t.asset}</td>
+      <td style="padding: 1rem; text-align: right;">${t.quantitySold.toLocaleString('es-AR')}</td>
+      <td style="padding: 1rem; text-align: right;">${symbol}${ (t.receivedAmount / t.quantitySold).toLocaleString('es-AR', { minimumFractionDigits: 2 }) }</td>
+      <td style="padding: 1rem; text-align: right;">${symbol}${ t.receivedAmount.toLocaleString('es-AR', { minimumFractionDigits: 2 }) }</td>
+      <td style="padding: 1rem; text-align: right; color: ${pnlColor}; font-weight: 700;">
+        ${t.pnl >= 0 ? '+' : '-'}${symbol}${ Math.abs(t.pnl).toLocaleString('es-AR', { minimumFractionDigits: 2 }) } (${t.pnlPercent ? t.pnlPercent.toFixed(1) : '---'}%)
+      </td>
+      <td style="padding: 1rem; text-align: right;">
+        <button class="delete-table-btn" onclick="removeClosedTrade(${t.id})">✕</button>
+      </td>
+    `;
+    tableBody.appendChild(tr);
+  });
+
+  const countEl = document.getElementById('closed-trades-count');
+  if (countEl) countEl.innerText = `${closedTrades.length} operacion${closedTrades.length !== 1 ? 'es' : ''}`;
+
+  const cashEl = document.getElementById('investment-cash-total');
+  if (cashEl) {
+    const cashParts = [];
+    if (totalCashARS > 0 || (totalCashARS === 0 && totalCashUSD === 0)) cashParts.push(`$${totalCashARS.toLocaleString('es-AR')}`);
+    if (totalCashUSD > 0) cashParts.push(`U$D ${totalCashUSD.toLocaleString('es-AR')}`);
+    cashEl.innerText = cashParts.join(' / ');
+  }
+}
+
+function removeClosedTrade(id) {
+  if (confirm('¿Eliminar este registro de venta del historial?')) {
+    closedTrades = closedTrades.filter(t => t.id !== id);
+    updateLocalStorage();
+    updateSavingsUI();
+  }
 }
 
 function updateSavingsAssetChart(assetsData) {
@@ -696,13 +925,21 @@ function openEditModal(id) {
   document.getElementById('edit-savings-quantity').value = item.quantity;
   document.getElementById('edit-savings-amount').value = (item.price).toFixed(2);
   document.getElementById('edit-savings-date').value = item.date;
+  document.getElementById('edit-savings-currency').value = item.currency || 'ARS';
 
   document.getElementById('edit-savings-modal').style.display = 'flex';
 }
 
 function closeEditModal() {
   document.getElementById('edit-savings-modal').style.display = 'none';
+  document.getElementById('edit-savings-form').reset();
 }
+
+const cancelEditBtn = document.getElementById('cancel-edit-savings');
+if (cancelEditBtn) cancelEditBtn.addEventListener('click', closeEditModal);
+
+const cancelSaleBtn = document.getElementById('cancel-sale-savings');
+if (cancelSaleBtn) cancelSaleBtn.addEventListener('click', closeSaleModal);
 
 const editSavingsForm = document.getElementById('edit-savings-form');
 if (editSavingsForm) {
@@ -722,7 +959,8 @@ if (editSavingsForm) {
         platform: document.getElementById('edit-savings-platform').value,
         quantity: q,
         price: a, // store Total Amount
-        date: document.getElementById('edit-savings-date').value
+        date: document.getElementById('edit-savings-date').value,
+        currency: document.getElementById('edit-savings-currency').value
       };
       updateLocalStorage();
       updateSavingsUI();
@@ -897,7 +1135,7 @@ function updateFormSideStats() {
 
 
 // ===== ADD TRANSACTION =====
-function createTransactionFromForm(textVal, amountVal, sign, dateVal, platformVal, isSaving = false, isDeposit = false, qty = 1, targetPlatform = '') {
+function createTransactionFromForm(textVal, amountVal, sign, dateVal, platformVal, isSaving = false, isDeposit = false, qty = 1, targetPlatform = '', assetTicker = '', currency = 'ARS') {
   const amount = sign * Math.abs(+amountVal);
   const transaction = {
     id: generateID(),
@@ -910,13 +1148,14 @@ function createTransactionFromForm(textVal, amountVal, sign, dateVal, platformVa
 
   // Auto-savings
   if (isSaving && amount < 0) {
-    const assetName = textVal && textVal.includes('BTC') ? 'BTC' : (textVal || 'Activo');
+    const assetName = assetTicker || (textVal && textVal.includes('BTC') ? 'BTC' : (textVal || 'Activo'));
     savings.push({
       id: generateID(),
-      asset: assetName,
+      asset: assetName.toUpperCase(),
       platform: platformVal || 'Binance',
       quantity: qty || 1,
       price: Math.abs(amount), // Store Total Amount
+      currency: currency,
       date: dateVal
     });
     updateSavingsUI();
@@ -928,6 +1167,12 @@ function createTransactionFromForm(textVal, amountVal, sign, dateVal, platformVa
   renderHistoryList();
 }
 
+// Override updateLocalStorage if it was just using localStorage.setItem
+function updateLocalStorage() {
+  localStorage.setItem('transactions', JSON.stringify(transactions));
+  localStorage.setItem('savings', JSON.stringify(savings));
+  localStorage.setItem('closedTrades', JSON.stringify(closedTrades));
+}
 
 
 // ===== REMOVE TRANSACTION =====
@@ -948,8 +1193,15 @@ if (expenseForm) {
   const savingField = document.getElementById('expense-saving-field');
 
   if (isSavingCheck) {
+    const savingField = document.getElementById('expense-saving-field');
+    const qtyField = document.getElementById('expense-qty-field');
+    const currencyField = document.getElementById('expense-currency-field');
+
     isSavingCheck.addEventListener('change', () => {
-      savingField.style.display = isSavingCheck.checked ? 'block' : 'none';
+      const show = isSavingCheck.checked ? 'block' : 'none';
+      if (savingField) savingField.style.display = show;
+      if (qtyField) qtyField.style.display = show;
+      if (currencyField) currencyField.style.display = show;
     });
   }
 
@@ -961,12 +1213,18 @@ if (expenseForm) {
     const platform = document.getElementById('expense-platform').value;
     const isSaving = isSavingCheck ? isSavingCheck.checked : false;
     const qty = document.getElementById('expense-qty') ? (parseFloat(document.getElementById('expense-qty').value) || 1) : 1;
+    const assetTicker = document.getElementById('expense-asset-ticker') ? document.getElementById('expense-asset-ticker').value : '';
+    const currency = document.getElementById('expense-currency') ? document.getElementById('expense-currency').value : 'ARS';
 
     if (!text || !amount || !date || !platform) return;
-    createTransactionFromForm(text, amount, -1, date, platform, isSaving, false, qty, '');
+    createTransactionFromForm(text, amount, -1, date, platform, isSaving, false, qty, '', assetTicker, currency);
     expenseForm.reset();
     document.getElementById('expense-date').valueAsDate = new Date();
-    if (savingField) savingField.style.display = 'none';
+    if (document.getElementById('expense-saving-field')) {
+      document.getElementById('expense-saving-field').style.display = 'none';
+      document.getElementById('expense-qty-field').style.display = 'none';
+      document.getElementById('expense-currency-field').style.display = 'none';
+    }
 
     // Show success feedback
     const btn = expenseForm.querySelector('.btn-submit');
@@ -1103,6 +1361,126 @@ logoutSettingsBtn.addEventListener('click', () => {
 });
 
 // Fondeos logic removed
+
+// ===== BULK IMPORT =====
+const btnBulkImport = document.getElementById('btn-bulk-import');
+const bulkImportInput = document.getElementById('bulk-import-input');
+
+if (btnBulkImport && bulkImportInput) {
+  btnBulkImport.addEventListener('click', () => bulkImportInput.click());
+
+  bulkImportInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const csv = event.target.result;
+      processCSV(csv);
+    };
+    reader.readAsText(file);
+    bulkImportInput.value = ''; // Reset for next use
+  });
+}
+
+function processCSV(csv) {
+  // 1. Auto-detect separator (comma vs semicolon)
+  const firstLine = csv.split('\n')[0];
+  const separator = firstLine.includes(';') ? ';' : ',';
+  
+  const lines = csv.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  if (lines.length < 2) return;
+
+  // Clean headers: remove quotes and spaces, set uppercase
+  const headers = lines[0].split(separator).map(h => h.trim().replace(/^["']|["']$/g, '').toUpperCase());
+
+  const getCol = (data, keys) => {
+    const keyMatch = Object.keys(data).find(k => keys.some(ki => k.includes(ki)));
+    return data[keyMatch] || '';
+  };
+
+  let addedCount = 0;
+
+  for (let i = 1; i < lines.length; i++) {
+    // Clean fields: remove quotes and spaces
+    const line = lines[i].split(separator).map(v => v.trim().replace(/^["']|["']$/g, ''));
+    if (line.length < 4) continue;
+
+    const row = {};
+    headers.forEach((h, idx) => {
+      row[h] = line[idx] || '';
+    });
+
+    const isVenta = (getCol(row, ['TIPO']) || '').toUpperCase() === 'VENTA';
+    
+    // Smart number parsing for Argentina/Standard formats
+    const parseSmart = (val) => {
+        if (!val) return 0;
+        let n = val.toString().replace(/[^\d,.-]/g, '');
+        if (n.includes(',') && n.includes('.')) {
+            if (n.indexOf('.') < n.indexOf(',')) n = n.replace(/\./g, '').replace(',', '.');
+            else n = n.replace(/,/g, ''); 
+        } else if (n.includes(',')) {
+            n = n.replace(',', '.');
+        }
+        return parseFloat(n) || 0;
+    };
+
+    const qty = parseSmart(getCol(row, ['CANTIDAD']));
+    const amount = parseSmart(getCol(row, ['MONTO_TOTAL']));
+    const costBasisComp = parseSmart(getCol(row, ['COSTO_ORIGINAL', 'COSTO_COMPRA']));
+    const asset = (getCol(row, ['ACTIVO', 'TICKER', 'INSTRUMENTO']) || '---').toUpperCase();
+    const platform = getCol(row, ['PLATAFORMA', 'BROKER', 'ORIGEN']) || 'Importado';
+    
+    // Clean currency - ensures no numbers/spaces remain
+    let currency = (getCol(row, ['MONEDA']) || 'ARS').replace(/[^a-zA-Z]/g,'').toUpperCase().substring(0, 3);
+    if (currency.length < 2) currency = 'ARS';
+
+    // Normalize date to YYYY-MM-DD
+    let rawDate = (getCol(row, ['FECHA']) || new Date().toISOString().split('T')[0]);
+    if (rawDate.includes('/')) {
+        const p = rawDate.split('/');
+        if (p.length === 3) {
+            if (p[2].length === 4) rawDate = `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
+            else if (p[0].length === 4) rawDate = `${p[0]}-${p[1].padStart(2,'0')}-${p[2].padStart(2,'0')}`;
+        }
+    }
+
+    if (isVenta) {
+      const pnl = costBasisComp > 0 ? (amount - costBasisComp) : amount;
+      const pnlPerc = costBasisComp > 0 ? (pnl / costBasisComp) * 100 : 0;
+
+      closedTrades.push({
+        id: generateID(),
+        asset: asset,
+        quantitySold: qty,
+        receivedAmount: amount,
+        costBasis: costBasisComp,
+        pnl: pnl,
+        pnlPercent: pnlPerc,
+        date: rawDate,
+        platform: platform,
+        currency: currency
+      });
+    } else {
+      savings.push({
+        id: generateID(),
+        asset: asset,
+        platform: platform,
+        quantity: qty,
+        price: amount,
+        currency: currency,
+        date: rawDate
+      });
+    }
+    addedCount++;
+  }
+
+  updateLocalStorage();
+  updateSavingsUI();
+  updateDashboard();
+  alert(`${addedCount} registros procesados correctamente.`);
+}
 
 // ===== INIT =====
 function init() {
