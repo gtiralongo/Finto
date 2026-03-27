@@ -622,27 +622,29 @@
                     </div>
                 </div>
 
-                    <div class="history-toolbar" style="margin-top: 2rem;">
-                        <h3>Detalle de Movimientos Activos</h3>
+                <div class="history-toolbar" style="margin-top: 2rem; display: flex; justify-content: space-between; align-items: center;">
+                    <h3>Detalle de Movimientos Activos</h3>
+                    <div class="search-wrap" style="width: 200px;">
+                        <input type="text" id="savings-search-input" placeholder="Buscar activo..." style="width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text);">
                     </div>
-                    <div class="table-container tx-table-wrap">
-                        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
-                            <thead>
-                                <tr style="border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02);">
-                                    <th style="padding: 1rem;">Fecha</th>
-                                    <th style="padding: 1rem;">Activo</th>
-                                    <th style="padding: 1rem; text-align: right;">Cantidad</th>
-                                    <th style="padding: 1rem; text-align: right;">Precio Unit.</th>
-                                    <th style="padding: 1rem; text-align: right;">Total</th>
-                                    <th style="padding: 1rem;">Plataforma</th>
-                                    <th style="padding: 1rem;">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="inv-table-body">
-                                <!-- Dynamic content -->
-                            </tbody>
-                        </table>
-                    </div>
+                </div>
+                <div class="table-container tx-table-wrap">
+                    <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02);">
+                                <th style="padding: 1rem;">Fecha</th>
+                                <th style="padding: 1rem;">Activo</th>
+                                <th style="padding: 1rem; text-align: right;">Cantidad</th>
+                                <th style="padding: 1rem; text-align: right;">Precio Unit.</th>
+                                <th style="padding: 1rem; text-align: right;">Total</th>
+                                <th style="padding: 1rem;">Plataforma</th>
+                                <th style="padding: 1rem;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inv-table-body">
+                            <!-- Dynamic content -->
+                        </tbody>
+                    </table>
                 </div>
 
                 <!-- Trades History Panel (New) -->
