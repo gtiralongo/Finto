@@ -218,20 +218,22 @@
                             <span class="kpi-trend" id="expense-count">0 movimientos</span>
                         </div>
                     </div>
-                    <div class="kpi-card kpi-savings">
-                        <div class="kpi-icon-wrap">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                stroke-linecap="round" stroke-linejoin="round">
-                                <path
-                                    d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.7-1 2-2h2v-4h-2c0-1-.5-1.5-1-2h0V5z" />
-                                <path d="M20 11v1h2" />
-                                <path d="M13 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z" />
-                            </svg>
+                    <div class="kpi-card kpi-balance">
+                         <div class="kpi-icon-wrap">
+                            <span style="font-weight: 800; color: var(--primary-light);">ARS</span>
                         </div>
                         <div class="kpi-content">
-                            <span class="kpi-label">Capital Ahorrado</span>
-                            <h3 id="total-savings" class="kpi-value">$0,00</h3>
-                            <span class="kpi-trend">Total en activos</span>
+                            <span class="kpi-label">Capital Ahorrado (ARS)</span>
+                            <h3 id="total-savings-ars" class="kpi-value">$0,00</h3>
+                        </div>
+                    </div>
+                    <div class="kpi-card kpi-balance">
+                         <div class="kpi-icon-wrap">
+                            <span style="font-weight: 800; color: var(--primary-light);">USD</span>
+                        </div>
+                        <div class="kpi-content">
+                            <span class="kpi-label">Capital Ahorrado (USD)</span>
+                            <h3 id="total-savings-usd" class="kpi-value">U$D 0,00</h3>
                         </div>
                     </div>
                 </div>
@@ -523,28 +525,46 @@
 
             <!-- ===== INVESTMENTS (SAVINGS) VIEW ===== -->
             <div id="savings-view" class="view-section" style="display: none;">
-                <div class="kpi-grid" style="margin-bottom: 2rem;">
+                <!-- Valor Portafolio Row -->
+                <div class="kpi-grid" style="margin-bottom: 1rem; grid-template-columns: 1fr 1fr;">
                     <div class="kpi-card kpi-balance">
                         <div class="kpi-icon-wrap">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-                            </svg>
+                            <span style="font-weight: 800; color: var(--primary-light);">ARS</span>
                         </div>
                         <div class="kpi-content">
-                            <span class="kpi-label">Valor Portafolio</span>
-                            <span class="kpi-value" id="savings-kpi-total">$0,00</span>
+                            <span class="kpi-label">Var. Portafolio (ARS)</span>
+                            <span class="kpi-value kpi-large" id="savings-kpi-total-ars">$0,00</span>
+                        </div>
+                    </div>
+                    <div class="kpi-card kpi-balance">
+                        <div class="kpi-icon-wrap">
+                            <span style="font-weight: 800; color: var(--primary-light);">USD</span>
+                        </div>
+                        <div class="kpi-content">
+                            <span class="kpi-label">Var. Portafolio (USD)</span>
+                            <span class="kpi-value kpi-large" id="savings-kpi-total-usd">U$D 0,00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PNL & Stats Row -->
+                <div class="kpi-grid" style="margin-bottom: 2rem; grid-template-columns: 1fr 1fr 200px;">
+                    <div class="kpi-card kpi-savings">
+                        <div class="kpi-icon-wrap">
+                             <span style="font-weight: 800; color: var(--income-light);">ARS</span>
+                        </div>
+                        <div class="kpi-content">
+                            <span class="kpi-label">PNL Realizado (ARS)</span>
+                            <span class="kpi-value kpi-large" id="savings-kpi-pnl-ars">$0,00</span>
                         </div>
                     </div>
                     <div class="kpi-card kpi-savings">
                         <div class="kpi-icon-wrap">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="10" />
-                                <path d="M16 12l-4-4-4 4M12 8v8" />
-                            </svg>
+                             <span style="font-weight: 800; color: var(--income-light);">USD</span>
                         </div>
                         <div class="kpi-content">
-                            <span class="kpi-label">PNL Realizado</span>
-                            <span class="kpi-value" id="savings-kpi-pnl">$0,00</span>
+                            <span class="kpi-label">PNL Realizado (USD)</span>
+                            <span class="kpi-value kpi-large" id="savings-kpi-pnl-usd">U$D 0,00</span>
                         </div>
                     </div>
                     <div class="kpi-card kpi-deposits">
@@ -552,20 +572,18 @@
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                                 <circle cx="8.5" cy="7" r="4" />
-                                <line x1="20" y1="8" x2="20" y2="14" />
-                                <line x1="23" y1="11" x2="17" y2="11" />
                             </svg>
                         </div>
                         <div class="kpi-content">
                             <span class="kpi-label">Activos</span>
-                            <span class="kpi-value" id="savings-kpi-count">0</span>
+                            <span class="kpi-value kpi-large" id="savings-kpi-count">0</span>
                         </div>
                     </div>
                 </div>
 
                 <div class="form-tabs" style="margin-bottom: 2rem;">
                     <button class="form-tab active" id="tab-investment-portfolio" data-tab-internal="portfolio">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
                             <rect x="3" y="3" width="7" height="7" rx="1" />
                             <rect x="14" y="3" width="7" height="7" rx="1" />
                             <rect x="14" y="14" width="7" height="7" rx="1" />
@@ -574,7 +592,7 @@
                         Mi Portafolio
                     </button>
                     <button class="form-tab" id="tab-investment-history" data-tab-internal="trades">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
                             <path d="M12 5v14M5 12l7 7 7-7" />
                         </svg>
                         Historial de Ventas
@@ -641,14 +659,24 @@
 
                     <div class="form-side-stats">
                         <div class="side-stat-card">
-                            <span class="side-stat-label">Valor Total Portafolio</span>
-                            <span class="side-stat-value" id="savings-stat-total"
+                            <span class="side-stat-label">Valor Portafolio (ARS)</span>
+                            <span class="side-stat-value" id="savings-stat-total-ars"
                                 style="color: var(--primary-light);">$0,00</span>
                         </div>
+                        <div class="side-stat-card">
+                            <span class="side-stat-label">Valor Portafolio (USD)</span>
+                            <span class="side-stat-value" id="savings-stat-total-usd"
+                                style="color: var(--primary-light);">U$D 0,00</span>
+                        </div>
                         <div class="side-stat-card" style="border-left-color: var(--income);">
-                            <span class="side-stat-label">PNL Realizado Total</span>
-                            <span class="side-stat-value" id="savings-stat-pnl"
+                            <span class="side-stat-label">PNL Realizado (ARS)</span>
+                            <span class="side-stat-value" id="savings-stat-pnl-ars"
                                 style="color: var(--income-light); font-weight: 800;">$0,00</span>
+                        </div>
+                        <div class="side-stat-card" style="border-left-color: var(--income);">
+                            <span class="side-stat-label">PNL Realizado (USD)</span>
+                            <span class="side-stat-value" id="savings-stat-pnl-usd"
+                                style="color: var(--income-light); font-weight: 800;">U$D 0,00</span>
                         </div>
                         <div class="recent-form-list" style="margin-top: 1.5rem;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">

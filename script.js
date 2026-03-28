@@ -227,18 +227,13 @@ function updateKPIs(displayTransactions, displaySavings) {
     totalSavByCur[cur] = (totalSavByCur[cur] || 0) + val;
   });
 
-  const totalSavingsEl = document.getElementById('total-savings');
-  if (totalSavingsEl) {
-    const entries = Object.entries(totalSavByCur);
-    if (entries.length === 0) {
-        totalSavingsEl.innerText = '$0,00';
-    } else {
-        totalSavingsEl.innerText = entries.map(([cur, val]) => {
-            const symbol = cur === 'USD' ? 'U$D ' : '$';
-            return `${symbol}${val.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
-        }).join(' / ');
-    }
-  }
+  const totalSavingsArsEl = document.getElementById('total-savings-ars');
+  const totalSavingsUsdEl = document.getElementById('total-savings-usd');
+  
+  const fmt = (val, symbol) => `${symbol}${val.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+
+  if (totalSavingsArsEl) totalSavingsArsEl.innerText = fmt(totalSavByCur['ARS'] || 0, '$');
+  if (totalSavingsUsdEl) totalSavingsUsdEl.innerText = fmt(totalSavByCur['USD'] || 0, 'U$D ');
 }
 
 // ===== CHARTS =====
@@ -751,50 +746,62 @@ function updateSavingsUI() {
     }).join(' / ');
   };
 
-  const totalEl = document.getElementById('savings-stat-total');
-  if (totalEl) totalEl.innerText = fmtCurrencyMap(totalValueByCurrency);
+  const pnlArsEl = document.getElementById('savings-stat-pnl-ars');
+  const pnlUsdEl = document.getElementById('savings-stat-pnl-usd');
+  
+  const pnlByCurrency = {};
+  closedTrades.forEach(t => {
+    const cur = (t.currency || 'ARS').toUpperCase();
+    pnlByCurrency[cur] = (pnlByCurrency[cur] || 0) + (parseFloat(t.pnl) || 0);
+  });
 
-  const pnlEl = document.getElementById('savings-stat-pnl');
-  if (pnlEl) {
-    const pnlByCurrency = {};
-    closedTrades.forEach(t => {
-      const cur = t.currency || 'ARS';
-      pnlByCurrency[cur] = (pnlByCurrency[cur] || 0) + t.pnl;
-    });
+  const fmtSimple = (val, symbol) => `${symbol}${val.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
 
-    const pnlStrings = Object.entries(pnlByCurrency).map(([cur, val]) => {
-      const formatted = Math.abs(val).toLocaleString('es-AR', { minimumFractionDigits: 0 });
-      const symbol = cur === 'USD' ? 'U$D' : '$';
-      return `${val >= 0 ? '+' : '-'}${symbol}${formatted}`;
-    });
-
-    pnlEl.innerText = pnlStrings.join(' / ') || '$0';
-    
-    // Color based on total sum if mixed, or first if single
-    const totalSum = Object.values(pnlByCurrency).reduce((a, b) => a + b, 0);
-    pnlEl.style.color = totalSum >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
+  if (pnlArsEl) {
+    const val = pnlByCurrency['ARS'] || 0;
+    pnlArsEl.innerText = fmtSimple(val, '$');
+    pnlArsEl.style.color = val >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
+  }
+  if (pnlUsdEl) {
+    const val = pnlByCurrency['USD'] || 0;
+    pnlUsdEl.innerText = fmtSimple(val, 'U$D ');
+    pnlUsdEl.style.color = val >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
   }
 
+  const totalArsEl = document.getElementById('savings-stat-total-ars');
+  const totalUsdEl = document.getElementById('savings-stat-total-usd');
+  if (totalArsEl) totalArsEl.innerText = fmtSimple(totalValueByCurrency['ARS'] || 0, '$');
+  if (totalUsdEl) totalUsdEl.innerText = fmtSimple(totalValueByCurrency['USD'] || 0, 'U$D ');
+
   // Populate New KPI Cards
-  const kpiTotal = document.getElementById('savings-kpi-total');
-  const kpiRoi = document.getElementById('savings-kpi-roi');
-  const kpiPnl = document.getElementById('savings-kpi-pnl');
+  const kpiTotalArs = document.getElementById('savings-kpi-total-ars');
+  const kpiTotalUsd = document.getElementById('savings-kpi-total-usd');
+  const kpiPnlArs = document.getElementById('savings-kpi-pnl-ars');
+  const kpiPnlUsd = document.getElementById('savings-kpi-pnl-usd');
   const kpiCount = document.getElementById('savings-kpi-count');
 
-  if (kpiTotal) kpiTotal.innerText = fmtCurrencyMap(totalValueByCurrency);
+  if (kpiTotalArs) kpiTotalArs.innerText = fmtSimple(totalValueByCurrency['ARS'] || 0, '$');
+  if (kpiTotalUsd) kpiTotalUsd.innerText = fmtSimple(totalValueByCurrency['USD'] || 0, 'U$D ');
   if (kpiCount) kpiCount.innerText = Object.keys(assetsData).length;
 
-  if (kpiPnl) {
+  if (kpiPnlArs || kpiPnlUsd) {
     const pnlByCurrencyTotal = {};
     closedTrades.forEach(t => {
         const cur = (t.currency || 'ARS').toUpperCase();
         const pVal = parseFloat(t.pnl) || 0;
         pnlByCurrencyTotal[cur] = (pnlByCurrencyTotal[cur] || 0) + pVal;
     });
-    kpiPnl.innerText = fmtCurrencyMap(pnlByCurrencyTotal);
-    
-    const totalSumPnl = Object.values(pnlByCurrencyTotal).reduce((a, b) => a + (parseFloat(b) || 0), 0);
-    kpiPnl.style.color = totalSumPnl >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
+
+    if (kpiPnlArs) {
+        const v = pnlByCurrencyTotal['ARS'] || 0;
+        kpiPnlArs.innerText = fmtSimple(v, '$');
+        kpiPnlArs.style.color = v >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
+    }
+    if (kpiPnlUsd) {
+        const v = pnlByCurrencyTotal['USD'] || 0;
+        kpiPnlUsd.innerText = fmtSimple(v, 'U$D ');
+        kpiPnlUsd.style.color = v >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
+    }
   }
 
   // Summary List
