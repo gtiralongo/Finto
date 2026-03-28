@@ -523,6 +523,46 @@
 
             <!-- ===== INVESTMENTS (SAVINGS) VIEW ===== -->
             <div id="savings-view" class="view-section" style="display: none;">
+                <div class="kpi-grid" style="margin-bottom: 2rem;">
+                    <div class="kpi-card kpi-balance">
+                        <div class="kpi-icon-wrap">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                            </svg>
+                        </div>
+                        <div class="kpi-content">
+                            <span class="kpi-label">Valor Portafolio</span>
+                            <span class="kpi-value" id="savings-kpi-total">$0,00</span>
+                        </div>
+                    </div>
+                    <div class="kpi-card kpi-savings">
+                        <div class="kpi-icon-wrap">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10" />
+                                <path d="M16 12l-4-4-4 4M12 8v8" />
+                            </svg>
+                        </div>
+                        <div class="kpi-content">
+                            <span class="kpi-label">PNL Realizado</span>
+                            <span class="kpi-value" id="savings-kpi-pnl">$0,00</span>
+                        </div>
+                    </div>
+                    <div class="kpi-card kpi-deposits">
+                        <div class="kpi-icon-wrap">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                <circle cx="8.5" cy="7" r="4" />
+                                <line x1="20" y1="8" x2="20" y2="14" />
+                                <line x1="23" y1="11" x2="17" y2="11" />
+                            </svg>
+                        </div>
+                        <div class="kpi-content">
+                            <span class="kpi-label">Activos</span>
+                            <span class="kpi-value" id="savings-kpi-count">0</span>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="form-tabs" style="margin-bottom: 2rem;">
                     <button class="form-tab active" id="tab-investment-portfolio" data-tab-internal="portfolio">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -619,32 +659,33 @@
                                 <!-- JS populated -->
                             </div>
                         </div>
+                        </div>
                     </div>
-                </div>
-
-                <div class="history-toolbar" style="margin-top: 2rem; display: flex; justify-content: space-between; align-items: center;">
-                    <h3>Detalle de Movimientos Activos</h3>
-                    <div class="search-wrap" style="width: 200px;">
-                        <input type="text" id="savings-search-input" placeholder="Buscar activo..." style="width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text);">
+                    
+                    <div class="history-toolbar" style="margin-top: 2rem; display: flex; justify-content: space-between; align-items: center;">
+                        <h3>Detalle de Movimientos Activos</h3>
+                        <div class="search-wrap" style="width: 200px;">
+                            <input type="text" id="savings-search-input" placeholder="Buscar activo..." style="width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text);">
+                        </div>
                     </div>
-                </div>
-                <div class="table-container tx-table-wrap">
-                    <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
-                        <thead>
-                            <tr style="border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02);">
-                                <th style="padding: 1rem;">Fecha</th>
-                                <th style="padding: 1rem;">Activo</th>
-                                <th style="padding: 1rem; text-align: right;">Cantidad</th>
-                                <th style="padding: 1rem; text-align: right;">Precio Unit.</th>
-                                <th style="padding: 1rem; text-align: right;">Total</th>
-                                <th style="padding: 1rem;">Plataforma</th>
-                                <th style="padding: 1rem;">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="inv-table-body">
-                            <!-- Dynamic content -->
-                        </tbody>
-                    </table>
+                    <div class="table-container tx-table-wrap">
+                        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02);">
+                                    <th style="padding: 1rem;">Fecha</th>
+                                    <th style="padding: 1rem;">Activo</th>
+                                    <th style="padding: 1rem; text-align: right;">Cantidad</th>
+                                    <th style="padding: 1rem; text-align: right;">Precio Unit.</th>
+                                    <th style="padding: 1rem; text-align: right;">Total</th>
+                                    <th style="padding: 1rem;">Plataforma</th>
+                                    <th style="padding: 1rem;">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inv-table-body">
+                                <!-- Dynamic content -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <!-- Trades History Panel (New) -->
@@ -669,6 +710,7 @@
                                     <th style="padding: 1rem;">Fecha</th>
                                     <th style="padding: 1rem;">Activo</th>
                                     <th style="padding: 1rem; text-align: right;">Cant. Vendida</th>
+                                    <th style="padding: 1rem; text-align: right;">Precio Unit. Venta</th>
                                     <th style="padding: 1rem; text-align: right;">Monto Recibido</th>
                                     <th style="padding: 1rem; text-align: right;">Resultado (PNL)</th>
                                     <th style="padding: 1rem;">Acciones</th>
@@ -679,6 +721,9 @@
                             </tbody>
                         </table>
                     </div>
+                    <p id="closed-trades-empty" class="empty-msg" style="display: none; border-style: solid; background: rgba(255,255,255,0.02); margin-top: 1rem;">
+                        No hay ventas registradas en el historial.
+                    </p>
                 </div>
             </div>
 

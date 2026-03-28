@@ -36,6 +36,11 @@ let currentFilter = 'all';
 let currentSearchQuery = '';
 let savingsSearchQuery = '';
 
+// Chart Instances
+let transactionChartInstance = null;
+let categoryChartInstance = null;
+let trendChartInstance = null;
+
 // ===== HELPERS =====
 function fmt(amount) {
   const formatted = Math.abs(amount).toLocaleString('es-AR', { minimumFractionDigits: 2 });
@@ -148,6 +153,9 @@ internalTabs.forEach(tab => {
     const panelName = tab.getAttribute('data-tab-internal');
     document.getElementById('portfolio-panel').style.display = panelName === 'portfolio' ? 'block' : 'none';
     document.getElementById('trades-panel').style.display = panelName === 'trades' ? 'block' : 'none';
+    
+    // Ensure data is refreshed on tab switch
+    if (typeof updateSavingsUI === 'function') updateSavingsUI();
   });
 });
 
@@ -507,6 +515,7 @@ const savePriceDisplay = document.getElementById('savings-price-display');
 const saveTableBody = document.querySelector('tbody'); // We'll find it by context if multiple
 let savingsAssetChartInstance = null;
 let savingsQtyChartInstance = null;
+let savingsAssetDonutInstance = null;
 
 if (saveQuantity && saveAmount) {
   [saveQuantity, saveAmount].forEach(input => {
@@ -674,18 +683,21 @@ function updateSavingsUI() {
     sorted = sorted.filter(s => s.asset.toLowerCase().includes(savingsSearchQuery));
   }
 
-  let totalValue = 0;
+  let totalValueByCurrency = {};
   const assetsData = {};
   const assetsQtyData = {};
+  const assetsCurrencyData = {};
 
   sorted.forEach(s => {
     // Treat s.price as the TOTAL amount
     const total = s.price;
     const unitPrice = s.quantity > 0 ? s.price / s.quantity : 0;
 
-    totalValue += total;
+    const cur = (s.currency || 'ARS').toUpperCase();
+    totalValueByCurrency[cur] = (totalValueByCurrency[cur] || 0) + total;
     assetsData[s.asset] = (assetsData[s.asset] || 0) + total;
     assetsQtyData[s.asset] = (assetsQtyData[s.asset] || 0) + s.quantity;
+    assetsCurrencyData[s.asset] = cur;
 
     const tr = document.createElement('tr');
     tr.style.borderBottom = '1px solid var(--border)';
@@ -713,9 +725,18 @@ function updateSavingsUI() {
     tableBody.appendChild(tr);
   });
 
-  // Update Stats
+  // Aggregate stats strings for currency separation
+  const fmtCurrencyMap = (map) => {
+    const entries = Object.entries(map);
+    if (entries.length === 0) return '$0,00';
+    return entries.map(([cur, val]) => {
+        const symbol = cur === 'USD' ? 'U$D ' : '$';
+        return `${symbol}${val.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+    }).join(' / ');
+  };
+
   const totalEl = document.getElementById('savings-stat-total');
-  if (totalEl) totalEl.innerText = fmt(totalValue);
+  if (totalEl) totalEl.innerText = fmtCurrencyMap(totalValueByCurrency);
 
   const pnlEl = document.getElementById('savings-stat-pnl');
   if (pnlEl) {
@@ -738,6 +759,27 @@ function updateSavingsUI() {
     pnlEl.style.color = totalSum >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
   }
 
+  // Populate New KPI Cards
+  const kpiTotal = document.getElementById('savings-kpi-total');
+  const kpiRoi = document.getElementById('savings-kpi-roi');
+  const kpiPnl = document.getElementById('savings-kpi-pnl');
+  const kpiCount = document.getElementById('savings-kpi-count');
+
+  if (kpiTotal) kpiTotal.innerText = fmtCurrencyMap(totalValueByCurrency);
+  if (kpiCount) kpiCount.innerText = Object.keys(assetsData).length;
+
+  if (kpiPnl) {
+    const pnlByCurrencyTotal = {};
+    closedTrades.forEach(t => {
+        const cur = (t.currency || 'ARS').toUpperCase();
+        pnlByCurrencyTotal[cur] = (pnlByCurrencyTotal[cur] || 0) + (t.pnl || 0);
+    });
+    kpiPnl.innerText = fmtCurrencyMap(pnlByCurrencyTotal);
+    
+    const totalSumPnl = Object.values(pnlByCurrencyTotal).reduce((a, b) => a + b, 0);
+    kpiPnl.style.color = totalSumPnl >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
+  }
+
   // Summary List
   const summaryEl = document.getElementById('savings-asset-summary');
   const countBadge = document.getElementById('asset-count-badge');
@@ -750,6 +792,8 @@ function updateSavingsUI() {
 
     assetsEntries.forEach(([asset, val]) => {
         const qty = assetsQtyData[asset] || 0;
+        const cur = assetsCurrencyData[asset] || 'ARS';
+        const symbol = cur === 'USD' ? 'U$D ' : '$';
         const item = document.createElement('div');
         item.style.cssText = 'display:flex; justify-content:space-between; padding:10px 14px; background:rgba(255,255,255,0.03); border-radius:12px; align-items:center; border: 1px solid rgba(255,255,255,0.05);';
         item.innerHTML = `
@@ -760,7 +804,8 @@ function updateSavingsUI() {
             </span>
           </div>
           <div style="text-align: right;">
-            <span style="font-size:0.9rem; font-weight:800; color:var(--text);">${fmt(val)}</span>
+            <span style="font-weight:800; font-size: 0.75rem; color: var(--text-soft); display: block;">${symbol}</span>
+            <span style="font-size:0.95rem; font-weight:800; color:var(--text);">${val.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
           </div>
         `;
         summaryEl.appendChild(item);
@@ -801,7 +846,7 @@ function renderClosedTradesTable() {
       <td style="padding: 1rem; text-align: right;">${symbol}${ (t.receivedAmount / t.quantitySold).toLocaleString('es-AR', { minimumFractionDigits: 2 }) }</td>
       <td style="padding: 1rem; text-align: right;">${symbol}${ t.receivedAmount.toLocaleString('es-AR', { minimumFractionDigits: 2 }) }</td>
       <td style="padding: 1rem; text-align: right; color: ${pnlColor}; font-weight: 700;">
-        ${t.pnl >= 0 ? '+' : '-'}${symbol}${ Math.abs(t.pnl).toLocaleString('es-AR', { minimumFractionDigits: 2 }) } (${t.pnlPercent ? t.pnlPercent.toFixed(1) : '---'}%)
+        ${t.pnl >= 0 ? '+' : '-'}${symbol}${ Math.abs(t.pnl).toLocaleString('es-AR', { minimumFractionDigits: 2 }) } (${t.pnlPercent ? t.pnlPercent.toFixed(2) : '---'}%)
       </td>
       <td style="padding: 1rem; text-align: right;">
         <button class="delete-table-btn" onclick="removeClosedTrade(${t.id})">✕</button>
@@ -819,6 +864,11 @@ function renderClosedTradesTable() {
     if (totalCashARS > 0 || (totalCashARS === 0 && totalCashUSD === 0)) cashParts.push(`$${totalCashARS.toLocaleString('es-AR')}`);
     if (totalCashUSD > 0) cashParts.push(`U$D ${totalCashUSD.toLocaleString('es-AR')}`);
     cashEl.innerText = cashParts.join(' / ');
+  }
+
+  const emptyEl = document.getElementById('closed-trades-empty');
+  if (emptyEl) {
+    emptyEl.style.display = closedTrades.length === 0 ? 'block' : 'none';
   }
 }
 
@@ -1175,11 +1225,11 @@ function createTransactionFromForm(textVal, amountVal, sign, dateVal, platformVa
 }
 
 // Override updateLocalStorage if it was just using localStorage.setItem
-function updateLocalStorage() {
-  localStorage.setItem('transactions', JSON.stringify(transactions));
-  localStorage.setItem('savings', JSON.stringify(savings));
-  localStorage.setItem('closedTrades', JSON.stringify(closedTrades));
-}
+// function updateLocalStorage() {
+//   localStorage.setItem('transactions', JSON.stringify(transactions));
+//   localStorage.setItem('savings', JSON.stringify(savings));
+//   localStorage.setItem('closedTrades', JSON.stringify(closedTrades));
+// }
 
 
 // ===== REMOVE TRANSACTION =====
@@ -1427,22 +1477,52 @@ function processCSV(csv) {
     
     // Smart number parsing for Argentina/Standard formats
     const parseSmart = (val) => {
-        if (!val) return 0;
-        let n = val.toString().replace(/[^\d,.-]/g, '');
+        if (!val || val === '') return 0;
+        let n = val.toString().trim();
+        
+        // Remove currency symbols and spaces
+        n = n.replace(/[^\d,.-]/g, '');
+        
+        // Scenario A: Both dot and comma exist (e.g. 1.234,56 or 1,234.56)
         if (n.includes(',') && n.includes('.')) {
+            // If dot is before comma, dot is thousands (AR/ES format)
             if (n.indexOf('.') < n.indexOf(',')) n = n.replace(/\./g, '').replace(',', '.');
+            // If comma is before dot, comma is thousands (US/UK format)
             else n = n.replace(/,/g, ''); 
-        } else if (n.includes(',')) {
+        } 
+        // Scenario B: Only comma exists (e.g. 1234,56) -> comma is decimal
+        else if (n.includes(',')) {
             n = n.replace(',', '.');
         }
+        // Scenario C: Only dot exists (e.g. 1.234) 
+        // This is ambiguous. In JS/US it's 1.234. In AR it's 1234.
+        // Financial rule: If there are exactly 3 digits after the dot, and it's not the only dot, 
+        // or if we are in AR context, treat as thousands if number is large?
+        // Let's use a heuristic: if we have "X.YYY" where YYY is 3 digits, and no decimal part 
+        // (no comma), and context is ARS, it's very likely thousands.
+        // But for tickers like BTC it could be 0.123.
+        // Revised Scenario C: Trust standard JS parseFloat unless it has multiple dots.
+        else if (n.match(/\.\d{3}$/) && n.split('.').length > 1 && parseFloat(n) < 100) {
+           // If it ends in .XXX and the resulting number would be small, but it has multiple sections, it's definitely thousands
+           // But actually, simple rule: if there are multiple dots, it's thousands.
+        }
+        
+        if (n.split('.').length > 2) n = n.replace(/\./g, ''); // 1.500.000 -> 1500000
+
         return parseFloat(n) || 0;
     };
 
-    const qty = parseSmart(getCol(row, ['CANTIDAD']));
-    const amount = parseSmart(getCol(row, ['MONTO_TOTAL']));
-    const costBasisComp = parseSmart(getCol(row, ['COSTO_ORIGINAL', 'COSTO_COMPRA']));
-    const asset = (getCol(row, ['ACTIVO', 'TICKER', 'INSTRUMENTO']) || '---').toUpperCase();
-    const platform = getCol(row, ['PLATAFORMA', 'BROKER', 'ORIGEN']) || 'Importado';
+    const qty = parseSmart(getCol(row, ['CANTIDAD', 'CANT.', 'QUANTITY', 'QTY']));
+    const amount = parseSmart(getCol(row, ['MONTO_TOTAL', 'MONTO_VENTA', 'TOTAL_VENTA', 'TOTAL', 'IMPORTE', 'RECIBIDO']));
+    
+    // Total Cost headers (explicitly total)
+    const costBasisComp = parseSmart(getCol(row, ['COSTO_TOTAL', 'TOTAL_COMPRA', 'INVERSION_TOTAL', 'PURCHASE_TOTAL', 'MONTO_COMPRA']));
+    
+    // Unit Cost headers (explicitly unit or ambiguous)
+    let unitCost = parseSmart(getCol(row, ['PRECIO_COMPRA', 'COSTO_ORIGINAL', 'COSTO_COMPRA', 'P_COMPRA', 'UNIT_COST', 'COSTO_UNITARIO', 'P.COMPRA']));
+    
+    const asset = (getCol(row, ['ACTIVO', 'TICKER', 'INSTRUMENTO', 'SYMBOL']) || '---').toUpperCase();
+    const platform = getCol(row, ['PLATAFORMA', 'BROKER', 'ORIGEN', 'PLATFORM']) || 'Importado';
     
     // Clean currency - ensures no numbers/spaces remain
     let currency = (getCol(row, ['MONEDA']) || 'ARS').replace(/[^a-zA-Z]/g,'').toUpperCase().substring(0, 3);
@@ -1453,21 +1533,35 @@ function processCSV(csv) {
     if (rawDate.includes('/')) {
         const p = rawDate.split('/');
         if (p.length === 3) {
-            if (p[2].length === 4) rawDate = `${p[2]}-${p[0].padStart(2,'0')}-${p[1].padStart(2,'0')}`;
-            else if (p[0].length === 4) rawDate = `${p[0]}-${p[1].padStart(2,'0')}-${p[2].padStart(2,'0')}`;
+            // Assume DD/MM/YYYY if year is at the end
+            if (p[2].length === 4) {
+              rawDate = `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
+            } 
+            // Assume YYYY/MM/DD if year is at the start
+            else if (p[0].length === 4) {
+              rawDate = `${p[0]}-${p[1].padStart(2,'0')}-${p[2].padStart(2,'0')}`;
+            }
         }
     }
 
     if (isVenta) {
-      const pnl = costBasisComp > 0 ? (amount - costBasisComp) : amount;
-      const pnlPerc = costBasisComp > 0 ? (pnl / costBasisComp) * 100 : 0;
+      // Use total cost if found, otherwise calculate from unit cost
+      let totalCostBasis = 0;
+      if (costBasisComp > 0) {
+        totalCostBasis = costBasisComp;
+      } else if (unitCost > 0) {
+        totalCostBasis = unitCost * qty;
+      }
+
+      const pnl = totalCostBasis > 0 ? (amount - totalCostBasis) : 0;
+      const pnlPerc = totalCostBasis > 0 ? (pnl / totalCostBasis) * 100 : 0;
 
       closedTrades.push({
         id: generateID(),
         asset: asset,
         quantitySold: qty,
         receivedAmount: amount,
-        costBasis: costBasisComp,
+        costBasis: totalCostBasis,
         pnl: pnl,
         pnlPercent: pnlPerc,
         date: rawDate,

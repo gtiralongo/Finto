@@ -74,11 +74,17 @@ if (logoutBtnSide) logoutBtnSide.addEventListener('click', logoutHandler);
 
 // Replace LocalStorage with Firestore Logic
 function updateLocalStorage() {
+    // Save locally for instant persistence
+    localStorage.setItem('transactions', JSON.stringify(transactions));
+    localStorage.setItem('savings', JSON.stringify(savings));
+    localStorage.setItem('closedTrades', JSON.stringify(closedTrades));
+
     const user = auth.currentUser;
     if (user) {
         db.collection('users').doc(user.uid).set({
             transactions: transactions,
-            savings: savings
+            savings: savings,
+            closedTrades: closedTrades
         });
     }
 }
@@ -89,6 +95,7 @@ function loadUserTransactions(uid) {
         const data = doc.exists ? doc.data() : {};
         transactions = data.transactions || [];
         savings = data.savings || [];
+        closedTrades = data.closedTrades || [];
         init();
     });
 }
