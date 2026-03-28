@@ -220,9 +220,25 @@ function updateKPIs(displayTransactions, displaySavings) {
   if (expenseCount) expenseCount.innerText = `${expenses.length} movimiento${expenses.length !== 1 ? 's' : ''}`;
 
   // Total Saved (Now Total Savings)
-  const totalSav = (displaySavings || savings).reduce((acc, s) => acc + (s.price), 0);
+  const totalSavByCur = {};
+  (displaySavings || savings).forEach(s => {
+    const cur = (s.currency || 'ARS').toUpperCase();
+    const val = parseFloat(s.price) || parseFloat(s.amount) || 0;
+    totalSavByCur[cur] = (totalSavByCur[cur] || 0) + val;
+  });
+
   const totalSavingsEl = document.getElementById('total-savings');
-  if (totalSavingsEl) totalSavingsEl.innerText = fmt(totalSav);
+  if (totalSavingsEl) {
+    const entries = Object.entries(totalSavByCur);
+    if (entries.length === 0) {
+        totalSavingsEl.innerText = '$0,00';
+    } else {
+        totalSavingsEl.innerText = entries.map(([cur, val]) => {
+            const symbol = cur === 'USD' ? 'U$D ' : '$';
+            return `${symbol}${val.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+        }).join(' / ');
+    }
+  }
 }
 
 // ===== CHARTS =====
@@ -324,7 +340,8 @@ function updateCharts(displayTransactions, displaySavings) {
   if (dashSavingsCanvas) {
     const assetsData = {};
     (displaySavings || savings).forEach(s => {
-      assetsData[s.asset] = (assetsData[s.asset] || 0) + (s.price);
+      const val = parseFloat(s.price) || parseFloat(s.amount) || 0;
+      assetsData[s.asset] = (assetsData[s.asset] || 0) + val;
     });
 
     const labels = Object.keys(assetsData);
@@ -689,9 +706,8 @@ function updateSavingsUI() {
   const assetsCurrencyData = {};
 
   sorted.forEach(s => {
-    // Treat s.price as the TOTAL amount
-    const total = s.price;
-    const unitPrice = s.quantity > 0 ? s.price / s.quantity : 0;
+    const total = parseFloat(s.price) || parseFloat(s.amount) || 0;
+    const unitPrice = s.quantity > 0 ? total / s.quantity : 0;
 
     const cur = (s.currency || 'ARS').toUpperCase();
     totalValueByCurrency[cur] = (totalValueByCurrency[cur] || 0) + total;
@@ -772,11 +788,12 @@ function updateSavingsUI() {
     const pnlByCurrencyTotal = {};
     closedTrades.forEach(t => {
         const cur = (t.currency || 'ARS').toUpperCase();
-        pnlByCurrencyTotal[cur] = (pnlByCurrencyTotal[cur] || 0) + (t.pnl || 0);
+        const pVal = parseFloat(t.pnl) || 0;
+        pnlByCurrencyTotal[cur] = (pnlByCurrencyTotal[cur] || 0) + pVal;
     });
     kpiPnl.innerText = fmtCurrencyMap(pnlByCurrencyTotal);
     
-    const totalSumPnl = Object.values(pnlByCurrencyTotal).reduce((a, b) => a + b, 0);
+    const totalSumPnl = Object.values(pnlByCurrencyTotal).reduce((a, b) => a + (parseFloat(b) || 0), 0);
     kpiPnl.style.color = totalSumPnl >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
   }
 
