@@ -525,61 +525,55 @@
 
             <!-- ===== INVESTMENTS (SAVINGS) VIEW ===== -->
             <div id="savings-view" class="view-section" style="display: none;">
-                <!-- Valor Portafolio Row -->
-                <div class="kpi-grid" style="margin-bottom: 1rem; grid-template-columns: 1fr 1fr;">
-                    <div class="kpi-card kpi-balance">
-                        <div class="kpi-icon-wrap">
-                            <span style="font-weight: 800; color: var(--primary-light);">ARS</span>
+                <!-- Elegant Portfolio Hero Banner -->
+                <div class="portfolio-hero-banner">
+                    <div class="hero-glass-blob blob-1"></div>
+                    <div class="hero-glass-blob blob-2"></div>
+                    <div class="portfolio-hero-content">
+                        <!-- Main Balance -->
+                        <div class="portfolio-hero-main">
+                            <span class="hero-label">Valor del Portafolio</span>
+                            <div class="hero-balance-wrap primary">
+                                <span class="hero-currency-pill">ARS</span>
+                                <h1 class="hero-balance" id="savings-kpi-total-ars">$0,00</h1>
+                            </div>
+                            <div class="hero-balance-wrap secondary">
+                                <span class="hero-currency-pill">USD</span>
+                                <h2 class="hero-balance-sub" id="savings-kpi-total-usd">U$D 0,00</h2>
+                            </div>
                         </div>
-                        <div class="kpi-content">
-                            <span class="kpi-label">Var. Portafolio (ARS)</span>
-                            <span class="kpi-value kpi-large" id="savings-kpi-total-ars">$0,00</span>
-                        </div>
-                    </div>
-                    <div class="kpi-card kpi-balance">
-                        <div class="kpi-icon-wrap">
-                            <span style="font-weight: 800; color: var(--primary-light);">USD</span>
-                        </div>
-                        <div class="kpi-content">
-                            <span class="kpi-label">Var. Portafolio (USD)</span>
-                            <span class="kpi-value kpi-large" id="savings-kpi-total-usd">U$D 0,00</span>
+                        
+                        <!-- Side Stats -->
+                        <div class="portfolio-hero-stats">
+                            <div class="hero-stat-box">
+                                <div class="hero-stat-header">
+                                    <svg viewBox="0 0 24 24" fill="none" class="hero-icon" stroke="currentColor" stroke-width="2">
+                                        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                                        <polyline points="17 6 23 6 23 12" />
+                                    </svg>
+                                    <span class="hero-stat-label">PNL Realizado</span>
+                                </div>
+                                <div class="hero-stat-values">
+                                    <span class="hero-stat-val" id="savings-kpi-pnl-ars">$0,00</span>
+                                    <span class="hero-stat-val text-muted" id="savings-kpi-pnl-usd">U$D 0,00</span>
+                                </div>
+                            </div>
+                            <div class="hero-stat-divider"></div>
+                            <div class="hero-stat-box">
+                                <div class="hero-stat-header">
+                                    <svg viewBox="0 0 24 24" fill="none" class="hero-icon" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                                    </svg>
+                                    <span class="hero-stat-label">Activos en Cartera</span>
+                                </div>
+                                <div class="hero-stat-values center">
+                                    <span class="hero-stat-val highlight" id="savings-kpi-count">0</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- PNL & Stats Row -->
-                <div class="kpi-grid" style="margin-bottom: 2rem; grid-template-columns: 1fr 1fr 200px;">
-                    <div class="kpi-card kpi-savings">
-                        <div class="kpi-icon-wrap">
-                             <span style="font-weight: 800; color: var(--income-light);">ARS</span>
-                        </div>
-                        <div class="kpi-content">
-                            <span class="kpi-label">PNL Realizado (ARS)</span>
-                            <span class="kpi-value kpi-large" id="savings-kpi-pnl-ars">$0,00</span>
-                        </div>
-                    </div>
-                    <div class="kpi-card kpi-savings">
-                        <div class="kpi-icon-wrap">
-                             <span style="font-weight: 800; color: var(--income-light);">USD</span>
-                        </div>
-                        <div class="kpi-content">
-                            <span class="kpi-label">PNL Realizado (USD)</span>
-                            <span class="kpi-value kpi-large" id="savings-kpi-pnl-usd">U$D 0,00</span>
-                        </div>
-                    </div>
-                    <div class="kpi-card kpi-deposits">
-                        <div class="kpi-icon-wrap">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                                <circle cx="8.5" cy="7" r="4" />
-                            </svg>
-                        </div>
-                        <div class="kpi-content">
-                            <span class="kpi-label">Activos</span>
-                            <span class="kpi-value kpi-large" id="savings-kpi-count">0</span>
-                        </div>
-                    </div>
-                </div>
 
                 <div class="form-tabs" style="margin-bottom: 2rem;">
                     <button class="form-tab active" id="tab-investment-portfolio" data-tab-internal="portfolio">
@@ -658,27 +652,7 @@
                     </div>
 
                     <div class="form-side-stats">
-                        <div class="side-stat-card">
-                            <span class="side-stat-label">Valor Portafolio (ARS)</span>
-                            <span class="side-stat-value" id="savings-stat-total-ars"
-                                style="color: var(--primary-light);">$0,00</span>
-                        </div>
-                        <div class="side-stat-card">
-                            <span class="side-stat-label">Valor Portafolio (USD)</span>
-                            <span class="side-stat-value" id="savings-stat-total-usd"
-                                style="color: var(--primary-light);">U$D 0,00</span>
-                        </div>
-                        <div class="side-stat-card" style="border-left-color: var(--income);">
-                            <span class="side-stat-label">PNL Realizado (ARS)</span>
-                            <span class="side-stat-value" id="savings-stat-pnl-ars"
-                                style="color: var(--income-light); font-weight: 800;">$0,00</span>
-                        </div>
-                        <div class="side-stat-card" style="border-left-color: var(--income);">
-                            <span class="side-stat-label">PNL Realizado (USD)</span>
-                            <span class="side-stat-value" id="savings-stat-pnl-usd"
-                                style="color: var(--income-light); font-weight: 800;">U$D 0,00</span>
-                        </div>
-                        <div class="recent-form-list" style="margin-top: 1.5rem;">
+                        <div class="recent-form-list" style="margin-top: 0;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
                                 <h4 style="margin: 0;">Resumen del Portafolio</h4>
                                 <span id="asset-count-badge" style="font-size: 0.7rem; background: var(--border); padding: 2px 8px; border-radius: 10px; color: var(--text-soft);">0 activos</span>

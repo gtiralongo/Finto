@@ -2121,3 +2121,212 @@ input:checked+.toggle-control::after {
         justify-content: space-between;
     }
 }
+
+/* ===== PORTFOLIO HERO BANNER ===== */
+.portfolio-hero-banner {
+    position: relative;
+    width: 100%;
+    border-radius: var(--radius-lg);
+    background: linear-gradient(135deg, rgba(20, 24, 40, 0.8), rgba(6, 9, 20, 0.9));
+    border: 1px solid rgba(124, 58, 237, 0.2);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.05);
+    padding: 2.5rem;
+    overflow: hidden;
+    margin-bottom: 2rem;
+}
+
+body.light-mode .portfolio-hero-banner {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(248, 250, 252, 0.95));
+    border: 1px solid rgba(124, 58, 237, 0.1);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.05), inset 0 1px 1px #fff;
+}
+
+.hero-glass-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    z-index: 0;
+    opacity: 0.5;
+}
+
+.hero-glass-blob.blob-1 {
+    top: -50px;
+    right: -20px;
+    width: 300px;
+    height: 300px;
+    background: rgba(124, 58, 237, 0.4);
+}
+
+.hero-glass-blob.blob-2 {
+    bottom: -60px;
+    left: 10%;
+    width: 200px;
+    height: 200px;
+    background: rgba(16, 185, 129, 0.2);
+}
+
+.portfolio-hero-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 2rem;
+}
+
+.portfolio-hero-main {
+    flex: 1;
+}
+
+.hero-label {
+    display: block;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-soft);
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+
+.hero-balance-wrap {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.hero-balance-wrap.secondary {
+    margin-bottom: 0;
+    opacity: 0.8;
+}
+
+.hero-currency-pill {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    background: rgba(124, 58, 237, 0.15);
+    color: var(--primary-light);
+    border: 1px solid rgba(124, 58, 237, 0.3);
+}
+
+.hero-balance-wrap.secondary .hero-currency-pill {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-soft);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.hero-balance {
+    font-size: 3.5rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: #fff;
+    background: linear-gradient(135deg, #fff, #a78bfa);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+body.light-mode .hero-balance {
+    background: linear-gradient(135deg, #0f172a, #5b21b6);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.hero-balance-sub {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+.portfolio-hero-stats {
+    display: flex;
+    gap: 2rem;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 1.5rem 2.5rem;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(255,255,255,0.05);
+    backdrop-filter: blur(10px);
+}
+
+body.light-mode .portfolio-hero-stats {
+    background: rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(0,0,0,0.05);
+}
+
+.hero-stat-divider {
+    width: 1px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+body.light-mode .hero-stat-divider {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.hero-stat-box {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.hero-stat-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.hero-icon {
+    width: 16px;
+    height: 16px;
+    color: var(--text-soft);
+}
+
+.hero-stat-label {
+    font-size: 0.85rem;
+    color: var(--text-soft);
+    font-weight: 600;
+}
+
+.hero-stat-values {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.hero-stat-values.center {
+    justify-content: center;
+    flex: 1;
+}
+
+.hero-stat-val {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--income-light);
+}
+
+.hero-stat-val.text-muted {
+    font-size: 1rem;
+    color: var(--text-muted) !important;
+}
+
+.hero-stat-val.highlight {
+    font-size: 2rem;
+    color: var(--text);
+}
+
+body.light-mode .hero-stat-val.highlight {
+    color: var(--primary);
+}
+
+@media (max-width: 900px) {
+    .portfolio-hero-content {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .hero-balance { font-size: 2.5rem; }
+    .hero-balance-sub { font-size: 1.5rem; }
+    .portfolio-hero-stats { width: 100%; justify-content: space-between; padding: 1.2rem; }
+}
+

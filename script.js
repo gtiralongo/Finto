@@ -29,9 +29,9 @@ const searchInput = document.getElementById('search-input');
 const savingsSearchInput = document.getElementById('savings-search-input');
 
 // ===== STATE =====
-let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
-let savings = JSON.parse(localStorage.getItem('savings')) || [];
-let closedTrades = JSON.parse(localStorage.getItem('closedTrades')) || [];
+var transactions = JSON.parse(localStorage.getItem('transactions')) || [];
+var savings = JSON.parse(localStorage.getItem('savings')) || [];
+var closedTrades = JSON.parse(localStorage.getItem('closedTrades')) || [];
 let currentFilter = 'all';
 let currentSearchQuery = '';
 let savingsSearchQuery = '';
@@ -230,10 +230,10 @@ function updateKPIs(displayTransactions, displaySavings) {
   const totalSavingsArsEl = document.getElementById('total-savings-ars');
   const totalSavingsUsdEl = document.getElementById('total-savings-usd');
   
-  const fmt = (val, symbol) => `${symbol}${val.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+  const fmtSav = (val, symbol) => `${symbol}${val.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
 
-  if (totalSavingsArsEl) totalSavingsArsEl.innerText = fmt(totalSavByCur['ARS'] || 0, '$');
-  if (totalSavingsUsdEl) totalSavingsUsdEl.innerText = fmt(totalSavByCur['USD'] || 0, 'U$D ');
+  if (totalSavingsArsEl) totalSavingsArsEl.innerText = fmtSav(totalSavByCur['ARS'] || 0, '$');
+  if (totalSavingsUsdEl) totalSavingsUsdEl.innerText = fmtSav(totalSavByCur['USD'] || 0, 'U$D ');
 }
 
 // ===== CHARTS =====

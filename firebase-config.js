@@ -42,8 +42,10 @@ auth.onAuthStateChanged(user => {
     } else {
         authOverlay.style.display = 'flex';
         mainApp.style.display = 'none';
-        transactions = [];
-        init();
+        window.transactions = [];
+        window.savings = [];
+        window.closedTrades = [];
+        if (typeof window.init === 'function') window.init();
     }
 });
 
@@ -75,17 +77,17 @@ if (logoutBtnSide) logoutBtnSide.addEventListener('click', logoutHandler);
 // Replace LocalStorage with Firestore Logic
 function updateLocalStorage() {
     // Save locally for instant persistence
-    localStorage.setItem('transactions', JSON.stringify(transactions));
-    localStorage.setItem('savings', JSON.stringify(savings));
-    localStorage.setItem('closedTrades', JSON.stringify(closedTrades));
+    localStorage.setItem('transactions', JSON.stringify(window.transactions || []));
+    localStorage.setItem('savings', JSON.stringify(window.savings || []));
+    localStorage.setItem('closedTrades', JSON.stringify(window.closedTrades || []));
 
     const user = auth.currentUser;
     if (user) {
         db.collection('users').doc(user.uid).set({
-            transactions: transactions,
-            savings: savings,
-            closedTrades: closedTrades
-        });
+            transactions: window.transactions || [],
+            savings: window.savings || [],
+            closedTrades: window.closedTrades || []
+        }).catch(err => console.error("Error saving to Firebase: ", err));
     }
 }
 
@@ -93,9 +95,19 @@ function loadUserTransactions(uid) {
     db.collection('users').doc(uid).get().then(doc => {
         // Load cloud data or default
         const data = doc.exists ? doc.data() : {};
-        transactions = data.transactions || [];
-        savings = data.savings || [];
-        closedTrades = data.closedTrades || [];
-        init();
+        window.transactions = data.transactions || [];
+        window.savings = data.savings || [];
+        window.closedTrades = data.closedTrades || [];
+        
+        // Caching locally so it shows immediately on next reload
+        localStorage.setItem('transactions', JSON.stringify(window.transactions));
+        localStorage.setItem('savings', JSON.stringify(window.savings));
+        localStorage.setItem('closedTrades', JSON.stringify(window.closedTrades));
+
+        if (typeof window.init === 'function') window.init();
+    }).catch(err => {
+        console.error("Error fetching data from Firebase: ", err);
+        // Fallback to local storage if cloud fails
+        if (typeof window.init === 'function') window.init();
     });
 }
