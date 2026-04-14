@@ -32,6 +32,7 @@ const savingsSearchInput = document.getElementById('savings-search-input');
 var transactions = JSON.parse(localStorage.getItem('transactions')) || [];
 var savings = JSON.parse(localStorage.getItem('savings')) || [];
 var closedTrades = JSON.parse(localStorage.getItem('closedTrades')) || [];
+let currentPrices = JSON.parse(localStorage.getItem('latest_prices')) || {};
 let currentFilter = 'all';
 let currentSearchQuery = '';
 let savingsSearchQuery = '';
@@ -64,7 +65,7 @@ function parseCSVNumber(val) {
   if (!val) return 0;
   // Remove currency symbols and non-numeric except , and .
   let clean = val.replace(/[^\d,.-]/g, '');
-  
+
   // Detect if it uses comma as decimal: e.g. "1.234,56" or "1234,56"
   if (clean.includes(',') && (!clean.includes('.') || clean.indexOf('.') < clean.indexOf(','))) {
     clean = clean.replace(/\./g, '').replace(',', '.');
@@ -153,7 +154,7 @@ internalTabs.forEach(tab => {
     const panelName = tab.getAttribute('data-tab-internal');
     document.getElementById('portfolio-panel').style.display = panelName === 'portfolio' ? 'block' : 'none';
     document.getElementById('trades-panel').style.display = panelName === 'trades' ? 'block' : 'none';
-    
+
     // Ensure data is refreshed on tab switch
     if (typeof updateSavingsUI === 'function') updateSavingsUI();
   });
@@ -229,7 +230,7 @@ function updateKPIs(displayTransactions, displaySavings) {
 
   const totalSavingsArsEl = document.getElementById('total-savings-ars');
   const totalSavingsUsdEl = document.getElementById('total-savings-usd');
-  
+
   const fmtSav = (val, symbol) => `${symbol}${val.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
 
   if (totalSavingsArsEl) totalSavingsArsEl.innerText = fmtSav(totalSavByCur['ARS'] || 0, '$');
@@ -565,7 +566,7 @@ function updateSalePNL() {
     pnlPreview.style.display = 'block';
     pnlAmountDisplay.innerText = fmt(pnl);
     pnlPercentDisplay.innerText = (pnl >= 0 ? '+' : '') + pnlPercent.toFixed(2) + '%';
-    
+
     const color = pnl >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
     pnlAmountDisplay.style.color = color;
     pnlPercentDisplay.style.color = color;
@@ -593,6 +594,7 @@ if (saveForm) {
       id: generateID(),
       asset: saveAsset.value.toUpperCase(),
       platform: savePlatform.value,
+      category: document.getElementById('savings-category').value,
       quantity: q,
       price: a, // now stores Total Amount
       currency: document.getElementById('savings-currency').value || 'ARS',
@@ -615,15 +617,15 @@ function openSaleModal(id) {
   document.getElementById('sale-savings-id').value = item.id;
   document.getElementById('sale-asset-name').innerText = item.asset;
   document.getElementById('sale-max-qty').innerText = `${item.quantity} uds.`;
-  
+
   const costBasis = item.price / item.quantity;
   document.getElementById('sale-cost-basis').innerText = `${fmt(costBasis)} (${item.currency})`;
-  
+
   document.getElementById('sale-savings-quantity').value = item.quantity;
   document.getElementById('sale-savings-amount').value = '';
   document.getElementById('sale-savings-currency').value = item.currency;
   document.getElementById('sale-savings-date').valueAsDate = new Date();
-  
+
   document.getElementById('pnl-preview').style.display = 'none';
   document.getElementById('sale-savings-modal').style.display = 'flex';
 }
@@ -646,7 +648,7 @@ if (saleForm) {
     if (index === -1) return;
 
     const item = savings[index];
-    
+
     // Calculate PNL for history text
     const costBasisPerUnit = item.price / item.quantity;
     const costOfSoldPortion = costBasisPerUnit * sellQty;
@@ -684,6 +686,7 @@ if (saleForm) {
   });
 }
 
+
 function updateSavingsUI() {
   const tableBody = document.getElementById('inv-table-body'); // Still using this ID from template
   if (!tableBody) return;
@@ -701,24 +704,27 @@ function updateSavingsUI() {
   const assetsCurrencyData = {};
 
   sorted.forEach(s => {
-    const total = parseFloat(s.price) || parseFloat(s.amount) || 0;
-    const unitPrice = s.quantity > 0 ? total / s.quantity : 0;
-
+    const costTotal = parseFloat(s.price) || 0;
     const cur = (s.currency || 'ARS').toUpperCase();
-    totalValueByCurrency[cur] = (totalValueByCurrency[cur] || 0) + total;
-    assetsData[s.asset] = (assetsData[s.asset] || 0) + total;
+    
+    totalValueByCurrency[cur] = (totalValueByCurrency[cur] || 0) + costTotal;
+    assetsData[s.asset] = (assetsData[s.asset] || 0) + costTotal;
     assetsQtyData[s.asset] = (assetsQtyData[s.asset] || 0) + s.quantity;
     assetsCurrencyData[s.asset] = cur;
 
     const tr = document.createElement('tr');
     tr.style.borderBottom = '1px solid var(--border)';
+
+    // Category Badge
+    const catLabel = s.category ? s.category.replace('-', ' ') : 'S/T';
+    const catClass = s.category ? '' : 'warning';
+
     tr.innerHTML = `
             <td style="padding: 1rem;">${fmtDate(s.date)}</td>
             <td style="padding: 1rem; font-weight: 700; color: var(--primary-light);">${s.asset}</td>
+            <td style="padding: 1rem;"><span class="category-badge ${catClass}">${catLabel}</span></td>
             <td style="padding: 1rem; text-align: right;">${s.quantity}</td>
-            <td style="padding: 1rem; text-align: right;">${fmt(unitPrice)}</td>
-            <td style="padding: 1rem; text-align: right; font-weight: 700;">${fmt(total)} (${s.currency || 'ARS'})</td>
-            <td style="padding: 1rem;">${s.platform}</td>
+            <td style="padding: 1rem; text-align: right; font-weight: 700;">${fmt(costTotal)}</td>
             <td style="padding: 1.25rem 1rem; display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
                 <button class="btn-icon" style="color: var(--income-light);" onclick="openSaleModal(${s.id})" title="Informar Venta">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px;">
@@ -741,14 +747,14 @@ function updateSavingsUI() {
     const entries = Object.entries(map);
     if (entries.length === 0) return '$0,00';
     return entries.map(([cur, val]) => {
-        const symbol = cur === 'USD' ? 'U$D ' : '$';
-        return `${symbol}${val.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+      const symbol = cur === 'USD' ? 'U$D ' : '$';
+      return `${symbol}${val.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
     }).join(' / ');
   };
 
   const pnlArsEl = document.getElementById('savings-stat-pnl-ars');
   const pnlUsdEl = document.getElementById('savings-stat-pnl-usd');
-  
+
   const pnlByCurrency = {};
   closedTrades.forEach(t => {
     const cur = (t.currency || 'ARS').toUpperCase();
@@ -787,40 +793,40 @@ function updateSavingsUI() {
   if (kpiPnlArs || kpiPnlUsd) {
     const pnlByCurrencyTotal = {};
     closedTrades.forEach(t => {
-        const cur = (t.currency || 'ARS').toUpperCase();
-        const pVal = parseFloat(t.pnl) || 0;
-        pnlByCurrencyTotal[cur] = (pnlByCurrencyTotal[cur] || 0) + pVal;
+      const cur = (t.currency || 'ARS').toUpperCase();
+      const pVal = parseFloat(t.pnl) || 0;
+      pnlByCurrencyTotal[cur] = (pnlByCurrencyTotal[cur] || 0) + pVal;
     });
 
     if (kpiPnlArs) {
-        const v = pnlByCurrencyTotal['ARS'] || 0;
-        kpiPnlArs.innerText = fmtSimple(v, '$');
-        kpiPnlArs.style.color = v >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
+      const v = pnlByCurrencyTotal['ARS'] || 0;
+      kpiPnlArs.innerText = fmtSimple(v, '$');
+      kpiPnlArs.style.color = v >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
     }
     if (kpiPnlUsd) {
-        const v = pnlByCurrencyTotal['USD'] || 0;
-        kpiPnlUsd.innerText = fmtSimple(v, 'U$D ');
-        kpiPnlUsd.style.color = v >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
+      const v = pnlByCurrencyTotal['USD'] || 0;
+      kpiPnlUsd.innerText = fmtSimple(v, 'U$D ');
+      kpiPnlUsd.style.color = v >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
     }
   }
 
   // Summary List
   const summaryEl = document.getElementById('savings-asset-summary');
   const countBadge = document.getElementById('asset-count-badge');
-  
+
   if (summaryEl) {
     summaryEl.innerHTML = '';
     const assetsEntries = Object.entries(assetsData).sort((a, b) => b[1] - a[1]);
-    
+
     if (countBadge) countBadge.innerText = `${assetsEntries.length} activo${assetsEntries.length !== 1 ? 's' : ''}`;
 
     assetsEntries.forEach(([asset, val]) => {
-        const qty = assetsQtyData[asset] || 0;
-        const cur = assetsCurrencyData[asset] || 'ARS';
-        const symbol = cur === 'USD' ? 'U$D ' : '$';
-        const item = document.createElement('div');
-        item.style.cssText = 'display:flex; justify-content:space-between; padding:10px 14px; background:rgba(255,255,255,0.03); border-radius:12px; align-items:center; border: 1px solid rgba(255,255,255,0.05);';
-        item.innerHTML = `
+      const qty = assetsQtyData[asset] || 0;
+      const cur = assetsCurrencyData[asset] || 'ARS';
+      const symbol = cur === 'USD' ? 'U$D ' : '$';
+      const item = document.createElement('div');
+      item.style.cssText = 'display:flex; justify-content:space-between; padding:10px 14px; background:rgba(255,255,255,0.03); border-radius:12px; align-items:center; border: 1px solid rgba(255,255,255,0.05);';
+      item.innerHTML = `
           <div style="display:flex; flex-direction:column; gap: 2px;">
             <span style="font-weight:700; color: var(--text); font-size: 0.9rem;">${asset}</span>
             <span style="font-size:0.7rem; color:var(--primary-light); background: rgba(124, 58, 237, 0.1); padding: 1px 6px; border-radius: 4px; width: fit-content;">
@@ -832,14 +838,14 @@ function updateSavingsUI() {
             <span style="font-size:0.95rem; font-weight:800; color:var(--text);">${val.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
           </div>
         `;
-        summaryEl.appendChild(item);
-      });
+      summaryEl.appendChild(item);
+    });
   }
 
   // Render Closed Trades Table
   renderClosedTradesTable();
 
-  // Visual Chart
+  // Visual Charts
   updateSavingsAssetChart(assetsData);
   updateSavingsQtyChart(assetsQtyData);
 }
@@ -862,15 +868,15 @@ function renderClosedTradesTable() {
     tr.style.borderBottom = '1px solid var(--border)';
     const pnlColor = t.pnl >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
     const symbol = isUSD ? 'U$D ' : '$';
-    
+
     tr.innerHTML = `
       <td style="padding: 1rem;">${fmtDate(t.date)}</td>
       <td style="padding: 1rem; font-weight: 700;">${t.asset}</td>
       <td style="padding: 1rem; text-align: right;">${t.quantitySold.toLocaleString('es-AR')}</td>
-      <td style="padding: 1rem; text-align: right;">${symbol}${ (t.receivedAmount / t.quantitySold).toLocaleString('es-AR', { minimumFractionDigits: 2 }) }</td>
-      <td style="padding: 1rem; text-align: right;">${symbol}${ t.receivedAmount.toLocaleString('es-AR', { minimumFractionDigits: 2 }) }</td>
+      <td style="padding: 1rem; text-align: right;">${symbol}${(t.receivedAmount / t.quantitySold).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
+      <td style="padding: 1rem; text-align: right;">${symbol}${t.receivedAmount.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
       <td style="padding: 1rem; text-align: right; color: ${pnlColor}; font-weight: 700;">
-        ${t.pnl >= 0 ? '+' : '-'}${symbol}${ Math.abs(t.pnl).toLocaleString('es-AR', { minimumFractionDigits: 2 }) } (${t.pnlPercent ? t.pnlPercent.toFixed(2) : '---'}%)
+        ${t.pnl >= 0 ? '+' : '-'}${symbol}${Math.abs(t.pnl).toLocaleString('es-AR', { minimumFractionDigits: 2 })} (${t.pnlPercent ? t.pnlPercent.toFixed(2) : '---'}%)
       </td>
       <td style="padding: 1rem; text-align: right;">
         <button class="delete-table-btn" onclick="removeClosedTrade(${t.id})">✕</button>
@@ -1001,11 +1007,12 @@ function openEditModal(id) {
   if (!item) return;
 
   document.getElementById('edit-savings-id').value = item.id;
-  document.getElementById('edit-savings-asset').value = item.asset;
+  document.getElementById('edit-savings-asset').value = item.ticker || item.asset;
   document.getElementById('edit-savings-platform').value = item.platform;
   document.getElementById('edit-savings-quantity').value = item.quantity;
-  document.getElementById('edit-savings-amount').value = (item.price).toFixed(2);
+  document.getElementById('edit-savings-amount').value = (item.price || item.amount || 0).toFixed(2);
   document.getElementById('edit-savings-date').value = item.date;
+  document.getElementById('edit-savings-category').value = item.category || 'acciones';
   document.getElementById('edit-savings-currency').value = item.currency || 'ARS';
 
   document.getElementById('edit-savings-modal').style.display = 'flex';
@@ -1032,16 +1039,15 @@ if (editSavingsForm) {
     if (index !== -1) {
       const q = parseFloat(document.getElementById('edit-savings-quantity').value) || 0;
       const a = parseFloat(document.getElementById('edit-savings-amount').value) || 0;
-      const p = q > 0 ? a / q : 0;
-
       savings[index] = {
         id: id,
-        asset: document.getElementById('edit-savings-asset').value,
+        asset: document.getElementById('edit-savings-asset').value.toUpperCase(),
         platform: document.getElementById('edit-savings-platform').value,
+        category: document.getElementById('edit-savings-category').value,
         quantity: q,
-        price: a, // store Total Amount
-        date: document.getElementById('edit-savings-date').value,
-        currency: document.getElementById('edit-savings-currency').value
+        price: a,
+        currency: document.getElementById('edit-savings-currency').value,
+        date: document.getElementById('edit-savings-date').value
       };
       updateLocalStorage();
       updateSavingsUI();
@@ -1216,7 +1222,7 @@ function updateFormSideStats() {
 
 
 // ===== ADD TRANSACTION =====
-function createTransactionFromForm(textVal, amountVal, sign, dateVal, platformVal, isSaving = false, isDeposit = false, qty = 1, targetPlatform = '', assetTicker = '', currency = 'ARS') {
+function createTransactionFromForm(textVal, amountVal, sign, dateVal, platformVal, isSaving = false, isDeposit = false, qty = 1, targetPlatform = '', assetTicker = '', currency = 'ARS', category = 'acciones') {
   const amount = sign * Math.abs(+amountVal);
   const transaction = {
     id: generateID(),
@@ -1234,6 +1240,7 @@ function createTransactionFromForm(textVal, amountVal, sign, dateVal, platformVa
       id: generateID(),
       asset: assetName.toUpperCase(),
       platform: platformVal || 'Binance',
+      category: category,
       quantity: qty || 1,
       price: Math.abs(amount), // Store Total Amount
       currency: currency,
@@ -1295,10 +1302,11 @@ if (expenseForm) {
     const isSaving = isSavingCheck ? isSavingCheck.checked : false;
     const qty = document.getElementById('expense-qty') ? (parseFloat(document.getElementById('expense-qty').value) || 1) : 1;
     const assetTicker = document.getElementById('expense-asset-ticker') ? document.getElementById('expense-asset-ticker').value : '';
+    const category = document.getElementById('expense-savings-category') ? document.getElementById('expense-savings-category').value : 'acciones';
     const currency = document.getElementById('expense-currency') ? document.getElementById('expense-currency').value : 'ARS';
 
     if (!text || !amount || !date || !platform) return;
-    createTransactionFromForm(text, amount, -1, date, platform, isSaving, false, qty, '', assetTicker, currency);
+    createTransactionFromForm(text, amount, -1, date, platform, isSaving, false, qty, '', assetTicker, currency, category);
     expenseForm.reset();
     document.getElementById('expense-date').valueAsDate = new Date();
     if (document.getElementById('expense-saving-field')) {
@@ -1473,7 +1481,7 @@ function processCSV(csv) {
   // 1. Auto-detect separator (comma vs semicolon)
   const firstLine = csv.split('\n')[0];
   const separator = firstLine.includes(';') ? ';' : ',';
-  
+
   const lines = csv.split('\n').map(l => l.trim()).filter(l => l.length > 0);
   if (lines.length < 2) return;
 
@@ -1498,74 +1506,74 @@ function processCSV(csv) {
     });
 
     const isVenta = (getCol(row, ['TIPO']) || '').toUpperCase() === 'VENTA';
-    
+
     // Smart number parsing for Argentina/Standard formats
     const parseSmart = (val) => {
-        if (!val || val === '') return 0;
-        let n = val.toString().trim();
-        
-        // Remove currency symbols and spaces
-        n = n.replace(/[^\d,.-]/g, '');
-        
-        // Scenario A: Both dot and comma exist (e.g. 1.234,56 or 1,234.56)
-        if (n.includes(',') && n.includes('.')) {
-            // If dot is before comma, dot is thousands (AR/ES format)
-            if (n.indexOf('.') < n.indexOf(',')) n = n.replace(/\./g, '').replace(',', '.');
-            // If comma is before dot, comma is thousands (US/UK format)
-            else n = n.replace(/,/g, ''); 
-        } 
-        // Scenario B: Only comma exists (e.g. 1234,56) -> comma is decimal
-        else if (n.includes(',')) {
-            n = n.replace(',', '.');
-        }
-        // Scenario C: Only dot exists (e.g. 1.234) 
-        // This is ambiguous. In JS/US it's 1.234. In AR it's 1234.
-        // Financial rule: If there are exactly 3 digits after the dot, and it's not the only dot, 
-        // or if we are in AR context, treat as thousands if number is large?
-        // Let's use a heuristic: if we have "X.YYY" where YYY is 3 digits, and no decimal part 
-        // (no comma), and context is ARS, it's very likely thousands.
-        // But for tickers like BTC it could be 0.123.
-        // Revised Scenario C: Trust standard JS parseFloat unless it has multiple dots.
-        else if (n.match(/\.\d{3}$/) && n.split('.').length > 1 && parseFloat(n) < 100) {
-           // If it ends in .XXX and the resulting number would be small, but it has multiple sections, it's definitely thousands
-           // But actually, simple rule: if there are multiple dots, it's thousands.
-        }
-        
-        if (n.split('.').length > 2) n = n.replace(/\./g, ''); // 1.500.000 -> 1500000
+      if (!val || val === '') return 0;
+      let n = val.toString().trim();
 
-        return parseFloat(n) || 0;
+      // Remove currency symbols and spaces
+      n = n.replace(/[^\d,.-]/g, '');
+
+      // Scenario A: Both dot and comma exist (e.g. 1.234,56 or 1,234.56)
+      if (n.includes(',') && n.includes('.')) {
+        // If dot is before comma, dot is thousands (AR/ES format)
+        if (n.indexOf('.') < n.indexOf(',')) n = n.replace(/\./g, '').replace(',', '.');
+        // If comma is before dot, comma is thousands (US/UK format)
+        else n = n.replace(/,/g, '');
+      }
+      // Scenario B: Only comma exists (e.g. 1234,56) -> comma is decimal
+      else if (n.includes(',')) {
+        n = n.replace(',', '.');
+      }
+      // Scenario C: Only dot exists (e.g. 1.234) 
+      // This is ambiguous. In JS/US it's 1.234. In AR it's 1234.
+      // Financial rule: If there are exactly 3 digits after the dot, and it's not the only dot, 
+      // or if we are in AR context, treat as thousands if number is large?
+      // Let's use a heuristic: if we have "X.YYY" where YYY is 3 digits, and no decimal part 
+      // (no comma), and context is ARS, it's very likely thousands.
+      // But for tickers like BTC it could be 0.123.
+      // Revised Scenario C: Trust standard JS parseFloat unless it has multiple dots.
+      else if (n.match(/\.\d{3}$/) && n.split('.').length > 1 && parseFloat(n) < 100) {
+        // If it ends in .XXX and the resulting number would be small, but it has multiple sections, it's definitely thousands
+        // But actually, simple rule: if there are multiple dots, it's thousands.
+      }
+
+      if (n.split('.').length > 2) n = n.replace(/\./g, ''); // 1.500.000 -> 1500000
+
+      return parseFloat(n) || 0;
     };
 
     const qty = parseSmart(getCol(row, ['CANTIDAD', 'CANT.', 'QUANTITY', 'QTY']));
     const amount = parseSmart(getCol(row, ['MONTO_TOTAL', 'MONTO_VENTA', 'TOTAL_VENTA', 'TOTAL', 'IMPORTE', 'RECIBIDO']));
-    
+
     // Total Cost headers (explicitly total)
     const costBasisComp = parseSmart(getCol(row, ['COSTO_TOTAL', 'TOTAL_COMPRA', 'INVERSION_TOTAL', 'PURCHASE_TOTAL', 'MONTO_COMPRA']));
-    
+
     // Unit Cost headers (explicitly unit or ambiguous)
     let unitCost = parseSmart(getCol(row, ['PRECIO_COMPRA', 'COSTO_ORIGINAL', 'COSTO_COMPRA', 'P_COMPRA', 'UNIT_COST', 'COSTO_UNITARIO', 'P.COMPRA']));
-    
+
     const asset = (getCol(row, ['ACTIVO', 'TICKER', 'INSTRUMENTO', 'SYMBOL']) || '---').toUpperCase();
     const platform = getCol(row, ['PLATAFORMA', 'BROKER', 'ORIGEN', 'PLATFORM']) || 'Importado';
-    
+
     // Clean currency - ensures no numbers/spaces remain
-    let currency = (getCol(row, ['MONEDA']) || 'ARS').replace(/[^a-zA-Z]/g,'').toUpperCase().substring(0, 3);
+    let currency = (getCol(row, ['MONEDA']) || 'ARS').replace(/[^a-zA-Z]/g, '').toUpperCase().substring(0, 3);
     if (currency.length < 2) currency = 'ARS';
 
     // Normalize date to YYYY-MM-DD
     let rawDate = (getCol(row, ['FECHA']) || new Date().toISOString().split('T')[0]);
     if (rawDate.includes('/')) {
-        const p = rawDate.split('/');
-        if (p.length === 3) {
-            // Assume DD/MM/YYYY if year is at the end
-            if (p[2].length === 4) {
-              rawDate = `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
-            } 
-            // Assume YYYY/MM/DD if year is at the start
-            else if (p[0].length === 4) {
-              rawDate = `${p[0]}-${p[1].padStart(2,'0')}-${p[2].padStart(2,'0')}`;
-            }
+      const p = rawDate.split('/');
+      if (p.length === 3) {
+        // Assume DD/MM/YYYY if year is at the end
+        if (p[2].length === 4) {
+          rawDate = `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
         }
+        // Assume YYYY/MM/DD if year is at the start
+        else if (p[0].length === 4) {
+          rawDate = `${p[0]}-${p[1].padStart(2, '0')}-${p[2].padStart(2, '0')}`;
+        }
+      }
     }
 
     if (isVenta) {
@@ -1613,11 +1621,11 @@ function processCSV(csv) {
 }
 
 function seedPersonalSavings() {
-  const seedData = [{"id": 37158155, "asset": "SPY", "platform": "IOL", "quantity": 1.0, "price": 49500.0, "date": "2026-03-17"}, {"id": 21140851, "asset": "FSLR", "platform": "IOL", "quantity": 12.0, "price": 191400.0, "date": "2026-03-10"}, {"id": 25501307, "asset": "GOOGL", "platform": "IOL", "quantity": 25.0, "price": 193750.0, "date": "2026-02-13"}, {"id": 75846083, "asset": "FXI", "platform": "IOL", "quantity": 12.0, "price": 144000.0, "date": "2026-01-30"}, {"id": 70934678, "asset": "F", "platform": "IOL", "quantity": 7.0, "price": 143780.0, "date": "2026-01-27"}, {"id": 81669968, "asset": "SHOP", "platform": "IOL", "quantity": 75.0, "price": 145200.0, "date": "2026-01-26"}, {"id": 10377480, "asset": "SPY", "platform": "IOL", "quantity": 6.0, "price": 315600.0, "date": "2026-01-26"}, {"id": 68914973, "asset": "QCOM", "platform": "IOL", "quantity": 6.0, "price": 129900.0, "date": "2026-01-22"}, {"id": 20287443, "asset": "PYPL", "platform": "IOL", "quantity": 16.0, "price": 168000.0, "date": "2026-01-20"}, {"id": 77122218, "asset": "MA", "platform": "IOL", "quantity": 6.0, "price": 150000.0, "date": "2026-01-15"}, {"id": 76759041, "asset": "NIOD", "platform": "IOL", "quantity": 120.0, "price": 150.0, "date": "2026-01-13"}, {"id": 15153854, "asset": "SONY", "platform": "IOL", "quantity": 22.0, "price": 105380.0, "date": "2026-01-12"}, {"id": 48835800, "asset": "AAPL", "platform": "IOL", "quantity": 10.0, "price": 197000.0, "date": "2026-01-09"}, {"id": 71805320, "asset": "AVGO", "platform": "IOL", "quantity": 20.0, "price": 268800.0, "date": "2026-01-07"}, {"id": 73637071, "asset": "TSLA", "platform": "IOL", "quantity": 4.0, "price": 178000.0, "date": "2026-01-07"}, {"id": 19935659, "asset": "TXAR", "platform": "IOL", "quantity": 42.0, "price": 31710.0, "date": "2026-01-07"}, {"id": 80575966, "asset": "NKE", "platform": "IOL", "quantity": 5.0, "price": 36850.0, "date": "2025-12-23"}, {"id": 66279136, "asset": "BABA", "platform": "IOL", "quantity": 8.0, "price": 207360.0, "date": "2025-12-22"}, {"id": 43673307, "asset": "OZC7O", "platform": "IOL", "quantity": 157000.0, "price": 157000.0, "date": "2025-12-18"}, {"id": 54662699, "asset": "TXAR", "platform": "IOL", "quantity": 275.0, "price": 203500.0, "date": "2025-12-18"}, {"id": 83747445, "asset": "AMZN", "platform": "IOL", "quantity": 30.0, "price": 72450.0, "date": "2025-12-17"}, {"id": 15877896, "asset": "MSFT", "platform": "IOL", "quantity": 6.0, "price": 147600.0, "date": "2025-12-17"}, {"id": 84615107, "asset": "GLD", "platform": "IOL", "quantity": 10.0, "price": 118500.0, "date": "2025-12-12"}, {"id": 78463327, "asset": "FXI", "platform": "IOL", "quantity": 10.0, "price": 118100.0, "date": "2025-12-11"}, {"id": 80282313, "asset": "NFLX", "platform": "IOL", "quantity": 35.0, "price": 105000.0, "date": "2025-12-09"}, {"id": 33857992, "asset": "SPOT", "platform": "IOL", "quantity": 2.0, "price": 62920.0, "date": "2025-12-09"}, {"id": 89955360, "asset": "XLU", "platform": "IOL", "quantity": 10.0, "price": 42800.0, "date": "2025-12-09"}, {"id": 55696975, "asset": "NVDA", "platform": "IOL", "quantity": 20.0, "price": 228400.0, "date": "2025-11-26"}, {"id": 91703308, "asset": "ARKK", "platform": "IOL", "quantity": 10.0, "price": 116000.0, "date": "2025-11-13"}, {"id": 64690175, "asset": "XROX", "platform": "IOL", "quantity": 30.0, "price": 127800.0, "date": "2025-11-13"}, {"id": 14562534, "asset": "IBIT", "platform": "IOL", "quantity": 24.0, "price": 211680.0, "date": "2025-11-05"}, {"id": 86357220, "asset": "YM41D", "platform": "IOL", "quantity": 150.0, "price": 150.0, "date": "2025-10-08"}, {"id": 86030994, "asset": "MELI", "platform": "IOL", "quantity": 7.0, "price": 197960.0, "date": "2025-10-03"}, {"id": 82971779, "asset": "RVS1O", "platform": "IOL", "quantity": 45956.0, "price": 44990.92, "date": "2025-04-30"}, {"id": 83475356, "asset": "IBIT", "platform": "IOL", "quantity": 8.0, "price": 49440.0, "date": "2025-03-21"}, {"id": 24504051, "asset": "PAMP", "platform": "IOL", "quantity": 1.0, "price": 4250.0, "date": "2025-03-21"}, {"id": 57179668, "asset": "COME", "platform": "IOL", "quantity": 240.0, "price": 39960.0, "date": "2025-03-10"}, {"id": 63911217, "asset": "IBIT", "platform": "IOL", "quantity": 20.0, "price": 109800.0, "date": "2025-03-10"}, {"id": 67815354, "asset": "HSAT", "platform": "IOL", "quantity": 43.0, "price": 9374.0, "date": "2025-01-20"}, {"id": 79717201, "asset": "IBIT", "platform": "IOL", "quantity": 13.0, "price": 99710.0, "date": "2025-01-20"}, {"id": 91136652, "asset": "PRPEDOB", "platform": "IOL", "quantity": 7.368, "price": 10.86, "date": "2025-01-16"}, {"id": 28937829, "asset": "HSAT", "platform": "IOL", "quantity": 135.0, "price": 30341.25, "date": "2025-01-14"}, {"id": 33255164, "asset": "ALUA", "platform": "IOL", "quantity": 2.0, "price": 1786.0, "date": "2025-01-13"}, {"id": 96823732, "asset": "IBIT", "platform": "IOL", "quantity": 2.0, "price": 12500.0, "date": "2025-01-13"}, {"id": 39865311, "asset": "ALUA", "platform": "IOL", "quantity": 3.0, "price": 2772.0, "date": "2025-01-10"}, {"id": 88546013, "asset": "PRPEDOB", "platform": "IOL", "quantity": 3.878, "price": 5.77, "date": "2025-01-10"}, {"id": 41389524, "asset": "PRPEDOB", "platform": "IOL", "quantity": 8.214, "price": 12.3, "date": "2025-01-09"}, {"id": 21855569, "asset": "PRPEDOB", "platform": "IOL", "quantity": 4.241, "price": 6.35, "date": "2025-01-09"}, {"id": 99322015, "asset": "ALUA", "platform": "IOL", "quantity": 1.0, "price": 900.0, "date": "2025-01-03"}, {"id": 81195895, "asset": "IBIT", "platform": "IOL", "quantity": 2.0, "price": 13100.0, "date": "2025-01-03"}, {"id": 26452636, "asset": "DGCU2", "platform": "IOL", "quantity": 51.0, "price": 99450.0, "date": "2025-01-02"}, {"id": 32646666, "asset": "IBIT", "platform": "IOL", "quantity": 2.0, "price": 12640.0, "date": "2024-12-30"}, {"id": 11134897, "asset": "ALUA", "platform": "IOL", "quantity": 3.0, "price": 2715.0, "date": "2024-12-27"}, {"id": 91386113, "asset": "CELU", "platform": "IOL", "quantity": 30.0, "price": 28950.0, "date": "2024-12-27"}, {"id": 15446318, "asset": "IBIT", "platform": "IOL", "quantity": 5.0, "price": 32600.0, "date": "2024-12-27"}, {"id": 71773270, "asset": "AL29", "platform": "IOL", "quantity": 55.0, "price": 50957.5, "date": "2024-12-20"}, {"id": 94885458, "asset": "EAC3D", "platform": "IOL", "quantity": 140.0, "price": 140.0, "date": "2024-12-20"}, {"id": 62197670, "asset": "IBIT", "platform": "IOL", "quantity": 14.0, "price": 94500.0, "date": "2024-12-19"}, {"id": 55021853, "asset": "TZXD7", "platform": "IOL", "quantity": 70931.0, "price": 101040.6, "date": "2024-12-19"}, {"id": 75630623, "asset": "ETHA", "platform": "IOL", "quantity": 1.0, "price": 6900.0, "date": "2024-12-17"}, {"id": 67534775, "asset": "IBIT", "platform": "IOL", "quantity": 2.0, "price": 13920.0, "date": "2024-12-17"}, {"id": 66100888, "asset": "PRERMDB", "platform": "IOL", "quantity": 5.298, "price": 5.0, "date": "2024-12-16"}, {"id": 60433398, "asset": "AL30", "platform": "IOL", "quantity": 12.0, "price": 9370.8, "date": "2024-12-13"}, {"id": 41128322, "asset": "GD30", "platform": "IOL", "quantity": 76.0, "price": 59637.2, "date": "2024-12-13"}, {"id": 51685635, "asset": "TX26", "platform": "IOL", "quantity": 3169.0, "price": 52177.59, "date": "2024-12-06"}, {"id": 13136996, "asset": "COME", "platform": "IOL", "quantity": 371.0, "price": 88390.75, "date": "2024-12-03"}, {"id": 64998073, "asset": "YMCIO", "platform": "IOL", "quantity": 46.0, "price": 54178.8, "date": "2024-12-02"}, {"id": 77072917, "asset": "IOLDOLD", "platform": "IOL", "quantity": 494.209, "price": 500.0, "date": "2024-11-21"}, {"id": 60019627, "asset": "IOLDOLD", "platform": "IOL", "quantity": 16.255, "price": 16.43, "date": "2024-11-14"}, {"id": 28533498, "asset": "PRERMDB", "platform": "IOL", "quantity": 11.554, "price": 10.99, "date": "2024-11-14"}, {"id": 18102557, "asset": "PRPEDOB", "platform": "IOL", "quantity": 23.455, "price": 32.95, "date": "2024-11-14"}, {"id": 42609578, "asset": "IOLDOLD", "platform": "IOL", "quantity": 182.072, "price": 183.34, "date": "2024-11-12"}, {"id": 12418074, "asset": "QCOM", "platform": "IOL", "quantity": 5.0, "price": 94125.0, "date": "2024-10-17"}, {"id": 79055745, "asset": "CARP", "platform": "IOL", "quantity": 17.0, "price": 202640.0, "date": "2024-10-07"}, {"id": 92696541, "asset": "VIST", "platform": "IOL", "quantity": 5.0, "price": 96375.0, "date": "2024-10-02"}, {"id": 62286185, "asset": "YMCOO", "platform": "IOL", "quantity": 38.0, "price": 36191.2, "date": "2024-09-11"}, {"id": 86018516, "asset": "KO", "platform": "IOL", "quantity": 2.0, "price": 35650.0, "date": "2024-08-19"}, {"id": 56921102, "asset": "BP", "platform": "IOL", "quantity": 2.0, "price": 17560.0, "date": "2024-08-16"}, {"id": 33269928, "asset": "PFE", "platform": "IOL", "quantity": 2.0, "price": 18120.0, "date": "2024-08-16"}, {"id": 90763576, "asset": "AL30", "platform": "IOL", "quantity": 100.0, "price": 71500.0, "date": "2024-07-12"}, {"id": 41188748, "asset": "MGCEO", "platform": "IOL", "quantity": 58.0, "price": 54050.2, "date": "2024-07-10"}, {"id": 42906252, "asset": "PRERMDB", "platform": "IOL", "quantity": 62.185, "price": 50.0, "date": "2024-07-03"}, {"id": 67997162, "asset": "PRPEDOB", "platform": "IOL", "quantity": 48.474, "price": 50.0, "date": "2024-07-03"}, {"id": 76468123, "asset": "TZXD7", "platform": "IOL", "quantity": 17818.0, "price": 24588.84, "date": "2024-07-01"}, {"id": 92094085, "asset": "GLOB", "platform": "IOL", "quantity": 1.0, "price": 10887.0, "date": "2024-05-16"}, {"id": 76767331, "asset": "GLOB", "platform": "IOL", "quantity": 2.0, "price": 23111.0, "date": "2024-05-03"}, {"id": 36192085, "asset": "MELI", "platform": "IOL", "quantity": 2.0, "price": 30820.0, "date": "2024-05-03"}];
-  
+  const seedData = [{ "id": 37158155, "asset": "SPY", "platform": "IOL", "quantity": 1.0, "price": 49500.0, "date": "2026-03-17" }, { "id": 21140851, "asset": "FSLR", "platform": "IOL", "quantity": 12.0, "price": 191400.0, "date": "2026-03-10" }, { "id": 25501307, "asset": "GOOGL", "platform": "IOL", "quantity": 25.0, "price": 193750.0, "date": "2026-02-13" }, { "id": 75846083, "asset": "FXI", "platform": "IOL", "quantity": 12.0, "price": 144000.0, "date": "2026-01-30" }, { "id": 70934678, "asset": "F", "platform": "IOL", "quantity": 7.0, "price": 143780.0, "date": "2026-01-27" }, { "id": 81669968, "asset": "SHOP", "platform": "IOL", "quantity": 75.0, "price": 145200.0, "date": "2026-01-26" }, { "id": 10377480, "asset": "SPY", "platform": "IOL", "quantity": 6.0, "price": 315600.0, "date": "2026-01-26" }, { "id": 68914973, "asset": "QCOM", "platform": "IOL", "quantity": 6.0, "price": 129900.0, "date": "2026-01-22" }, { "id": 20287443, "asset": "PYPL", "platform": "IOL", "quantity": 16.0, "price": 168000.0, "date": "2026-01-20" }, { "id": 77122218, "asset": "MA", "platform": "IOL", "quantity": 6.0, "price": 150000.0, "date": "2026-01-15" }, { "id": 76759041, "asset": "NIOD", "platform": "IOL", "quantity": 120.0, "price": 150.0, "date": "2026-01-13" }, { "id": 15153854, "asset": "SONY", "platform": "IOL", "quantity": 22.0, "price": 105380.0, "date": "2026-01-12" }, { "id": 48835800, "asset": "AAPL", "platform": "IOL", "quantity": 10.0, "price": 197000.0, "date": "2026-01-09" }, { "id": 71805320, "asset": "AVGO", "platform": "IOL", "quantity": 20.0, "price": 268800.0, "date": "2026-01-07" }, { "id": 73637071, "asset": "TSLA", "platform": "IOL", "quantity": 4.0, "price": 178000.0, "date": "2026-01-07" }, { "id": 19935659, "asset": "TXAR", "platform": "IOL", "quantity": 42.0, "price": 31710.0, "date": "2026-01-07" }, { "id": 80575966, "asset": "NKE", "platform": "IOL", "quantity": 5.0, "price": 36850.0, "date": "2025-12-23" }, { "id": 66279136, "asset": "BABA", "platform": "IOL", "quantity": 8.0, "price": 207360.0, "date": "2025-12-22" }, { "id": 43673307, "asset": "OZC7O", "platform": "IOL", "quantity": 157000.0, "price": 157000.0, "date": "2025-12-18" }, { "id": 54662699, "asset": "TXAR", "platform": "IOL", "quantity": 275.0, "price": 203500.0, "date": "2025-12-18" }, { "id": 83747445, "asset": "AMZN", "platform": "IOL", "quantity": 30.0, "price": 72450.0, "date": "2025-12-17" }, { "id": 15877896, "asset": "MSFT", "platform": "IOL", "quantity": 6.0, "price": 147600.0, "date": "2025-12-17" }, { "id": 84615107, "asset": "GLD", "platform": "IOL", "quantity": 10.0, "price": 118500.0, "date": "2025-12-12" }, { "id": 78463327, "asset": "FXI", "platform": "IOL", "quantity": 10.0, "price": 118100.0, "date": "2025-12-11" }, { "id": 80282313, "asset": "NFLX", "platform": "IOL", "quantity": 35.0, "price": 105000.0, "date": "2025-12-09" }, { "id": 33857992, "asset": "SPOT", "platform": "IOL", "quantity": 2.0, "price": 62920.0, "date": "2025-12-09" }, { "id": 89955360, "asset": "XLU", "platform": "IOL", "quantity": 10.0, "price": 42800.0, "date": "2025-12-09" }, { "id": 55696975, "asset": "NVDA", "platform": "IOL", "quantity": 20.0, "price": 228400.0, "date": "2025-11-26" }, { "id": 91703308, "asset": "ARKK", "platform": "IOL", "quantity": 10.0, "price": 116000.0, "date": "2025-11-13" }, { "id": 64690175, "asset": "XROX", "platform": "IOL", "quantity": 30.0, "price": 127800.0, "date": "2025-11-13" }, { "id": 14562534, "asset": "IBIT", "platform": "IOL", "quantity": 24.0, "price": 211680.0, "date": "2025-11-05" }, { "id": 86357220, "asset": "YM41D", "platform": "IOL", "quantity": 150.0, "price": 150.0, "date": "2025-10-08" }, { "id": 86030994, "asset": "MELI", "platform": "IOL", "quantity": 7.0, "price": 197960.0, "date": "2025-10-03" }, { "id": 82971779, "asset": "RVS1O", "platform": "IOL", "quantity": 45956.0, "price": 44990.92, "date": "2025-04-30" }, { "id": 83475356, "asset": "IBIT", "platform": "IOL", "quantity": 8.0, "price": 49440.0, "date": "2025-03-21" }, { "id": 24504051, "asset": "PAMP", "platform": "IOL", "quantity": 1.0, "price": 4250.0, "date": "2025-03-21" }, { "id": 57179668, "asset": "COME", "platform": "IOL", "quantity": 240.0, "price": 39960.0, "date": "2025-03-10" }, { "id": 63911217, "asset": "IBIT", "platform": "IOL", "quantity": 20.0, "price": 109800.0, "date": "2025-03-10" }, { "id": 67815354, "asset": "HSAT", "platform": "IOL", "quantity": 43.0, "price": 9374.0, "date": "2025-01-20" }, { "id": 79717201, "asset": "IBIT", "platform": "IOL", "quantity": 13.0, "price": 99710.0, "date": "2025-01-20" }, { "id": 91136652, "asset": "PRPEDOB", "platform": "IOL", "quantity": 7.368, "price": 10.86, "date": "2025-01-16" }, { "id": 28937829, "asset": "HSAT", "platform": "IOL", "quantity": 135.0, "price": 30341.25, "date": "2025-01-14" }, { "id": 33255164, "asset": "ALUA", "platform": "IOL", "quantity": 2.0, "price": 1786.0, "date": "2025-01-13" }, { "id": 96823732, "asset": "IBIT", "platform": "IOL", "quantity": 2.0, "price": 12500.0, "date": "2025-01-13" }, { "id": 39865311, "asset": "ALUA", "platform": "IOL", "quantity": 3.0, "price": 2772.0, "date": "2025-01-10" }, { "id": 88546013, "asset": "PRPEDOB", "platform": "IOL", "quantity": 3.878, "price": 5.77, "date": "2025-01-10" }, { "id": 41389524, "asset": "PRPEDOB", "platform": "IOL", "quantity": 8.214, "price": 12.3, "date": "2025-01-09" }, { "id": 21855569, "asset": "PRPEDOB", "platform": "IOL", "quantity": 4.241, "price": 6.35, "date": "2025-01-09" }, { "id": 99322015, "asset": "ALUA", "platform": "IOL", "quantity": 1.0, "price": 900.0, "date": "2025-01-03" }, { "id": 81195895, "asset": "IBIT", "platform": "IOL", "quantity": 2.0, "price": 13100.0, "date": "2025-01-03" }, { "id": 26452636, "asset": "DGCU2", "platform": "IOL", "quantity": 51.0, "price": 99450.0, "date": "2025-01-02" }, { "id": 32646666, "asset": "IBIT", "platform": "IOL", "quantity": 2.0, "price": 12640.0, "date": "2024-12-30" }, { "id": 11134897, "asset": "ALUA", "platform": "IOL", "quantity": 3.0, "price": 2715.0, "date": "2024-12-27" }, { "id": 91386113, "asset": "CELU", "platform": "IOL", "quantity": 30.0, "price": 28950.0, "date": "2024-12-27" }, { "id": 15446318, "asset": "IBIT", "platform": "IOL", "quantity": 5.0, "price": 32600.0, "date": "2024-12-27" }, { "id": 71773270, "asset": "AL29", "platform": "IOL", "quantity": 55.0, "price": 50957.5, "date": "2024-12-20" }, { "id": 94885458, "asset": "EAC3D", "platform": "IOL", "quantity": 140.0, "price": 140.0, "date": "2024-12-20" }, { "id": 62197670, "asset": "IBIT", "platform": "IOL", "quantity": 14.0, "price": 94500.0, "date": "2024-12-19" }, { "id": 55021853, "asset": "TZXD7", "platform": "IOL", "quantity": 70931.0, "price": 101040.6, "date": "2024-12-19" }, { "id": 75630623, "asset": "ETHA", "platform": "IOL", "quantity": 1.0, "price": 6900.0, "date": "2024-12-17" }, { "id": 67534775, "asset": "IBIT", "platform": "IOL", "quantity": 2.0, "price": 13920.0, "date": "2024-12-17" }, { "id": 66100888, "asset": "PRERMDB", "platform": "IOL", "quantity": 5.298, "price": 5.0, "date": "2024-12-16" }, { "id": 60433398, "asset": "AL30", "platform": "IOL", "quantity": 12.0, "price": 9370.8, "date": "2024-12-13" }, { "id": 41128322, "asset": "GD30", "platform": "IOL", "quantity": 76.0, "price": 59637.2, "date": "2024-12-13" }, { "id": 51685635, "asset": "TX26", "platform": "IOL", "quantity": 3169.0, "price": 52177.59, "date": "2024-12-06" }, { "id": 13136996, "asset": "COME", "platform": "IOL", "quantity": 371.0, "price": 88390.75, "date": "2024-12-03" }, { "id": 64998073, "asset": "YMCIO", "platform": "IOL", "quantity": 46.0, "price": 54178.8, "date": "2024-12-02" }, { "id": 77072917, "asset": "IOLDOLD", "platform": "IOL", "quantity": 494.209, "price": 500.0, "date": "2024-11-21" }, { "id": 60019627, "asset": "IOLDOLD", "platform": "IOL", "quantity": 16.255, "price": 16.43, "date": "2024-11-14" }, { "id": 28533498, "asset": "PRERMDB", "platform": "IOL", "quantity": 11.554, "price": 10.99, "date": "2024-11-14" }, { "id": 18102557, "asset": "PRPEDOB", "platform": "IOL", "quantity": 23.455, "price": 32.95, "date": "2024-11-14" }, { "id": 42609578, "asset": "IOLDOLD", "platform": "IOL", "quantity": 182.072, "price": 183.34, "date": "2024-11-12" }, { "id": 12418074, "asset": "QCOM", "platform": "IOL", "quantity": 5.0, "price": 94125.0, "date": "2024-10-17" }, { "id": 79055745, "asset": "CARP", "platform": "IOL", "quantity": 17.0, "price": 202640.0, "date": "2024-10-07" }, { "id": 92696541, "asset": "VIST", "platform": "IOL", "quantity": 5.0, "price": 96375.0, "date": "2024-10-02" }, { "id": 62286185, "asset": "YMCOO", "platform": "IOL", "quantity": 38.0, "price": 36191.2, "date": "2024-09-11" }, { "id": 86018516, "asset": "KO", "platform": "IOL", "quantity": 2.0, "price": 35650.0, "date": "2024-08-19" }, { "id": 56921102, "asset": "BP", "platform": "IOL", "quantity": 2.0, "price": 17560.0, "date": "2024-08-16" }, { "id": 33269928, "asset": "PFE", "platform": "IOL", "quantity": 2.0, "price": 18120.0, "date": "2024-08-16" }, { "id": 90763576, "asset": "AL30", "platform": "IOL", "quantity": 100.0, "price": 71500.0, "date": "2024-07-12" }, { "id": 41188748, "asset": "MGCEO", "platform": "IOL", "quantity": 58.0, "price": 54050.2, "date": "2024-07-10" }, { "id": 42906252, "asset": "PRERMDB", "platform": "IOL", "quantity": 62.185, "price": 50.0, "date": "2024-07-03" }, { "id": 67997162, "asset": "PRPEDOB", "platform": "IOL", "quantity": 48.474, "price": 50.0, "date": "2024-07-03" }, { "id": 76468123, "asset": "TZXD7", "platform": "IOL", "quantity": 17818.0, "price": 24588.84, "date": "2024-07-01" }, { "id": 92094085, "asset": "GLOB", "platform": "IOL", "quantity": 1.0, "price": 10887.0, "date": "2024-05-16" }, { "id": 76767331, "asset": "GLOB", "platform": "IOL", "quantity": 2.0, "price": 23111.0, "date": "2024-05-03" }, { "id": 36192085, "asset": "MELI", "platform": "IOL", "quantity": 2.0, "price": 30820.0, "date": "2024-05-03" }];
+
   // Combine with existing
   savings = [...savings, ...seedData];
-  
+
   // Update store and UI
   updateLocalStorage();
   updateSavingsUI();
@@ -1633,11 +1641,25 @@ function init() {
 
   if (typeof updateSavingsUI === 'function') updateSavingsUI();
 
+  // Savings Search
+  const savingsSearch = document.getElementById('savings-search-input');
+  if (savingsSearch) {
+    savingsSearch.addEventListener('input', (e) => {
+      savingsSearchQuery = e.target.value.toLowerCase();
+      updateSavingsUI();
+    });
+  }
+
   // One-time seed for user data
   if (!localStorage.getItem('finto_savings_imported_v2')) {
     seedPersonalSavings();
     localStorage.setItem('finto_savings_imported_v2', 'true');
   }
 }
+
+
+// Ensure chart resizes
+window.addEventListener('resize', () => {
+});
 
 init();

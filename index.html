@@ -382,10 +382,21 @@
                                     </label>
                                 </div>
                                 <!-- Conditional Fields -->
-                                <div id="expense-saving-field" class="form-group"
-                                    style="display: none;">
-                                    <label>Ticker del Activo</label>
-                                    <input type="text" id="expense-asset-ticker" placeholder="Ej. BTC, AL30...">
+                                <div id="expense-saving-field" class="form-row" style="display: none; grid-column: span 2; gap: 1rem;">
+                                    <div class="form-group" style="flex: 1;">
+                                        <label>Ticker del Activo</label>
+                                        <input type="text" id="expense-asset-ticker" placeholder="Ej. BTC, AL30...">
+                                    </div>
+                                    <div class="form-group" style="flex: 1;">
+                                        <label>Tipo de Activo</label>
+                                        <select id="expense-savings-category">
+                                            <option value="crypto-ars">Crypto (ARS)</option>
+                                            <option value="acciones">Acciones / CEDEARs</option>
+                                            <option value="bonos">Bonos / ON</option>
+                                            <option value="fondos">Fondos (FCI)</option>
+                                            <option value="crypto-global">Crypto Global</option>
+                                        </select>
+                                    </div>
                                 </div>
                                 <div id="expense-qty-field" class="form-group"
                                     style="display: none;">
@@ -394,7 +405,7 @@
                                         step="0.00000001">
                                 </div>
                                 <div id="expense-currency-field" class="form-group"
-                                    style="display: none; grid-column: span 2;">
+                                    style="display: none;">
                                     <label>Moneda de Compra</label>
                                     <select id="expense-currency">
                                         <option value="ARS">Peso Argentino (ARS)</option>
@@ -575,6 +586,7 @@
                 </div>
 
 
+
                 <div class="form-tabs" style="margin-bottom: 2rem;">
                     <button class="form-tab active" id="tab-investment-portfolio" data-tab-internal="portfolio">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
@@ -635,6 +647,17 @@
                                         style="background: rgba(255,255,255,0.03); opacity: 0.8;">
                                 </div>
                                 <div class="form-group">
+                                    <label>Tipo de Activo</label>
+                                    <select id="savings-category" required>
+                                        <option value="" disabled selected>Seleccionar...</option>
+                                        <option value="crypto-ars">Crypto (ARS - CriptoYa)</option>
+                                        <option value="acciones">Acciones / CEDEARs (TradingView)</option>
+                                        <option value="bonos">Bonos / ON (TradingView)</option>
+                                        <option value="fondos">Fondos (FCI - API)</option>
+                                        <option value="crypto-global">Crypto Global (Binance)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
                                     <label>Moneda</label>
                                     <select id="savings-currency">
                                         <option value="ARS">ARS</option>
@@ -664,10 +687,12 @@
                         </div>
                     </div>
                     
-                    <div class="history-toolbar" style="margin-top: 2rem; display: flex; justify-content: space-between; align-items: center;">
+                    <div class="history-toolbar" style="margin-top: 2rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
                         <h3>Detalle de Movimientos Activos</h3>
-                        <div class="search-wrap" style="width: 200px;">
-                            <input type="text" id="savings-search-input" placeholder="Buscar activo..." style="width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text);">
+                        <div style="display: flex; gap: 1rem; align-items: center; margin-left: auto;">
+                            <div class="search-wrap" style="width: 200px;">
+                                <input type="text" id="savings-search-input" placeholder="Buscar activo..." style="width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text);">
+                            </div>
                         </div>
                     </div>
                     <div class="table-container tx-table-wrap">
@@ -676,11 +701,10 @@
                                 <tr style="border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02);">
                                     <th style="padding: 1rem;">Fecha</th>
                                     <th style="padding: 1rem;">Activo</th>
-                                    <th style="padding: 1rem; text-align: right;">Cantidad</th>
-                                    <th style="padding: 1rem; text-align: right;">Precio Unit.</th>
-                                    <th style="padding: 1rem; text-align: right;">Total</th>
-                                    <th style="padding: 1rem;">Plataforma</th>
-                                    <th style="padding: 1rem;">Acciones</th>
+                                    <th style="padding: 1rem;">Tipo</th>
+                                    <th style="padding: 1rem; text-align: right;">Cant.</th>
+                                    <th style="padding: 1rem; text-align: right;">Total Invertido</th>
+                                    <th style="padding: 1rem; text-align: right;">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody id="inv-table-body">
@@ -778,7 +802,7 @@
                 <form id="edit-savings-form">
                     <input type="hidden" id="edit-savings-id">
                     <div class="form-group">
-                        <label>Activo (BTC, ETH, Acciones...)</label>
+                        <label>Activo (Ticker)</label>
                         <input type="text" id="edit-savings-asset" required>
                     </div>
                     <div class="form-group">
@@ -799,6 +823,16 @@
                         <div class="form-group">
                             <label>Fecha</label>
                             <input type="date" id="edit-savings-date" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Categoría</label>
+                            <select id="edit-savings-category">
+                                <option value="crypto-ars">Crypto (ARS)</option>
+                                <option value="acciones">Acciones / CEDEARs</option>
+                                <option value="bonos">Bonos / ON</option>
+                                <option value="fondos">Fondos (FCI)</option>
+                                <option value="crypto-global">Crypto Global</option>
+                            </select>
                         </div>
                         <div class="form-group">
                             <label>Moneda</label>

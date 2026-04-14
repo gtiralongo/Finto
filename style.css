@@ -1182,29 +1182,42 @@ option {
 /* ===== FORM VIEW ===== */
 .form-tabs {
     display: flex;
-    gap: 8px;
-    margin-bottom: 1.75rem;
-    background: var(--surface);
+    gap: 4px;
+    margin-bottom: 2rem;
+    background: rgba(255, 255, 255, 0.03);
     border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    padding: 6px;
+    border-radius: var(--radius-lg);
+    padding: 4px;
     width: fit-content;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .form-tab {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 20px;
-    border-radius: var(--radius-sm);
-    border: none;
+    padding: 8px 20px;
+    border-radius: calc(var(--radius-lg) - 4px);
+    border: 1px solid transparent;
     background: transparent;
     color: var(--text-muted);
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     font-weight: 600;
     font-family: 'Inter', sans-serif;
     cursor: pointer;
-    transition: all 0.25s ease;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.form-tab:hover:not(.active) {
+    color: var(--text-soft);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.form-tab.active {
+    background: var(--surface);
+    color: var(--primary-light);
+    border-color: var(--border);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .form-tab svg {
@@ -1402,12 +1415,32 @@ option {
     color: var(--expense-light);
 }
 
-.recent-form-list {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    padding: 1.25rem;
-    flex: 1;
+/* Refresh Icon Animation */
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.loading #refresh-icon {
+    animation: spin 1s linear infinite !important;
+}
+
+/* Category Badges in Table */
+.category-badge {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.05);
+    color: var(--text-soft);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.category-badge.warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+    border-color: rgba(245, 158, 11, 0.2);
 }
 
 .recent-form-list h4 {
@@ -1431,6 +1464,40 @@ option {
 .filter-pills {
     display: flex;
     gap: 6px;
+}
+
+.btn-outline, .btn-secondary {
+    padding: 10px 20px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-soft);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-outline:hover, .btn-secondary:hover {
+    background: var(--surface-hover);
+    border-color: var(--border-hover);
+    color: var(--text);
+    transform: translateY(-1px);
+}
+
+#btn-bulk-import {
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.1), rgba(124, 58, 237, 0.05));
+    border: 1px solid rgba(124, 58, 237, 0.2);
+    color: var(--primary-light);
+}
+
+#btn-bulk-import:hover {
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.2), rgba(124, 58, 237, 0.1));
+    border-color: var(--primary-light);
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.1);
 }
 
 .pill {
@@ -1936,7 +2003,19 @@ option {
     }
 
     .form-tabs {
-        flex-direction: column;
+        width: 100%;
+        gap: 2px;
+    }
+
+    .form-tab {
+        flex: 1;
+        padding: 8px 4px;
+        font-size: 0.75rem;
+        justify-content: center;
+    }
+
+    .form-tab svg {
+        display: none;
     }
 
     .filter-pills {
