@@ -1,0 +1,17 @@
+{
+  "name": "Finto - Gestión Financiera",
+  "short_name": "Finto",
+  "description": "Tu asistente personal para el control de gastos e inversiones.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#060914",
+  "theme_color": "#7c3aed",
+  "icons": [
+    {
+      "src": "logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
