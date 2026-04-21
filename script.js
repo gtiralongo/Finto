@@ -32,6 +32,11 @@ const savingsSearchInput = document.getElementById('savings-search-input');
 var transactions = JSON.parse(localStorage.getItem('transactions')) || [];
 var savings = JSON.parse(localStorage.getItem('savings')) || [];
 var closedTrades = JSON.parse(localStorage.getItem('closedTrades')) || [];
+var platforms = JSON.parse(localStorage.getItem('platforms')) || [
+  { id: 1, name: 'Efectivo', initialBalance: 0 },
+  { id: 2, name: 'Mercado Pago', initialBalance: 0 },
+  { id: 3, name: 'Banco', initialBalance: 0 }
+];
 let currentPrices = JSON.parse(localStorage.getItem('latest_prices')) || {};
 let currentFilter = 'all';
 let currentSearchQuery = '';
@@ -85,7 +90,8 @@ const viewTitles = {
   'dashboard': ['Dashboard', 'Resumen financiero'],
   'transactions-form': ['Movimientos', 'Registrar ingresos y gastos'],
   'history': ['Historial', 'Todos los movimientos'],
-  'savings': ['Mis Ahorros', 'Gestión de activos y capital']
+  'savings': ['Mis Ahorros', 'Gestión de activos y capital'],
+  'platforms': ['Plataformas', 'Mis cuentas y balances']
 };
 
 navItems.forEach(item => {
@@ -129,6 +135,10 @@ function switchView(view) {
   if (view === 'savings') {
     updateSavingsUI();
   }
+
+  if (view === 'platforms') {
+    updatePlatformsUI();
+  }
 }
 
 // ===== FORM TABS =====
@@ -141,6 +151,8 @@ formTabs.forEach(tab => {
     const tabName = tab.getAttribute('data-tab');
     document.getElementById('expense-panel').style.display = tabName === 'expense' ? 'grid' : 'none';
     document.getElementById('income-panel').style.display = tabName === 'income' ? 'grid' : 'none';
+    const transferPanel = document.getElementById('transfer-panel');
+    if (transferPanel) transferPanel.style.display = tabName === 'transfer' ? 'grid' : 'none';
   });
 });
 
@@ -203,8 +215,9 @@ function populateYearFilter() {
 
 // ===== KPI UPDATE =====
 function updateKPIs(displayTransactions, displaySavings) {
+  const initialBalancesTotal = platforms.reduce((acc, p) => acc + (parseFloat(p.initialBalance) || 0), 0);
   const amounts = displayTransactions.map(t => t.amount);
-  const total = amounts.reduce((acc, item) => acc + item, 0);
+  const total = initialBalancesTotal + amounts.reduce((acc, item) => acc + item, 0);
   const income = amounts.filter(i => i > 0).reduce((acc, i) => acc + i, 0);
   const expense = Math.abs(amounts.filter(i => i < 0).reduce((acc, i) => acc + i, 0));
 
@@ -1192,6 +1205,9 @@ function updateFormSideStats() {
 
   fmtEl('form-income-month', incMonthTotal);
   fmtEl('form-income-year', incYearTotal);
+
+  const transferCountEl = document.getElementById('transfer-platforms-count');
+  if (transferCountEl) transferCountEl.innerText = platforms.length;
   // Mini lists
   if (expenseList) {
     expenseList.innerHTML = '';
@@ -1298,7 +1314,7 @@ if (expenseForm) {
     const text = document.getElementById('expense-text').value;
     const amount = document.getElementById('expense-amount').value;
     const date = document.getElementById('expense-date').value;
-    const platform = document.getElementById('expense-platform').value;
+    const platform = document.getElementById('expense-platform-select').value;
     const isSaving = isSavingCheck ? isSavingCheck.checked : false;
     const qty = document.getElementById('expense-qty') ? (parseFloat(document.getElementById('expense-qty').value) || 1) : 1;
     const assetTicker = document.getElementById('expense-asset-ticker') ? document.getElementById('expense-asset-ticker').value : '';
@@ -1328,7 +1344,7 @@ if (incomeForm) {
     const text = document.getElementById('income-text').value;
     const amount = document.getElementById('income-amount').value;
     const date = document.getElementById('income-date').value;
-    const platform = document.getElementById('income-platform').value;
+    const platform = document.getElementById('income-platform-select').value;
     if (!text || !amount || !date || !platform) return;
     createTransactionFromForm(text, amount, 1, date, platform);
     incomeForm.reset();
@@ -1638,6 +1654,7 @@ function init() {
   updateDashboard();
   renderHistoryList();
   updateFormSideStats();
+  updatePlatformsUI();
 
   if (typeof updateSavingsUI === 'function') updateSavingsUI();
 
@@ -1661,5 +1678,233 @@ function init() {
 // Ensure chart resizes
 window.addEventListener('resize', () => {
 });
+
+// ===== PLATFORMS LOGIC =====
+function calculatePlatformBalance(platformName) {
+  const platformObj = platforms.find(p => p.name === platformName);
+  const initial = platformObj ? (parseFloat(platformObj.initialBalance) || 0) : 0;
+  
+  const platformTransactions = transactions.filter(t => t.platform === platformName);
+  const movementTotal = platformTransactions.reduce((acc, t) => acc + t.amount, 0);
+  
+  return initial + movementTotal;
+}
+
+function updatePlatformsUI() {
+  renderPlatformsList();
+  populatePlatformsDropdowns();
+}
+
+function renderPlatformsList() {
+  const platformsList = document.getElementById('platforms-list');
+  if (!platformsList) return;
+  platformsList.innerHTML = '';
+
+  platforms.forEach(p => {
+    const currentBalance = calculatePlatformBalance(p.name);
+    const card = document.createElement('div');
+    card.className = 'platform-card';
+    card.innerHTML = `
+      <div class="platform-card-header">
+        <div class="platform-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="5" width="20" height="14" rx="2" />
+            <line x1="2" y1="10" x2="22" y2="10" />
+          </svg>
+        </div>
+        <div class="platform-card-actions">
+          <button class="btn-icon" onclick="editPlatform(${p.id})">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+            </svg>
+          </button>
+          <button class="delete-table-btn" onclick="deletePlatform(${p.id})">✕</button>
+        </div>
+      </div>
+      <div>
+        <div class="platform-card-name">${p.name}</div>
+        <div class="platform-balance-wrap">
+          <span class="platform-balance-label">Saldo Actual</span>
+          <div class="platform-balance-value ${currentBalance >= 0 ? 'income-color' : 'expense-color'}">${fmt(currentBalance)}</div>
+        </div>
+      </div>
+    `;
+    platformsList.appendChild(card);
+  });
+}
+
+function populatePlatformsDropdowns() {
+  const dropdowns = [
+    'expense-platform-select',
+    'income-platform-select',
+    'transfer-from',
+    'transfer-to'
+  ];
+
+  dropdowns.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    
+    const currentVal = el.value;
+    el.innerHTML = '<option value="" disabled selected>Seleccionar...</option>';
+    
+    platforms.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.name;
+      opt.textContent = p.name;
+      el.appendChild(opt);
+    });
+
+    if (currentVal && platforms.some(p => p.name === currentVal)) {
+      el.value = currentVal;
+    }
+  });
+}
+
+// Platform Form Logic
+const platformForm = document.getElementById('platform-form');
+const cancelPlatformEditBtn = document.getElementById('cancel-platform-edit');
+
+if (platformForm) {
+  platformForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const id = document.getElementById('platform-id').value;
+    const name = document.getElementById('platform-name').value.trim();
+    const initialBalance = parseFloat(document.getElementById('platform-initial-balance').value) || 0;
+
+    if (!name) return;
+
+    if (id) {
+      // Edit
+      const index = platforms.findIndex(p => p.id == id);
+      if (index !== -1) {
+        platforms[index].name = name;
+        platforms[index].initialBalance = initialBalance;
+      }
+    } else {
+      // Add
+      if (platforms.some(p => p.name.toLowerCase() === name.toLowerCase())) {
+        alert('Ya existe una plataforma con ese nombre');
+        return;
+      }
+      platforms.push({
+        id: generateID(),
+        name: name,
+        initialBalance: initialBalance
+      });
+    }
+
+    updateLocalStorage();
+    resetPlatformForm();
+    updatePlatformsUI();
+    updateDashboard();
+  });
+}
+
+if (cancelPlatformEditBtn) {
+  cancelPlatformEditBtn.addEventListener('click', resetPlatformForm);
+}
+
+function resetPlatformForm() {
+  if (!platformForm) return;
+  platformForm.reset();
+  const idEl = document.getElementById('platform-id');
+  const titleEl = document.getElementById('platform-form-title');
+  if (idEl) idEl.value = '';
+  if (titleEl) titleEl.innerText = 'Nueva Plataforma';
+  if (cancelPlatformEditBtn) cancelPlatformEditBtn.style.display = 'none';
+}
+
+function editPlatform(id) {
+  const p = platforms.find(plat => plat.id === id);
+  if (!p) return;
+
+  document.getElementById('platform-id').value = p.id;
+  document.getElementById('platform-name').value = p.name;
+  document.getElementById('platform-initial-balance').value = p.initialBalance || 0;
+  
+  document.getElementById('platform-form-title').innerText = 'Editar Plataforma';
+  if (cancelPlatformEditBtn) cancelPlatformEditBtn.style.display = 'block';
+  
+  platformForm.scrollIntoView({ behavior: 'smooth' });
+}
+
+function deletePlatform(id) {
+  const p = platforms.find(plat => plat.id === id);
+  if (!p) return;
+
+  const usage = transactions.filter(t => t.platform === p.name).length;
+  if (usage > 0) {
+    if (!confirm(`Esta plataforma tiene ${usage} movimientos asociados. Si la eliminas, esos movimientos perderán su referencia de plataforma. ¿Continuar?`)) {
+      return;
+    }
+  } else {
+    if (!confirm('¿Eliminar esta plataforma?')) return;
+  }
+
+  platforms = platforms.filter(plat => plat.id !== id);
+  updateLocalStorage();
+  updatePlatformsUI();
+}
+
+// Transfer Logic
+const transferForm = document.getElementById('transfer-form');
+if (transferForm) {
+  document.getElementById('transfer-date').valueAsDate = new Date();
+  
+  transferForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const from = document.getElementById('transfer-from').value;
+    const to = document.getElementById('transfer-to').value;
+    const amount = parseFloat(document.getElementById('transfer-amount').value);
+    const date = document.getElementById('transfer-date').value;
+
+    if (!from || !to || !amount || !date) return;
+    if (from === to) {
+      alert('Las plataformas de origen y destino deben ser diferentes');
+      return;
+    }
+
+    // Create 2 movements
+    const transferId = generateID();
+    
+    // 1. Withdrawal from source
+    transactions.push({
+      id: generateID(),
+      text: `Transferencia a ${to}`,
+      amount: -amount,
+      date: date,
+      platform: from,
+      isTransfer: true,
+      transferRef: transferId
+    });
+
+    // 2. Deposit to destination
+    transactions.push({
+      id: generateID(),
+      text: `Transferencia desde ${from}`,
+      amount: amount,
+      date: date,
+      platform: to,
+      isTransfer: true,
+      transferRef: transferId
+    });
+
+    updateLocalStorage();
+    transferForm.reset();
+    document.getElementById('transfer-date').valueAsDate = new Date();
+    
+    updatePlatformsUI();
+    updateDashboard();
+    renderHistoryList();
+    
+    // Success feedback
+    const btn = transferForm.querySelector('.btn-submit');
+    const originalText = btn.innerHTML;
+    btn.innerText = '✓ Transferencia realizada';
+    setTimeout(() => { btn.innerHTML = originalText; }, 2000);
+  });
+}
 
 init();

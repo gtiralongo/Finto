@@ -45,6 +45,7 @@ auth.onAuthStateChanged(user => {
         window.transactions = [];
         window.savings = [];
         window.closedTrades = [];
+        window.platforms = [];
         if (typeof window.init === 'function') window.init();
     }
 });
@@ -80,13 +81,15 @@ function updateLocalStorage() {
     localStorage.setItem('transactions', JSON.stringify(window.transactions || []));
     localStorage.setItem('savings', JSON.stringify(window.savings || []));
     localStorage.setItem('closedTrades', JSON.stringify(window.closedTrades || []));
+    localStorage.setItem('platforms', JSON.stringify(window.platforms || []));
 
     const user = auth.currentUser;
     if (user) {
         db.collection('users').doc(user.uid).set({
             transactions: window.transactions || [],
             savings: window.savings || [],
-            closedTrades: window.closedTrades || []
+            closedTrades: window.closedTrades || [],
+            platforms: window.platforms || []
         }).catch(err => console.error("Error saving to Firebase: ", err));
     }
 }
@@ -98,11 +101,13 @@ function loadUserTransactions(uid) {
         window.transactions = data.transactions || [];
         window.savings = data.savings || [];
         window.closedTrades = data.closedTrades || [];
+        window.platforms = data.platforms || [];
         
         // Caching locally so it shows immediately on next reload
         localStorage.setItem('transactions', JSON.stringify(window.transactions));
         localStorage.setItem('savings', JSON.stringify(window.savings));
         localStorage.setItem('closedTrades', JSON.stringify(window.closedTrades));
+        localStorage.setItem('platforms', JSON.stringify(window.platforms));
 
         if (typeof window.init === 'function') window.init();
     }).catch(err => {

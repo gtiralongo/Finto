@@ -98,6 +98,14 @@
                     </svg>
                     <span>Inversiones</span>
                 </a>
+                <a href="#" class="nav-item" data-view="platforms">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                        <line x1="3" y1="9" x2="21" y2="9" />
+                        <line x1="9" y1="21" x2="9" y2="9" />
+                    </svg>
+                    <span>Plataformas</span>
+                </a>
             </nav>
             <div class="sidebar-footer">
                 <div class="user-info" id="sidebar-user-info" style="cursor: pointer; position: relative;">
@@ -337,6 +345,13 @@
                         </svg>
                         Registrar Ingreso
                     </button>
+                    <button class="form-tab" id="tab-transfer" data-tab="transfer">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17 10h-10l4-4" />
+                            <path d="M7 14h10l-4 4" />
+                        </svg>
+                        Transferencia
+                    </button>
                 </div>
 
                 <!-- Expense Form -->
@@ -371,8 +386,9 @@
                                 </div>
                                 <div class="form-group">
                                     <label>Plataforma / Medio</label>
-                                    <input type="text" id="expense-platform" placeholder="Personal Pay, Mercado Pago..."
-                                        required>
+                                    <select id="expense-platform-select" required>
+                                        <option value="" disabled selected>Seleccionar...</option>
+                                    </select>
                                 </div>
                                 <!-- Tracking Options -->
                                 <div class="tracking-options-row" style="grid-column: span 2;">
@@ -480,8 +496,9 @@
                                 </div>
                                 <div class="form-group">
                                     <label>Plataforma / Medio</label>
-                                    <input type="text" id="income-platform" placeholder="Mercado Pago, Santander..."
-                                        required>
+                                    <select id="income-platform-select" required>
+                                        <option value="" disabled selected>Seleccionar...</option>
+                                    </select>
                                 </div>
                             </div>
                             <button type="submit" class="btn-submit btn-income">
@@ -510,6 +527,65 @@
                             <h4>Últimos Ingresos</h4>
                             <ul id="income-list" class="mini-list"></ul>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Transfer Panel (Moved from Platforms) -->
+                <div id="transfer-panel" class="form-panel" style="display:none;">
+                    <div class="form-card">
+                        <div class="form-card-header">
+                            <div class="form-card-icon secondary-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M17 10h-10l4-4" />
+                                    <path d="M7 14h10l-4 4" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h2>Realizar Transferencia</h2>
+                                <p>Mueve dinero entre tus cuentas</p>
+                            </div>
+                        </div>
+                        <form id="transfer-form">
+                            <div class="form-grid-2">
+                                <div class="form-group">
+                                    <label>Desde</label>
+                                    <select id="transfer-from" required>
+                                        <option value="" disabled selected>Seleccionar origen...</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Hacia</label>
+                                    <select id="transfer-to" required>
+                                        <option value="" disabled selected>Seleccionar destino...</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Monto ($)</label>
+                                    <input type="number" id="transfer-amount" placeholder="0.00" step="0.01" min="0.01" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Fecha</label>
+                                    <input type="date" id="transfer-date" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn-submit" style="background: var(--primary); margin-top: 1.5rem; width: 100%;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M17 10h-10l4-4" />
+                                    <path d="M7 14h10l-4 4" />
+                                </svg>
+                                Confirmar Transferencia
+                            </button>
+                        </form>
+                    </div>
+                    
+                    <div class="form-side-stats">
+                        <div class="side-stat-card">
+                            <span class="side-stat-label">Cuentas Activas</span>
+                            <span class="side-stat-value" id="transfer-platforms-count">0</span>
+                        </div>
+                        <p class="header-subtitle" style="padding: 1rem; background: rgba(255,255,255,0.02); border-radius: 12px; font-size: 0.8rem;">
+                            Las transferencias no afectan tu balance global, solo mueven el dinero de una plataforma a otra.
+                        </p>
                     </div>
                 </div>
             </div>
@@ -756,9 +832,48 @@
                     <p id="closed-trades-empty" class="empty-msg" style="display: none; border-style: solid; background: rgba(255,255,255,0.02); margin-top: 1rem;">
                         No hay ventas registradas en el historial.
                     </p>
+            </div>
+        </div>
+
+            <!-- ===== PLATFORMS VIEW ===== -->
+            <div id="platforms-view" class="view-section" style="display: none;">
+                <div class="platforms-grid" id="platforms-list">
+                    <!-- Dynamic content: Platform Cards -->
+                </div>
+
+                <div class="platforms-actions">
+                    <div class="form-card">
+                        <div class="form-card-header">
+                            <div class="form-card-icon primary-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 5v14M5 12h14" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 id="platform-form-title">Nueva Plataforma</h2>
+                                <p>Agrega una cuenta o billetera</p>
+                            </div>
+                        </div>
+                        <form id="platform-form">
+                            <input type="hidden" id="platform-id">
+                            <div class="form-grid-2">
+                                <div class="form-group">
+                                    <label>Nombre</label>
+                                    <input type="text" id="platform-name" placeholder="Ej. Mercado Pago, Efectivo..." required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Saldo Inicial (Opcional)</label>
+                                    <input type="number" id="platform-initial-balance" placeholder="0.00" step="0.01">
+                                </div>
+                            </div>
+                            <div class="form-actions" style="margin-top: 1.5rem; display: flex; gap: 1rem;">
+                                <button type="submit" class="btn-primary" style="flex: 1;">Guardar Plataforma</button>
+                                <button type="button" id="cancel-platform-edit" class="btn-outline" style="display: none;">Cancelar</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
-
         </main>
 
         <!-- Mobile Navigation -->
@@ -792,6 +907,14 @@
                     <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
                 </svg>
                 <span>Inv.</span>
+            </a>
+            <a href="#" class="mobile-nav-item" data-view="platforms">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                    <line x1="3" y1="9" x2="21" y2="9" />
+                    <line x1="9" y1="21" x2="9" y2="9" />
+                </svg>
+                <span>Cuentas</span>
             </a>
 
         </nav>
