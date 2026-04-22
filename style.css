@@ -803,9 +803,34 @@ option {
 /* ===== KPI CARDS ===== */
 .kpi-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 1.25rem;
     margin-bottom: 1.75rem;
+}
+
+/* Dashboard Specific Layout: 3 on top, 2 on bottom on desktop */
+@media (min-width: 1200px) {
+    .dashboard-kpis {
+        grid-template-columns: repeat(6, 1fr);
+    }
+    .dashboard-kpis .kpi-card:nth-child(1),
+    .dashboard-kpis .kpi-card:nth-child(2),
+    .dashboard-kpis .kpi-card:nth-child(3) {
+        grid-column: span 2;
+    }
+    .dashboard-kpis .kpi-card:nth-child(4),
+    .dashboard-kpis .kpi-card:nth-child(5) {
+        grid-column: span 3;
+    }
+}
+
+@media (max-width: 1199px) and (min-width: 769px) {
+    .dashboard-kpis {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .dashboard-kpis .kpi-card:nth-child(1) {
+        grid-column: span 2;
+    }
 }
 
 .kpi-deposits .kpi-icon-wrap {
@@ -828,8 +853,10 @@ option {
     border-radius: var(--radius-lg);
     padding: 1.5rem;
     display: flex;
-    align-items: center;
-    gap: 1rem;
+    align-items: flex-start;
+    gap: 1.25rem;
+    padding-top: 1.75rem;
+    padding-bottom: 1.75rem;
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
@@ -909,11 +936,18 @@ option {
     color: var(--expense-light);
 }
 
-.kpi-savings .kpi-icon-wrap {
+.kpi-savings .kpi-icon-wrap,
+.kpi-savings-ars .kpi-icon-wrap,
+.kpi-savings-usd .kpi-icon-wrap {
     background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(245, 158, 11, 0.08));
     border: 1px solid rgba(245, 158, 11, 0.15);
     box-shadow: 0 4px 12px rgba(245, 158, 11, 0.08);
     color: var(--savings);
+}
+
+.dashboard-kpis .kpi-card:nth-child(4),
+.dashboard-kpis .kpi-card:nth-child(5) {
+    background: linear-gradient(135deg, var(--surface), rgba(245, 158, 11, 0.03));
 }
 
 .kpi-content {
@@ -932,13 +966,18 @@ option {
 }
 
 .kpi-value {
-    font-size: 1.2rem;
+    font-size: 1.35rem;
     font-weight: 800;
     color: var(--text);
     line-height: 1.2;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    word-break: break-word;
+}
+
+/* Ensure large values don't overflow small containers */
+@media (max-width: 1400px) {
+    .kpi-value {
+        font-size: 1.2rem;
+    }
 }
 
 .kpi-income .kpi-value {
