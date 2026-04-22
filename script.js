@@ -215,23 +215,41 @@ function populateYearFilter() {
 
 // ===== KPI UPDATE =====
 function updateKPIs(displayTransactions, displaySavings) {
-  const initialBalancesTotal = platforms.reduce((acc, p) => acc + (parseFloat(p.initialBalance) || 0), 0);
-  const amounts = displayTransactions.map(t => t.amount);
-  const total = initialBalancesTotal + amounts.reduce((acc, item) => acc + item, 0);
-  const income = amounts.filter(i => i > 0).reduce((acc, i) => acc + i, 0);
-  const expense = Math.abs(amounts.filter(i => i < 0).reduce((acc, i) => acc + i, 0));
+  // Available Cash (Transactions)
+  const initialARS = platforms.reduce((acc, p) => acc + (parseFloat(p.initialBalance) || 0), 0);
+  const initialUSD = platforms.reduce((acc, p) => acc + (parseFloat(p.initialBalanceUSD) || 0), 0);
 
-  const incomes = displayTransactions.filter(t => t.amount > 0);
-  const expenses = displayTransactions.filter(t => t.amount < 0);
+  const transactionsARS = displayTransactions.filter(t => (t.currency || 'ARS') === 'ARS');
+  const transactionsUSD = displayTransactions.filter(t => (t.currency || 'ARS') === 'USD');
 
-  balance.innerText = fmt(total);
-  balance.style.color = total >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
+  const totalARS = initialARS + transactionsARS.reduce((acc, t) => acc + t.amount, 0);
+  const totalUSD = initialUSD + transactionsUSD.reduce((acc, t) => acc + t.amount, 0);
 
-  money_plus.innerText = '+' + fmt(income);
-  money_minus.innerText = '-' + fmt(expense);
+  // For generic Income/Expense KPIs, we convert to ARS roughly or just show ARS for now
+  // Since we don't have a reliable exchange rate, we show the sum of ARS transactions.
+  const incomeARS = transactionsARS.filter(t => t.amount > 0).reduce((acc, t) => acc + t.amount, 0);
+  const expenseARS = Math.abs(transactionsARS.filter(t => t.amount < 0).reduce((acc, t) => acc + t.amount, 0));
 
-  if (incomeCount) incomeCount.innerText = `${incomes.length} movimiento${incomes.length !== 1 ? 's' : ''}`;
-  if (expenseCount) expenseCount.innerText = `${expenses.length} movimiento${expenses.length !== 1 ? 's' : ''}`;
+  balance.innerText = fmt(totalARS);
+  balance.style.color = totalARS >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
+
+  const balanceUsdEl = document.getElementById('balance-usd');
+  const balanceUsdContainer = document.getElementById('balance-usd-container');
+  if (balanceUsdEl && balanceUsdContainer) {
+    if (totalUSD !== 0) {
+      balanceUsdEl.innerText = `U$D ${totalUSD.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+      balanceUsdContainer.style.display = 'flex';
+    } else {
+      balanceUsdContainer.style.display = 'none';
+    }
+  }
+
+  money_plus.innerText = '+' + fmt(incomeARS);
+  money_minus.innerText = '-' + fmt(expenseARS);
+
+  if (incomeCount) incomeCount.innerText = `${transactionsARS.filter(t => t.amount > 0).length} mov. ARS`;
+  if (expenseCount) expenseCount.innerText = `${transactionsARS.filter(t => t.amount < 0).length} mov. ARS`;
+
 
   // Total Saved (Now Total Savings)
   const totalSavByCur = {};
@@ -247,7 +265,10 @@ function updateKPIs(displayTransactions, displaySavings) {
   const fmtSav = (val, symbol) => `${symbol}${val.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
 
   if (totalSavingsArsEl) totalSavingsArsEl.innerText = fmtSav(totalSavByCur['ARS'] || 0, '$');
-  if (totalSavingsUsdEl) totalSavingsUsdEl.innerText = fmtSav(totalSavByCur['USD'] || 0, 'U$D ');
+  
+  // Combine USD and USDT for the Dashboard KPI display
+  const usdTotal = (totalSavByCur['USD'] || 0) + (totalSavByCur['USDT'] || 0);
+  if (totalSavingsUsdEl) totalSavingsUsdEl.innerText = fmtSav(usdTotal, 'U$D ');
 }
 
 // ===== CHARTS =====
@@ -533,7 +554,7 @@ function updateBalanceEvolutionChart(displayTransactions) {
 // ===== SAVINGS LOGIC =====
 const saveForm = document.getElementById('savings-form');
 const saveAsset = document.getElementById('savings-asset');
-const savePlatform = document.getElementById('savings-platform');
+const savePlatform = document.getElementById('savings-platform-select');
 const saveQuantity = document.getElementById('savings-quantity');
 const saveAmount = document.getElementById('savings-amount');
 const saveDate = document.getElementById('savings-date');
@@ -542,6 +563,7 @@ const saveTableBody = document.querySelector('tbody'); // We'll find it by conte
 let savingsAssetChartInstance = null;
 let savingsQtyChartInstance = null;
 let savingsAssetDonutInstance = null;
+let selectedSavingsIds = [];
 
 if (saveQuantity && saveAmount) {
   [saveQuantity, saveAmount].forEach(input => {
@@ -606,7 +628,7 @@ if (saveForm) {
     const item = {
       id: generateID(),
       asset: saveAsset.value.toUpperCase(),
-      platform: savePlatform.value,
+      platform: document.getElementById('savings-platform-select').value,
       category: document.getElementById('savings-category').value,
       quantity: q,
       price: a, // now stores Total Amount
@@ -732,10 +754,21 @@ function updateSavingsUI() {
     const catLabel = s.category ? s.category.replace('-', ' ') : 'S/T';
     const catClass = s.category ? '' : 'warning';
 
+    const isSelected = selectedSavingsIds.includes(s.id);
+    if (isSelected) tr.classList.add('selected');
+
     tr.innerHTML = `
+            <td style="padding: 1rem;">
+                <input type="checkbox" class="custom-checkbox row-checkbox" data-id="${s.id}" ${isSelected ? 'checked' : ''}>
+            </td>
             <td style="padding: 1rem;">${fmtDate(s.date)}</td>
             <td style="padding: 1rem; font-weight: 700; color: var(--primary-light);">${s.asset}</td>
-            <td style="padding: 1rem;"><span class="category-badge ${catClass}">${catLabel}</span></td>
+            <td style="padding: 1rem;">
+                <div style="display:flex; flex-direction:column; gap:4px;">
+                    <span class="category-badge ${catClass}" style="width:fit-content;">${catLabel}</span>
+                    <span style="font-size:0.75rem; color:var(--text-soft); font-weight:600;">${s.platform || 'S/P'}</span>
+                </div>
+            </td>
             <td style="padding: 1rem; text-align: right;">${s.quantity}</td>
             <td style="padding: 1rem; text-align: right; font-weight: 700;">${fmt(costTotal)}</td>
             <td style="padding: 1.25rem 1rem; display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
@@ -752,8 +785,24 @@ function updateSavingsUI() {
                 <button class="delete-table-btn" onclick="removeSavings(${s.id})">✕</button>
             </td>
         `;
+
+    // Add checkbox listener
+    const cb = tr.querySelector('.row-checkbox');
+    cb.addEventListener('change', (e) => {
+        const id = parseInt(e.target.dataset.id);
+        if (e.target.checked) {
+            if (!selectedSavingsIds.includes(id)) selectedSavingsIds.push(id);
+        } else {
+            selectedSavingsIds = selectedSavingsIds.filter(sid => sid !== id);
+        }
+        updateBulkToolbar();
+        updateSavingsUI(); // Refresh to update "Select All" state if needed
+    });
+
     tableBody.appendChild(tr);
   });
+
+  updateBulkToolbar();
 
   // Aggregate stats strings for currency separation
   const fmtCurrencyMap = (map) => {
@@ -903,10 +952,18 @@ function renderClosedTradesTable() {
 
   const cashEl = document.getElementById('investment-cash-total');
   if (cashEl) {
-    const cashParts = [];
-    if (totalCashARS > 0 || (totalCashARS === 0 && totalCashUSD === 0)) cashParts.push(`$${totalCashARS.toLocaleString('es-AR')}`);
-    if (totalCashUSD > 0) cashParts.push(`U$D ${totalCashUSD.toLocaleString('es-AR')}`);
-    cashEl.innerText = cashParts.join(' / ');
+    const cashByCur = {};
+    closedTrades.forEach(t => {
+      const cur = (t.currency || 'ARS').toUpperCase();
+      cashByCur[cur] = (cashByCur[cur] || 0) + (parseFloat(t.receivedAmount) || 0);
+    });
+
+    const cashParts = Object.entries(cashByCur).map(([cur, val]) => {
+      const symbol = (cur === 'USD' || cur === 'USDT') ? 'U$D ' : '$';
+      return `${symbol}${val.toLocaleString('es-AR')}`;
+    });
+    
+    cashEl.innerText = cashParts.length > 0 ? cashParts.join(' / ') : '$0,00';
   }
 
   const emptyEl = document.getElementById('closed-trades-empty');
@@ -1021,7 +1078,7 @@ function openEditModal(id) {
 
   document.getElementById('edit-savings-id').value = item.id;
   document.getElementById('edit-savings-asset').value = item.ticker || item.asset;
-  document.getElementById('edit-savings-platform').value = item.platform;
+  document.getElementById('edit-savings-platform-select').value = item.platform;
   document.getElementById('edit-savings-quantity').value = item.quantity;
   document.getElementById('edit-savings-amount').value = (item.price || item.amount || 0).toFixed(2);
   document.getElementById('edit-savings-date').value = item.date;
@@ -1055,7 +1112,7 @@ if (editSavingsForm) {
       savings[index] = {
         id: id,
         asset: document.getElementById('edit-savings-asset').value.toUpperCase(),
-        platform: document.getElementById('edit-savings-platform').value,
+        platform: document.getElementById('edit-savings-platform-select').value,
         category: document.getElementById('edit-savings-category').value,
         quantity: q,
         price: a,
@@ -1067,6 +1124,116 @@ if (editSavingsForm) {
       updateDashboard();
       closeEditModal();
     }
+  });
+}
+
+
+function getVisibleSavingsInTable() {
+  let sorted = [...savings].sort((a, b) => new Date(b.date) - new Date(a.date));
+  if (savingsSearchQuery) {
+    sorted = sorted.filter(s => s.asset.toLowerCase().includes(savingsSearchQuery));
+  }
+  return sorted;
+}
+
+// BULK ACTIONS LOGIC
+function updateBulkToolbar() {
+  const toolbar = document.getElementById('bulk-actions-toolbar');
+  const countEl = document.getElementById('selected-count');
+  const selectAllCb = document.getElementById('select-all-savings');
+  
+  if (!toolbar) return;
+  
+  const count = selectedSavingsIds.length;
+  if (count > 0) {
+    toolbar.style.display = 'flex';
+    if (countEl) countEl.innerText = count;
+  } else {
+    toolbar.style.display = 'none';
+  }
+
+  // Update Select All checkbox state
+  if (selectAllCb) {
+    const visibleIds = getVisibleSavingsInTable().map(s => s.id);
+    selectAllCb.checked = visibleIds.length > 0 && visibleIds.every(id => selectedSavingsIds.includes(id));
+  }
+}
+
+// Select All functionality
+const selectAllCb = document.getElementById('select-all-savings');
+if (selectAllCb) {
+  selectAllCb.addEventListener('change', (e) => {
+    const visibleIds = getVisibleSavingsInTable().map(s => s.id);
+    if (e.target.checked) {
+      visibleIds.forEach(id => {
+        if (!selectedSavingsIds.includes(id)) selectedSavingsIds.push(id);
+      });
+    } else {
+      selectedSavingsIds = selectedSavingsIds.filter(id => !visibleIds.includes(id));
+    }
+    updateSavingsUI();
+  });
+}
+
+// Toolbar Buttons
+const btnBulkCancel = document.getElementById('btn-bulk-cancel');
+if (btnBulkCancel) {
+  btnBulkCancel.addEventListener('click', () => {
+    selectedSavingsIds = [];
+    updateSavingsUI();
+  });
+}
+
+const btnBulkDelete = document.getElementById('btn-bulk-delete');
+if (btnBulkDelete) {
+  btnBulkDelete.addEventListener('click', () => {
+    if (confirm(`¿Estás seguro de eliminar ${selectedSavingsIds.length} registros?`)) {
+      savings = savings.filter(s => !selectedSavingsIds.includes(s.id));
+      selectedSavingsIds = [];
+      updateLocalStorage();
+      updateSavingsUI();
+      updateDashboard();
+    }
+  });
+}
+
+const btnBulkEdit = document.getElementById('btn-bulk-edit');
+const bulkEditModal = document.getElementById('bulk-edit-modal');
+if (btnBulkEdit) {
+  btnBulkEdit.addEventListener('click', () => {
+    document.getElementById('bulk-edit-count').innerText = selectedSavingsIds.length;
+    bulkEditModal.style.display = 'flex';
+  });
+}
+
+// Bulk Modal Logic
+const closeBulkEdit = document.getElementById('close-bulk-edit');
+const cancelBulkEdit = document.getElementById('cancel-bulk-edit');
+const bulkEditForm = document.getElementById('bulk-edit-form');
+
+const hideBulkEdit = () => { if (bulkEditModal) bulkEditModal.style.display = 'none'; };
+if (closeBulkEdit) closeBulkEdit.addEventListener('click', hideBulkEdit);
+if (cancelBulkEdit) cancelBulkEdit.addEventListener('click', hideBulkEdit);
+
+if (bulkEditForm) {
+  bulkEditForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const newPlatform = document.getElementById('bulk-platform-select').value;
+    const newCategory = document.getElementById('bulk-category-select').value;
+
+    savings.forEach(s => {
+      if (selectedSavingsIds.includes(s.id)) {
+        if (newPlatform !== 'no-change') s.platform = newPlatform;
+        if (newCategory !== 'no-change') s.category = newCategory;
+      }
+    });
+
+    updateLocalStorage();
+    selectedSavingsIds = [];
+    updateSavingsUI();
+    updateDashboard();
+    hideBulkEdit();
+    bulkEditForm.reset();
   });
 }
 
@@ -1238,14 +1405,15 @@ function updateFormSideStats() {
 
 
 // ===== ADD TRANSACTION =====
-function createTransactionFromForm(textVal, amountVal, sign, dateVal, platformVal, isSaving = false, isDeposit = false, qty = 1, targetPlatform = '', assetTicker = '', currency = 'ARS', category = 'acciones') {
+function createTransactionFromForm(textVal, amountVal, sign, dateVal, platformVal, isSaving = false, isDeposit = false, qty = 1, targetPlatform = '', assetTicker = '', currency = 'ARS', category = 'acciones', mainCurrency = 'ARS') {
   const amount = sign * Math.abs(+amountVal);
   const transaction = {
     id: generateID(),
     text: textVal,
     amount: amount,
     date: dateVal,
-    platform: platformVal
+    platform: platformVal,
+    currency: mainCurrency // Apply main currency to available balance
   };
   transactions.push(transaction);
 
@@ -1321,8 +1489,10 @@ if (expenseForm) {
     const category = document.getElementById('expense-savings-category') ? document.getElementById('expense-savings-category').value : 'acciones';
     const currency = document.getElementById('expense-currency') ? document.getElementById('expense-currency').value : 'ARS';
 
+    const mainCurrency = document.getElementById('expense-main-currency').value;
+
     if (!text || !amount || !date || !platform) return;
-    createTransactionFromForm(text, amount, -1, date, platform, isSaving, false, qty, '', assetTicker, currency, category);
+    createTransactionFromForm(text, amount, -1, date, platform, isSaving, false, qty, '', assetTicker, currency, category, mainCurrency);
     expenseForm.reset();
     document.getElementById('expense-date').valueAsDate = new Date();
     if (document.getElementById('expense-saving-field')) {
@@ -1345,8 +1515,9 @@ if (incomeForm) {
     const amount = document.getElementById('income-amount').value;
     const date = document.getElementById('income-date').value;
     const platform = document.getElementById('income-platform-select').value;
+    const mainCurrency = document.getElementById('income-main-currency').value;
     if (!text || !amount || !date || !platform) return;
-    createTransactionFromForm(text, amount, 1, date, platform);
+    createTransactionFromForm(text, amount, 1, date, platform, false, false, 1, '', '', 'ARS', 'acciones', mainCurrency);
     incomeForm.reset();
     document.getElementById('income-date').valueAsDate = new Date();
     const btn = incomeForm.querySelector('.btn-submit');
@@ -1680,11 +1851,16 @@ window.addEventListener('resize', () => {
 });
 
 // ===== PLATFORMS LOGIC =====
-function calculatePlatformBalance(platformName) {
+function calculatePlatformBalance(platformName, currency = 'ARS') {
   const platformObj = platforms.find(p => p.name === platformName);
-  const initial = platformObj ? (parseFloat(platformObj.initialBalance) || 0) : 0;
+  let initial = 0;
   
-  const platformTransactions = transactions.filter(t => t.platform === platformName);
+  if (platformObj) {
+    if (currency === 'ARS') initial = parseFloat(platformObj.initialBalance) || 0;
+    else if (currency === 'USD') initial = parseFloat(platformObj.initialBalanceUSD) || 0;
+  }
+  
+  const platformTransactions = transactions.filter(t => t.platform === platformName && (t.currency || 'ARS') === currency);
   const movementTotal = platformTransactions.reduce((acc, t) => acc + t.amount, 0);
   
   return initial + movementTotal;
@@ -1695,15 +1871,70 @@ function updatePlatformsUI() {
   populatePlatformsDropdowns();
 }
 
+function calculatePlatformInvestmentBalances(platformName) {
+  const platformSavings = savings.filter(s => s.platform === platformName);
+  const balances = {};
+  platformSavings.forEach(s => {
+    const cur = (s.currency || 'ARS').toUpperCase();
+    balances[cur] = (balances[cur] || 0) + (parseFloat(s.price) || 0);
+  });
+  return balances;
+}
+
 function renderPlatformsList() {
   const platformsList = document.getElementById('platforms-list');
   if (!platformsList) return;
   platformsList.innerHTML = '';
 
   platforms.forEach(p => {
-    const currentBalance = calculatePlatformBalance(p.name);
+    const availableARS = calculatePlatformBalance(p.name, 'ARS');
+    const availableUSD = calculatePlatformBalance(p.name, 'USD');
+    const investmentBalances = calculatePlatformInvestmentBalances(p.name);
+    
+    // Total in ARS (just for primary display if needed)
+    const totalARS = availableARS + (investmentBalances['ARS'] || 0);
+    
     const card = document.createElement('div');
     card.className = 'platform-card';
+    
+    // Build rows for available balances
+    let availableRows = `
+      <div class="platform-balance-row">
+        <span class="platform-balance-label">Disponible ARS</span>
+        <span class="platform-balance-value ${availableARS >= 0 ? 'income-color' : 'expense-color'}">${fmt(availableARS)}</span>
+      </div>
+    `;
+    if (availableUSD !== 0) {
+      availableRows += `
+        <div class="platform-balance-row">
+          <span class="platform-balance-label">Disponible <span class="currency-badge">USD</span></span>
+          <span class="platform-balance-value ${availableUSD >= 0 ? 'income-color' : 'expense-color'}">U$D ${availableUSD.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+        </div>
+      `;
+    }
+
+    // Build rows for investment balances
+    let investmentRows = '';
+    const currencies = Object.keys(investmentBalances);
+    if (currencies.length === 0) {
+      investmentRows = `
+        <div class="platform-balance-row">
+          <span class="platform-balance-label">Inversión</span>
+          <span class="platform-balance-value text-muted">$0,00</span>
+        </div>
+      `;
+    } else {
+      currencies.forEach(cur => {
+        const symbol = (cur === 'USD' || cur === 'USDT') ? 'U$D ' : '$';
+        investmentRows += `
+          <div class="platform-balance-row">
+            <span class="platform-balance-label">Inversión <span class="currency-badge">${cur}</span></span>
+            <span class="platform-balance-value">${symbol}${investmentBalances[cur].toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+          </div>
+        `;
+      });
+    }
+
     card.innerHTML = `
       <div class="platform-card-header">
         <div class="platform-icon">
@@ -1725,8 +1956,13 @@ function renderPlatformsList() {
       <div>
         <div class="platform-card-name">${p.name}</div>
         <div class="platform-balance-wrap">
-          <span class="platform-balance-label">Saldo Actual</span>
-          <div class="platform-balance-value ${currentBalance >= 0 ? 'income-color' : 'expense-color'}">${fmt(currentBalance)}</div>
+          ${availableRows}
+          <div style="height: 1px; background: var(--border); margin: 4px 0;"></div>
+          ${investmentRows}
+          <div class="platform-total-row">
+            <span class="platform-total-label">Balance Total (ARS)</span>
+            <span class="platform-total-value">${fmt(totalARS)}</span>
+          </div>
         </div>
       </div>
     `;
@@ -1739,7 +1975,10 @@ function populatePlatformsDropdowns() {
     'expense-platform-select',
     'income-platform-select',
     'transfer-from',
-    'transfer-to'
+    'transfer-to',
+    'savings-platform-select',
+    'edit-savings-platform-select',
+    'bulk-platform-select'
   ];
 
   dropdowns.forEach(id => {
@@ -1772,6 +2011,7 @@ if (platformForm) {
     const id = document.getElementById('platform-id').value;
     const name = document.getElementById('platform-name').value.trim();
     const initialBalance = parseFloat(document.getElementById('platform-initial-balance').value) || 0;
+    const initialBalanceUSD = parseFloat(document.getElementById('platform-initial-balance-usd').value) || 0;
 
     if (!name) return;
 
@@ -1781,6 +2021,7 @@ if (platformForm) {
       if (index !== -1) {
         platforms[index].name = name;
         platforms[index].initialBalance = initialBalance;
+        platforms[index].initialBalanceUSD = initialBalanceUSD;
       }
     } else {
       // Add
@@ -1791,7 +2032,8 @@ if (platformForm) {
       platforms.push({
         id: generateID(),
         name: name,
-        initialBalance: initialBalance
+        initialBalance: initialBalance,
+        initialBalanceUSD: initialBalanceUSD
       });
     }
 
@@ -1823,6 +2065,7 @@ function editPlatform(id) {
   document.getElementById('platform-id').value = p.id;
   document.getElementById('platform-name').value = p.name;
   document.getElementById('platform-initial-balance').value = p.initialBalance || 0;
+  document.getElementById('platform-initial-balance-usd').value = p.initialBalanceUSD || 0;
   
   document.getElementById('platform-form-title').innerText = 'Editar Plataforma';
   if (cancelPlatformEditBtn) cancelPlatformEditBtn.style.display = 'block';
@@ -1859,6 +2102,7 @@ if (transferForm) {
     const to = document.getElementById('transfer-to').value;
     const amount = parseFloat(document.getElementById('transfer-amount').value);
     const date = document.getElementById('transfer-date').value;
+    const currency = document.getElementById('transfer-currency').value;
 
     if (!from || !to || !amount || !date) return;
     if (from === to) {
@@ -1876,6 +2120,7 @@ if (transferForm) {
       amount: -amount,
       date: date,
       platform: from,
+      currency: currency,
       isTransfer: true,
       transferRef: transferId
     });
@@ -1887,6 +2132,7 @@ if (transferForm) {
       amount: amount,
       date: date,
       platform: to,
+      currency: currency,
       isTransfer: true,
       transferRef: transferId
     });
