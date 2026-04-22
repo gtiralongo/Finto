@@ -41,6 +41,8 @@ let currentPrices = JSON.parse(localStorage.getItem('latest_prices')) || {};
 let currentFilter = 'all';
 let currentSearchQuery = '';
 let savingsSearchQuery = '';
+let savingsFilterPlatform = '';
+let savingsFilterCategory = '';
 
 // Chart Instances
 let transactionChartInstance = null;
@@ -729,9 +731,10 @@ function updateSavingsUI() {
 
   let sorted = [...savings].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-  if (savingsSearchQuery) {
-    sorted = sorted.filter(s => s.asset.toLowerCase().includes(savingsSearchQuery));
-  }
+  sorted = applySavingsFilters(sorted);
+
+  // Populate platform filter dropdown with real data
+  updateSavingsFilterPlatformDropdown();
 
   let totalValueByCurrency = {};
   const assetsData = {};
@@ -1128,12 +1131,50 @@ if (editSavingsForm) {
 }
 
 
+// Central savings filter helper — used by both updateSavingsUI and getVisibleSavingsInTable
+function applySavingsFilters(list) {
+  let result = list;
+  if (savingsSearchQuery) {
+    result = result.filter(s =>
+      s.asset.toLowerCase().includes(savingsSearchQuery) ||
+      (s.platform || '').toLowerCase().includes(savingsSearchQuery)
+    );
+  }
+  if (savingsFilterPlatform) {
+    result = result.filter(s => (s.platform || '') === savingsFilterPlatform);
+  }
+  if (savingsFilterCategory) {
+    result = result.filter(s => (s.category || '') === savingsFilterCategory);
+  }
+  return result;
+}
+
 function getVisibleSavingsInTable() {
   let sorted = [...savings].sort((a, b) => new Date(b.date) - new Date(a.date));
-  if (savingsSearchQuery) {
-    sorted = sorted.filter(s => s.asset.toLowerCase().includes(savingsSearchQuery));
-  }
-  return sorted;
+  return applySavingsFilters(sorted);
+}
+
+function updateSavingsFilterPlatformDropdown() {
+  const sel = document.getElementById('savings-filter-platform');
+  if (!sel) return;
+  const current = sel.value;
+  // Keep first default option, rebuild the rest
+  sel.innerHTML = '<option value="">Todas las plataformas</option>';
+  const used = [...new Set(savings.map(s => s.platform).filter(Boolean))].sort();
+  used.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p;
+    opt.textContent = p;
+    if (p === current) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function updateSavingsFilterClearBtn() {
+  const btn = document.getElementById('savings-filter-clear');
+  if (!btn) return;
+  const hasFilter = savingsSearchQuery || savingsFilterPlatform || savingsFilterCategory;
+  btn.style.display = hasFilter ? 'inline-flex' : 'none';
 }
 
 // BULK ACTIONS LOGIC
@@ -1548,6 +1589,39 @@ if (searchInput) {
 if (savingsSearchInput) {
   savingsSearchInput.addEventListener('input', () => {
     savingsSearchQuery = savingsSearchInput.value.trim().toLowerCase();
+    updateSavingsFilterClearBtn();
+    updateSavingsUI();
+  });
+}
+
+const savingsFilterPlatformEl = document.getElementById('savings-filter-platform');
+if (savingsFilterPlatformEl) {
+  savingsFilterPlatformEl.addEventListener('change', () => {
+    savingsFilterPlatform = savingsFilterPlatformEl.value;
+    updateSavingsFilterClearBtn();
+    updateSavingsUI();
+  });
+}
+
+const savingsFilterCategoryEl = document.getElementById('savings-filter-category');
+if (savingsFilterCategoryEl) {
+  savingsFilterCategoryEl.addEventListener('change', () => {
+    savingsFilterCategory = savingsFilterCategoryEl.value;
+    updateSavingsFilterClearBtn();
+    updateSavingsUI();
+  });
+}
+
+const savingsFilterClearBtn = document.getElementById('savings-filter-clear');
+if (savingsFilterClearBtn) {
+  savingsFilterClearBtn.addEventListener('click', () => {
+    savingsSearchQuery = '';
+    savingsFilterPlatform = '';
+    savingsFilterCategory = '';
+    if (savingsSearchInput) savingsSearchInput.value = '';
+    if (savingsFilterPlatformEl) savingsFilterPlatformEl.value = '';
+    if (savingsFilterCategoryEl) savingsFilterCategoryEl.value = '';
+    updateSavingsFilterClearBtn();
     updateSavingsUI();
   });
 }
@@ -1829,14 +1903,8 @@ function init() {
 
   if (typeof updateSavingsUI === 'function') updateSavingsUI();
 
-  // Savings Search
-  const savingsSearch = document.getElementById('savings-search-input');
-  if (savingsSearch) {
-    savingsSearch.addEventListener('input', (e) => {
-      savingsSearchQuery = e.target.value.toLowerCase();
-      updateSavingsUI();
-    });
-  }
+  // Savings filter platform dropdown initial population
+  updateSavingsFilterPlatformDropdown();
 
   // One-time seed for user data
   if (!localStorage.getItem('finto_savings_imported_v2')) {

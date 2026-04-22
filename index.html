@@ -836,13 +836,34 @@
                     </div>
 
                     <div class="history-toolbar"
-                        style="margin-top: 2rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
+                        style="margin-top: 2rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
                         <h3>Detalle de Movimientos Activos</h3>
-                        <div style="display: flex; gap: 1rem; align-items: center; margin-left: auto;">
-                            <div class="search-wrap" style="width: 200px;">
+                        <div style="display: flex; gap: 0.75rem; align-items: center; margin-left: auto; flex-wrap: wrap;">
+                            <div class="search-wrap" style="position: relative; min-width: 180px;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    style="position: absolute; left: 0.6rem; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: var(--text-muted); pointer-events: none;">
+                                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                </svg>
                                 <input type="text" id="savings-search-input" placeholder="Buscar activo..."
-                                    style="width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text);">
+                                    style="width: 100%; padding: 0.5rem 0.75rem 0.5rem 2rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font-size: 0.85rem;">
                             </div>
+                            <select id="savings-filter-platform"
+                                style="padding: 0.5rem 0.75rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font-size: 0.85rem; min-width: 140px;">
+                                <option value="">Todas las plataformas</option>
+                            </select>
+                            <select id="savings-filter-category"
+                                style="padding: 0.5rem 0.75rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font-size: 0.85rem; min-width: 140px;">
+                                <option value="">Todas las categorías</option>
+                                <option value="crypto-ars">Crypto (ARS)</option>
+                                <option value="acciones">Acciones / CEDEARs</option>
+                                <option value="bonos">Bonos / ON</option>
+                                <option value="fondos">Fondos (FCI)</option>
+                                <option value="crypto-global">Crypto Global</option>
+                            </select>
+                            <button id="savings-filter-clear" title="Limpiar filtros"
+                                style="padding: 0.5rem 0.75rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text-muted); font-size: 0.8rem; cursor: pointer; display: none; align-items: center; gap: 4px;">
+                                ✕ Limpiar
+                            </button>
                         </div>
                     </div>
                     <div class="table-container tx-table-wrap">
