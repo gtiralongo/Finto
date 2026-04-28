@@ -459,20 +459,37 @@ function updateBalanceEvolutionChart(displayTransactions) {
   const canvas = document.getElementById('balanceEvolutionChart');
   if (!canvas) return;
 
-  const filtered = getDashboardFilteredTransactions();
-  let endDate = new Date();
+  // Determine date range based on filters
+  let startDate = null;
+  let endDate = null;
 
-  if (filtered.length > 0) {
-    const sortedFiltered = [...filtered].sort((a, b) => new Date(b.date) - new Date(a.date));
-    endDate = new Date(sortedFiltered[0].date + 'T23:59:59');
-  } else if (filterYear.value !== 'all' || filterMonth.value !== 'all') {
-    const year = filterYear.value === 'all' ? new Date().getFullYear() : parseInt(filterYear.value);
-    const month = filterMonth.value === 'all' ? 11 : parseInt(filterMonth.value) - 1;
+  if (filterYear.value !== 'all') {
+    const year = parseInt(filterYear.value);
+    if (filterMonth.value !== 'all') {
+      const month = parseInt(filterMonth.value) - 1;
+      startDate = new Date(year, month, 1, 0, 0, 0);
+      endDate = new Date(year, month + 1, 0, 23, 59, 59);
+    } else {
+      startDate = new Date(year, 0, 1, 0, 0, 0);
+      endDate = new Date(year, 11, 31, 23, 59, 59);
+    }
+  } else if (filterMonth.value !== 'all') {
+    const month = parseInt(filterMonth.value) - 1;
+    const year = new Date().getFullYear();
+    startDate = new Date(year, month, 1, 0, 0, 0);
     endDate = new Date(year, month + 1, 0, 23, 59, 59);
+  } else {
+    // No filter: use all transactions
+    startDate = new Date('2000-01-01');
+    endDate = new Date();
   }
 
+  // Filter transactions within date range
   const history = transactions
-    .filter(t => new Date(t.date + 'T00:00:00') <= endDate)
+    .filter(t => {
+      const tDate = new Date(t.date + 'T00:00:00');
+      return tDate >= startDate && tDate <= endDate;
+    })
     .sort((a, b) => new Date(a.date) - new Date(b.date));
 
   if (history.length === 0) {
@@ -480,6 +497,7 @@ function updateBalanceEvolutionChart(displayTransactions) {
     return;
   }
 
+  // Build evolution data
   const evolution = {};
   let runningBalance = 0;
   history.forEach(t => {
@@ -513,7 +531,7 @@ function updateBalanceEvolutionChart(displayTransactions) {
         maintainAspectRatio: false,
         layout: {
           padding: {
-            left: -10,
+            left: 0,
             right: 0,
             top: 10,
             bottom: 0
@@ -707,7 +725,18 @@ if (saleForm) {
     };
     closedTrades.push(closedTrade);
 
-    // 2. Update Savings (Active Portfolio)
+    // 2. Add the received amount to available balance as income
+    const saleTransaction = {
+      id: generateID(),
+      text: `Venta de ${item.asset}`,
+      amount: sellAmount,
+      date: sellDate,
+      platform: item.platform,
+      currency: sellCurrency
+    };
+    transactions.push(saleTransaction);
+
+    // 3. Update Savings (Active Portfolio)
     if (sellQty >= item.quantity) {
       savings.splice(index, 1);
     } else {
