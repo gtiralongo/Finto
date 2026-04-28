@@ -656,6 +656,18 @@ if (saveForm) {
       date: saveDate.value
     };
     savings.push(item);
+
+    // Create expense transaction to deduct from available balance
+    const expenseTransaction = {
+      id: generateID(),
+      text: `Inversión en ${saveAsset.value.toUpperCase()}`,
+      amount: -a, // Negative amount for expense
+      date: saveDate.value,
+      platform: document.getElementById('savings-platform-select').value,
+      currency: document.getElementById('savings-currency').value || 'ARS'
+    };
+    transactions.push(expenseTransaction);
+
     updateLocalStorage();
     saveForm.reset();
     saveDate.valueAsDate = new Date();
