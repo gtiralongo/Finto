@@ -1991,91 +1991,55 @@ function calculatePlatformInvestmentBalances(platformName) {
 }
 
 function renderPlatformsList() {
-  const platformsList = document.getElementById('platforms-list');
-  if (!platformsList) return;
-  platformsList.innerHTML = '';
+  const platformsTable = document.getElementById('platforms-list');
+  if (!platformsTable) return;
+  const tbody = platformsTable.querySelector('tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
 
   platforms.forEach(p => {
     const availableARS = calculatePlatformBalance(p.name, 'ARS');
     const availableUSD = calculatePlatformBalance(p.name, 'USD');
     const investmentBalances = calculatePlatformInvestmentBalances(p.name);
-    
-    // Total in ARS (just for primary display if needed)
+
+    // Total in ARS
     const totalARS = availableARS + (investmentBalances['ARS'] || 0);
-    
-    const card = document.createElement('div');
-    card.className = 'platform-card';
-    
-    // Build rows for available balances
-    let availableRows = `
-      <div class="platform-balance-row">
-        <span class="platform-balance-label">Disponible ARS</span>
-        <span class="platform-balance-value ${availableARS >= 0 ? 'income-color' : 'expense-color'}">${fmt(availableARS)}</span>
-      </div>
-    `;
-    if (availableUSD !== 0) {
-      availableRows += `
-        <div class="platform-balance-row">
-          <span class="platform-balance-label">Disponible <span class="currency-badge">USD</span></span>
-          <span class="platform-balance-value ${availableUSD >= 0 ? 'income-color' : 'expense-color'}">U$D ${availableUSD.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
-        </div>
-      `;
-    }
 
-    // Build rows for investment balances
-    let investmentRows = '';
-    const currencies = Object.keys(investmentBalances);
-    if (currencies.length === 0) {
-      investmentRows = `
-        <div class="platform-balance-row">
-          <span class="platform-balance-label">Inversión</span>
-          <span class="platform-balance-value text-muted">$0,00</span>
-        </div>
-      `;
-    } else {
-      currencies.forEach(cur => {
-        const symbol = (cur === 'USD' || cur === 'USDT') ? 'U$D ' : '$';
-        investmentRows += `
-          <div class="platform-balance-row">
-            <span class="platform-balance-label">Inversión <span class="currency-badge">${cur}</span></span>
-            <span class="platform-balance-value">${symbol}${investmentBalances[cur].toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
-          </div>
-        `;
-      });
-    }
+    // Separar inversiones ARS y USD
+    const invARS = investmentBalances['ARS'] ? '$' + investmentBalances['ARS'].toLocaleString('es-AR', { minimumFractionDigits: 2 }) : '-';
+    const invUSD = investmentBalances['USD'] ? 'U$D ' + investmentBalances['USD'].toLocaleString('es-AR', { minimumFractionDigits: 2 }) : '-';
 
-    card.innerHTML = `
-      <div class="platform-card-header">
-        <div class="platform-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="2" y="5" width="20" height="14" rx="2" />
-            <line x1="2" y1="10" x2="22" y2="10" />
-          </svg>
-        </div>
-        <div class="platform-card-actions">
-          <button class="btn-icon" onclick="editPlatform(${p.id})">
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>
+        <div style="display:flex;align-items:center;gap:0.75rem;">
+          <div class="platform-icon" style="width:36px;height:36px;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="5" width="20" height="14" rx="2" />
+              <line x1="2" y1="10" x2="22" y2="10" />
+            </svg>
+          </div>
+          <strong>${p.name}</strong>
+        </div>
+      </td>
+      <td class="${availableARS >= 0 ? 'income-color' : 'expense-color'}" style="font-weight:600;">${fmt(availableARS)}</td>
+      <td class="${availableUSD >= 0 ? 'income-color' : 'expense-color'}" style="font-weight:600;">${availableUSD !== 0 ? 'U$D ' + availableUSD.toLocaleString('es-AR', { minimumFractionDigits: 2 }) : '-'}</td>
+      <td style="font-weight:600;">${invARS}</td>
+      <td style="font-weight:600;">${invUSD}</td>
+      <td class="platform-total-value" style="font-weight:800;">${fmt(totalARS)}</td>
+      <td>
+        <div style="display:flex;gap:0.5rem;">
+          <button class="btn-icon" onclick="editPlatform(${p.id})">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
             </svg>
           </button>
           <button class="delete-table-btn" onclick="deletePlatform(${p.id})">✕</button>
         </div>
-      </div>
-      <div>
-        <div class="platform-card-name">${p.name}</div>
-        <div class="platform-balance-wrap">
-          ${availableRows}
-          <div style="height: 1px; background: var(--border); margin: 4px 0;"></div>
-          ${investmentRows}
-          <div class="platform-total-row">
-            <span class="platform-total-label">Balance Total (ARS)</span>
-            <span class="platform-total-value">${fmt(totalARS)}</span>
-          </div>
-        </div>
-      </div>
+      </td>
     `;
-    platformsList.appendChild(card);
+    tbody.appendChild(row);
   });
 }
 

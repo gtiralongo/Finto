@@ -2554,6 +2554,97 @@ body.light-mode .hero-stat-val.highlight {
     color: var(--primary-light);
 }
 
+.platform-list-item {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    gap: 1rem;
+}
+
+.platforms-table-wrapper {
+    overflow-x: auto;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.platforms-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.platforms-table thead {
+    background: rgba(255, 255, 255, 0.05);
+    border-bottom: 2px solid var(--border);
+}
+
+.platforms-table th {
+    padding: 1rem 1.25rem;
+    text-align: left;
+    font-weight: 700;
+    color: var(--text-soft);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.platforms-table td {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+}
+
+.platforms-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.platforms-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.platform-icon {
+    width: 36px;
+    height: 36px;
+    background: var(--surface-active);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-light);
+    flex-shrink: 0;
+}
+
+.platform-icon svg {
+    width: 18px;
+    height: 18px;
+}
+    gap: 0.25rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.platform-list-label {
+    font-weight: 600;
+    color: var(--text-soft);
+}
+
+.platform-list-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.platform-list-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
 .currency-badge {
     font-size: 0.65rem;
     padding: 2px 6px;

@@ -935,11 +935,7 @@
 
             <!-- ===== PLATFORMS VIEW ===== -->
             <div id="platforms-view" class="view-section" style="display: none;">
-                <div class="platforms-grid" id="platforms-list">
-                    <!-- Dynamic content: Platform Cards -->
-                </div>
-
-                <div class="platforms-actions">
+                <div class="platforms-actions" style="margin-bottom: 1.5rem;">
                     <div class="form-card">
                         <div class="form-card-header">
                             <div class="form-card-icon primary-icon">
@@ -977,6 +973,25 @@
                             </div>
                         </form>
                     </div>
+                </div>
+
+                <div class="platforms-table-wrapper">
+                    <table class="platforms-table" id="platforms-list">
+                        <thead>
+                            <tr>
+                                <th>Plataforma</th>
+                                <th>Disponible ARS</th>
+                                <th>Disponible USD</th>
+                                <th>Inversión ARS</th>
+                                <th>Inversión USD</th>
+                                <th>Balance Total (ARS)</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Dynamic content: Platform rows -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </main>
