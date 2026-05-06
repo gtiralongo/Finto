@@ -43,6 +43,7 @@ let currentSearchQuery = '';
 let savingsSearchQuery = '';
 let savingsFilterPlatform = '';
 let savingsFilterCategory = '';
+let platformViewMode = localStorage.getItem('platformViewMode') || 'cards';
 
 // Chart Instances
 let transactionChartInstance = null;
@@ -144,6 +145,59 @@ function switchView(view) {
 }
 
 // ===== FORM TABS =====
+// User Menu Toggle
+const userMenuToggle = document.getElementById('user-menu-toggle');
+const userDropdown = document.getElementById('user-dropdown');
+const logoutBtnMobile = document.getElementById('logout-btn-mobile');
+
+if (userMenuToggle && userDropdown) {
+  userMenuToggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    userDropdown.classList.toggle('show');
+  });
+
+  document.addEventListener('click', () => {
+    userDropdown.classList.remove('show');
+  });
+}
+
+if (logoutBtnMobile) {
+  logoutBtnMobile.addEventListener('click', () => auth.signOut());
+}
+
+// Sync Mobile Filters
+const mobileYearFilter = document.getElementById('filter-year-mobile');
+const mobileMonthFilter = document.getElementById('filter-month-mobile');
+const desktopYearFilter = document.getElementById('filter-year');
+const desktopMonthFilter = document.getElementById('filter-month');
+
+if (mobileYearFilter && desktopYearFilter) {
+  mobileYearFilter.addEventListener('change', (e) => {
+    desktopYearFilter.value = e.target.value;
+    updateDashboard();
+  });
+}
+
+if (mobileMonthFilter && desktopMonthFilter) {
+  mobileMonthFilter.addEventListener('change', (e) => {
+    desktopMonthFilter.value = e.target.value;
+    updateDashboard();
+  });
+}
+
+// Sync Desktop to Mobile (optional, but good for consistency)
+if (desktopYearFilter && mobileYearFilter) {
+  desktopYearFilter.addEventListener('change', () => {
+    mobileYearFilter.value = desktopYearFilter.value;
+  });
+}
+if (desktopMonthFilter && mobileMonthFilter) {
+  desktopMonthFilter.addEventListener('change', () => {
+    mobileMonthFilter.value = desktopMonthFilter.value;
+  });
+}
+
+// Tabs Logic (Restored)
 const formTabs = document.querySelectorAll('.form-tab');
 formTabs.forEach(tab => {
   tab.addEventListener('click', () => {
@@ -197,40 +251,69 @@ function getDashboardFilteredSavings() {
   });
 }
 
+function getDashboardFilteredTrades() {
+  return closedTrades.filter(t => {
+    const tDate = new Date(t.date + 'T00:00:00');
+    const tYear = tDate.getFullYear().toString();
+    const tMonth = (tDate.getMonth() + 1).toString().padStart(2, '0');
+    const yearMatch = filterYear.value === 'all' || tYear === filterYear.value;
+    const monthMatch = filterMonth.value === 'all' || tMonth === filterMonth.value;
+    return yearMatch && monthMatch;
+  });
+}
+
 function populateYearFilter() {
   const allDates = [
     ...transactions.map(t => t.date),
     ...savings.map(s => s.date)
   ].filter(d => d);
   const years = [...new Set(allDates.map(d => new Date(d + 'T00:00:00').getFullYear()))].sort((a, b) => b - a);
-  const currentSelection = filterYear.value;
-  filterYear.innerHTML = '<option value="all">Todos los años</option>';
-  years.forEach(year => {
-    const option = document.createElement('option');
-    option.value = year;
-    option.textContent = year;
-    filterYear.appendChild(option);
-  });
-  if (years.includes(parseInt(currentSelection))) filterYear.value = currentSelection;
+  
+  const filterYear = document.getElementById('filter-year');
+  const filterYearMobile = document.getElementById('filter-year-mobile');
+  
+  if (filterYear) {
+    const currentSelection = filterYear.value;
+    filterYear.innerHTML = '<option value="all">Todos los años</option>';
+    years.forEach(year => {
+      const option = document.createElement('option');
+      option.value = year;
+      option.textContent = year;
+      filterYear.appendChild(option);
+    });
+    if (years.includes(parseInt(currentSelection))) filterYear.value = currentSelection;
+  }
+
+  if (filterYearMobile) {
+    const currentSelection = filterYearMobile.value;
+    filterYearMobile.innerHTML = '<option value="all">Año: Todos</option>';
+    years.forEach(year => {
+      const option = document.createElement('option');
+      option.value = year;
+      option.textContent = year;
+      filterYearMobile.appendChild(option);
+    });
+    if (years.includes(parseInt(currentSelection))) filterYearMobile.value = currentSelection;
+  }
 }
 
 
 // ===== KPI UPDATE =====
-function updateKPIs(displayTransactions, displaySavings) {
-  // Available Cash (Transactions)
+function updateKPIs(displayTransactions, displaySavings, displayTrades) {
+  // Available Cash (Transactions) - ALWAYS use all transactions to show REAL TOTAL
   const initialARS = platforms.reduce((acc, p) => acc + (parseFloat(p.initialBalance) || 0), 0);
   const initialUSD = platforms.reduce((acc, p) => acc + (parseFloat(p.initialBalanceUSD) || 0), 0);
 
+  const allTransactionsARS = transactions.filter(t => (t.currency || 'ARS') === 'ARS');
+  const allTransactionsUSD = transactions.filter(t => (t.currency || 'ARS') === 'USD');
+
+  const totalARS = initialARS + allTransactionsARS.reduce((acc, t) => acc + t.amount, 0);
+  const totalUSD = initialUSD + allTransactionsUSD.reduce((acc, t) => acc + t.amount, 0);
+
+  // For generic Income/Expense KPIs, we use FILTERED transactions (of the selected period)
   const transactionsARS = displayTransactions.filter(t => (t.currency || 'ARS') === 'ARS');
-  const transactionsUSD = displayTransactions.filter(t => (t.currency || 'ARS') === 'USD');
-
-  const totalARS = initialARS + transactionsARS.reduce((acc, t) => acc + t.amount, 0);
-  const totalUSD = initialUSD + transactionsUSD.reduce((acc, t) => acc + t.amount, 0);
-
-  // For generic Income/Expense KPIs, we convert to ARS roughly or just show ARS for now
-  // Since we don't have a reliable exchange rate, we show the sum of ARS transactions.
-  const incomeARS = transactionsARS.filter(t => t.amount > 0).reduce((acc, t) => acc + t.amount, 0);
-  const expenseARS = Math.abs(transactionsARS.filter(t => t.amount < 0).reduce((acc, t) => acc + t.amount, 0));
+  const incomeARS = transactionsARS.filter(t => t.amount > 0 && !t.isTransfer).reduce((acc, t) => acc + t.amount, 0);
+  const expenseARS = Math.abs(transactionsARS.filter(t => t.amount < 0 && !t.isTransfer).reduce((acc, t) => acc + t.amount, 0));
 
   balance.innerText = fmt(totalARS);
   balance.style.color = totalARS >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
@@ -249,8 +332,24 @@ function updateKPIs(displayTransactions, displaySavings) {
   money_plus.innerText = '+' + fmt(incomeARS);
   money_minus.innerText = '-' + fmt(expenseARS);
 
-  if (incomeCount) incomeCount.innerText = `${transactionsARS.filter(t => t.amount > 0).length} mov. ARS`;
-  if (expenseCount) expenseCount.innerText = `${transactionsARS.filter(t => t.amount < 0).length} mov. ARS`;
+  const surplusARS = incomeARS - expenseARS;
+  const rateValue = incomeARS > 0 ? (surplusARS / incomeARS) * 100 : 0;
+
+  const surplusEl = document.getElementById('period-surplus');
+  const rateEl = document.getElementById('savings-rate');
+
+  if (surplusEl) {
+    surplusEl.innerText = fmt(surplusARS);
+    surplusEl.style.color = surplusARS >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
+  }
+
+  if (rateEl) {
+    rateEl.innerText = `${rateValue.toFixed(1)}%`;
+    rateEl.style.color = rateValue >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
+  }
+
+  if (incomeCount) incomeCount.innerText = `${transactionsARS.filter(t => t.amount > 0 && !t.isTransfer).length} mov. ARS`;
+  if (expenseCount) expenseCount.innerText = `${transactionsARS.filter(t => t.amount < 0 && !t.isTransfer).length} mov. ARS`;
 
 
   // Total Saved (Now Total Savings)
@@ -271,6 +370,39 @@ function updateKPIs(displayTransactions, displaySavings) {
   // Combine USD and USDT for the Dashboard KPI display
   const usdTotal = (totalSavByCur['USD'] || 0) + (totalSavByCur['USDT'] || 0);
   if (totalSavingsUsdEl) totalSavingsUsdEl.innerText = fmtSav(usdTotal, 'U$D ');
+
+  // Realized PNL
+  const tradesARS = (displayTrades || []).filter(t => (t.currency || 'ARS') === 'ARS');
+  const pnlARS = tradesARS.reduce((acc, t) => acc + (t.pnl || 0), 0);
+  const costARS = tradesARS.reduce((acc, t) => acc + (t.costBasis || 0), 0);
+  const pnlPctARS = costARS > 0 ? (pnlARS / costARS) * 100 : 0;
+
+  const pnlArsEl = document.getElementById('pnl-realized-ars');
+  const pnlPctArsEl = document.getElementById('pnl-percent-ars');
+  if (pnlArsEl) {
+    pnlArsEl.innerText = fmt(pnlARS);
+    pnlArsEl.style.color = pnlARS >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
+  }
+  if (pnlPctArsEl) {
+    pnlPctArsEl.innerText = `${pnlPctARS >= 0 ? '+' : ''}${pnlPctARS.toFixed(2)}% pnl`;
+    pnlPctArsEl.style.color = pnlPctARS >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
+  }
+
+  const tradesUSD = (displayTrades || []).filter(t => (t.currency || 'ARS') === 'USD' || (t.currency || 'ARS') === 'USDT');
+  const pnlUSD = tradesUSD.reduce((acc, t) => acc + (t.pnl || 0), 0);
+  const costUSD = tradesUSD.reduce((acc, t) => acc + (t.costBasis || 0), 0);
+  const pnlPctUSD = costUSD > 0 ? (pnlUSD / costUSD) * 100 : 0;
+
+  const pnlUsdEl = document.getElementById('pnl-realized-usd');
+  const pnlPctUsdEl = document.getElementById('pnl-percent-usd');
+  if (pnlUsdEl) {
+    pnlUsdEl.innerText = `U$D ${pnlUSD.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+    pnlUsdEl.style.color = pnlUSD >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
+  }
+  if (pnlPctUsdEl) {
+    pnlPctUsdEl.innerText = `${pnlPctUSD >= 0 ? '+' : ''}${pnlPctUSD.toFixed(2)}% pnl`;
+    pnlPctUsdEl.style.color = pnlPctUSD >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
+  }
 }
 
 // ===== CHARTS =====
@@ -290,6 +422,7 @@ function updateCharts(displayTransactions, displaySavings) {
   // Monthly Bar Chart
   const monthlyData = {};
   displayTransactions.forEach(t => {
+    if (t.isTransfer) return;
     const month = t.date.substring(0, 7);
     if (!monthlyData[month]) monthlyData[month] = { income: 0, expense: 0 };
     if (t.amount > 0) monthlyData[month].income += t.amount;
@@ -411,15 +544,26 @@ function updateCharts(displayTransactions, displaySavings) {
     }
   }
 
-  // Portfolio Quantities Distribution
+  // Portfolio Distribution by Asset Type (%)
   if (dashSavingsQtyCanvas) {
-    const assetsQtyData = {};
+    const categoryNames = {
+      'crypto-ars': 'Crypto (ARS)',
+      'acciones': 'Acciones',
+      'bonos': 'Bonos',
+      'fondos': 'Fondos',
+      'crypto-global': 'Crypto Global'
+    };
+
+    const categoryData = {};
     (displaySavings || savings).forEach(s => {
-      assetsQtyData[s.asset] = (assetsQtyData[s.asset] || 0) + s.quantity;
+      const val = parseFloat(s.price) || 0;
+      categoryData[s.category] = (categoryData[s.category] || 0) + val;
     });
 
-    const labels = Object.keys(assetsQtyData);
-    const values = Object.values(assetsQtyData);
+    const labels = Object.keys(categoryData).map(c => categoryNames[c] || c);
+    const values = Object.values(categoryData);
+    const total = values.reduce((a, b) => a + b, 0);
+    const percentages = total > 0 ? values.map(v => ((v / total) * 100).toFixed(1)) : values.map(() => '0');
 
     if (dashSavingsQtyChartInstance) dashSavingsQtyChartInstance.destroy();
 
@@ -429,7 +573,7 @@ function updateCharts(displayTransactions, displaySavings) {
         data: {
           labels: labels,
           datasets: [{
-            data: values,
+            data: percentages,
             backgroundColor: palette,
             borderWidth: 0,
             hoverOffset: 4
@@ -443,7 +587,7 @@ function updateCharts(displayTransactions, displaySavings) {
             tooltip: {
               backgroundColor: 'rgba(6,9,20,0.95)',
               callbacks: {
-                label: (ctx) => ` ${ctx.label}: ${ctx.parsed.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} uds.`
+                label: (ctx) => ` ${ctx.label}: ${ctx.parsed}%`
               }
             }
           },
@@ -1351,7 +1495,8 @@ function updateRecentList(displayTransactions) {
 function updateDashboard() {
   const displayTransactions = getDashboardFilteredTransactions();
   const displaySavings = getDashboardFilteredSavings();
-  updateKPIs(displayTransactions, displaySavings);
+  const displayTrades = getDashboardFilteredTrades();
+  updateKPIs(displayTransactions, displaySavings, displayTrades);
   updateCharts(displayTransactions, displaySavings);
   updateBalanceEvolutionChart(displayTransactions);
   updateRecentList(displayTransactions);
@@ -1422,7 +1567,7 @@ function updateFormSideStats() {
   const sorted = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
 
   // Expenses
-  const allExpenses = sorted.filter(t => t.amount < 0);
+  const allExpenses = sorted.filter(t => t.amount < 0 && !t.isTransfer);
   const expMonth = allExpenses.filter(t => {
     const d = new Date(t.date + 'T00:00:00');
     return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
@@ -1440,7 +1585,7 @@ function updateFormSideStats() {
   fmtEl('form-expense-avg', expAvg);
 
   // Incomes
-  const allIncomes = sorted.filter(t => t.amount > 0);
+  const allIncomes = sorted.filter(t => t.amount > 0 && !t.isTransfer);
   const incMonth = allIncomes.filter(t => {
     const d = new Date(t.date + 'T00:00:00');
     return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
@@ -1977,7 +2122,110 @@ function calculatePlatformBalance(platformName, currency = 'ARS') {
 
 function updatePlatformsUI() {
   renderPlatformsList();
+  renderPlatformsCards();
   populatePlatformsDropdowns();
+  updateViewToggleUI();
+}
+
+function updateViewToggleUI() {
+  const cardsBtn = document.getElementById('view-cards-btn');
+  const tableBtn = document.getElementById('view-table-btn');
+  const cardsContainer = document.getElementById('platforms-cards-container');
+  const tableContainer = document.getElementById('platforms-table-container');
+
+  if (!cardsBtn || !tableBtn) return;
+
+  if (platformViewMode === 'cards') {
+    cardsBtn.classList.add('active');
+    tableBtn.classList.remove('active');
+    if (cardsContainer) cardsContainer.style.display = 'grid';
+    if (tableContainer) tableContainer.style.display = 'none';
+  } else {
+    cardsBtn.classList.remove('active');
+    tableBtn.classList.add('active');
+    if (cardsContainer) cardsContainer.style.display = 'none';
+    if (tableContainer) tableContainer.style.display = 'block';
+  }
+}
+
+// Toggle event listeners
+document.addEventListener('click', (e) => {
+  if (e.target.closest('#view-cards-btn')) {
+    platformViewMode = 'cards';
+    localStorage.setItem('platformViewMode', 'cards');
+    updateViewToggleUI();
+  }
+  if (e.target.closest('#view-table-btn')) {
+    platformViewMode = 'table';
+    localStorage.setItem('platformViewMode', 'table');
+    updateViewToggleUI();
+  }
+});
+
+function renderPlatformsCards() {
+  const container = document.getElementById('platforms-cards-container');
+  if (!container) return;
+  container.innerHTML = '';
+
+  platforms.forEach(p => {
+    const availableARS = calculatePlatformBalance(p.name, 'ARS');
+    const availableUSD = calculatePlatformBalance(p.name, 'USD');
+    const investmentBalances = calculatePlatformInvestmentBalances(p.name);
+    const totalARS = availableARS + (investmentBalances['ARS'] || 0);
+
+    const card = document.createElement('div');
+    card.className = 'platform-card';
+    card.innerHTML = `
+      <div class="platform-card-header">
+        <div class="platform-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="5" width="20" height="14" rx="2" />
+            <line x1="2" y1="10" x2="22" y2="10" />
+          </svg>
+        </div>
+        <div class="platform-card-actions">
+          <button class="btn-icon" onclick="editPlatform(${p.id})">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+            </svg>
+          </button>
+          <button class="btn-icon" style="color: var(--expense-light);" onclick="deletePlatform(${p.id})">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;">
+              <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div>
+        <div class="platform-card-name">${p.name}</div>
+        <div class="platform-balance-wrap" style="margin-top: 1rem;">
+          <div class="platform-balance-row">
+            <span class="platform-balance-label">Disponible ARS</span>
+            <span class="platform-balance-value ${availableARS >= 0 ? 'income-color' : 'expense-color'}">${fmt(availableARS)}</span>
+          </div>
+          <div class="platform-balance-row">
+            <span class="platform-balance-label">Disponible USD</span>
+            <span class="platform-balance-value ${availableUSD >= 0 ? 'income-color' : 'expense-color'}">${availableUSD !== 0 ? 'U$D ' + availableUSD.toLocaleString('es-AR', { minimumFractionDigits: 2 }) : '-'}</span>
+          </div>
+          <div class="platform-balance-row">
+            <span class="platform-balance-label">Inversión</span>
+            <span class="platform-balance-value" style="font-size: 0.75rem;">
+              ${investmentBalances['ARS'] ? '$' + investmentBalances['ARS'].toLocaleString('es-AR', { minimumFractionDigits: 2 }) : ''}
+              ${investmentBalances['ARS'] && investmentBalances['USD'] ? ' / ' : ''}
+              ${investmentBalances['USD'] ? 'U$D ' + investmentBalances['USD'].toLocaleString('es-AR', { minimumFractionDigits: 2 }) : ''}
+              ${!investmentBalances['ARS'] && !investmentBalances['USD'] ? '-' : ''}
+            </span>
+          </div>
+        </div>
+      </div>
+      <div class="platform-total-row">
+        <span class="platform-total-label">Balance Total</span>
+        <span class="platform-total-value">${fmt(totalARS)}</span>
+      </div>
+    `;
+    container.appendChild(card);
+  });
 }
 
 function calculatePlatformInvestmentBalances(platformName) {
