@@ -44,6 +44,8 @@ let savingsSearchQuery = '';
 let savingsFilterPlatform = '';
 let savingsFilterCategory = '';
 let platformViewMode = localStorage.getItem('platformViewMode') || 'cards';
+let platformSortColumn = localStorage.getItem('platformSortColumn') || 'name';
+let platformSortDirection = parseInt(localStorage.getItem('platformSortDirection')) || 1;
 
 // Chart Instances
 let transactionChartInstance = null;
@@ -2085,6 +2087,7 @@ function init() {
   updateDashboard();
   renderHistoryList();
   updateFormSideStats();
+  initPlatformTableSorting();
   updatePlatformsUI();
 
   if (typeof updateSavingsUI === 'function') updateSavingsUI();
@@ -2238,6 +2241,16 @@ function calculatePlatformInvestmentBalances(platformName) {
   return balances;
 }
 
+function getPlatformSortData(p) {
+  const availableARS = calculatePlatformBalance(p.name, 'ARS');
+  const availableUSD = calculatePlatformBalance(p.name, 'USD');
+  const invBalances = calculatePlatformInvestmentBalances(p.name);
+  const invARS = invBalances['ARS'] || 0;
+  const invUSD = invBalances['USD'] || 0;
+  const totalARS = availableARS + invARS;
+  return { availableARS, availableUSD, invARS, invUSD, totalARS };
+}
+
 function renderPlatformsList() {
   const platformsTable = document.getElementById('platforms-list');
   if (!platformsTable) return;
@@ -2245,15 +2258,30 @@ function renderPlatformsList() {
   if (!tbody) return;
   tbody.innerHTML = '';
 
-  platforms.forEach(p => {
+  updatePlatformSortIndicators();
+
+  const sorted = [...platforms].sort((a, b) => {
+    const aData = getPlatformSortData(a);
+    const bData = getPlatformSortData(b);
+    let valA, valB;
+    switch (platformSortColumn) {
+      case 'name': valA = a.name.toLowerCase(); valB = b.name.toLowerCase(); break;
+      case 'availableARS': valA = aData.availableARS; valB = bData.availableARS; break;
+      case 'availableUSD': valA = aData.availableUSD; valB = bData.availableUSD; break;
+      case 'invARS': valA = aData.invARS; valB = bData.invARS; break;
+      case 'invUSD': valA = aData.invUSD; valB = bData.invUSD; break;
+      case 'totalARS': valA = aData.totalARS; valB = bData.totalARS; break;
+      default: valA = a.name.toLowerCase(); valB = b.name.toLowerCase();
+    }
+    if (typeof valA === 'string') return valA.localeCompare(valB) * platformSortDirection;
+    return (valA - valB) * platformSortDirection;
+  });
+
+  sorted.forEach(p => {
     const availableARS = calculatePlatformBalance(p.name, 'ARS');
     const availableUSD = calculatePlatformBalance(p.name, 'USD');
     const investmentBalances = calculatePlatformInvestmentBalances(p.name);
-
-    // Total in ARS
     const totalARS = availableARS + (investmentBalances['ARS'] || 0);
-
-    // Separar inversiones ARS y USD
     const invARS = investmentBalances['ARS'] ? '$' + investmentBalances['ARS'].toLocaleString('es-AR', { minimumFractionDigits: 2 }) : '-';
     const invUSD = investmentBalances['USD'] ? 'U$D ' + investmentBalances['USD'].toLocaleString('es-AR', { minimumFractionDigits: 2 }) : '-';
 
@@ -2288,6 +2316,34 @@ function renderPlatformsList() {
       </td>
     `;
     tbody.appendChild(row);
+  });
+}
+
+function updatePlatformSortIndicators() {
+  const ths = document.querySelectorAll('#platforms-list thead th.sortable');
+  ths.forEach(th => {
+    const col = th.dataset.sort;
+    th.classList.remove('sort-asc', 'sort-desc');
+    if (col === platformSortColumn) {
+      th.classList.add(platformSortDirection === 1 ? 'sort-asc' : 'sort-desc');
+    }
+  });
+}
+
+function initPlatformTableSorting() {
+  document.querySelectorAll('#platforms-list thead th.sortable').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.dataset.sort;
+      if (platformSortColumn === col) {
+        platformSortDirection *= -1;
+      } else {
+        platformSortColumn = col;
+        platformSortDirection = 1;
+      }
+      localStorage.setItem('platformSortColumn', platformSortColumn);
+      localStorage.setItem('platformSortDirection', platformSortDirection);
+      renderPlatformsList();
+    });
   });
 }
 

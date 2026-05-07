@@ -2597,6 +2597,42 @@ body.light-mode .hero-stat-val.highlight {
     letter-spacing: 0.5px;
 }
 
+.platforms-table th.sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.15s ease;
+}
+
+.platforms-table th.sortable:hover {
+    color: var(--text);
+}
+
+.platforms-table th.sortable::after {
+    content: '';
+    display: inline-block;
+    margin-left: 0.4rem;
+    vertical-align: middle;
+    opacity: 0.3;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+}
+
+.platforms-table th.sort-asc::after {
+    content: '';
+    border-bottom: 5px solid var(--text);
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    opacity: 1;
+}
+
+.platforms-table th.sort-desc::after {
+    content: '';
+    border-top: 5px solid var(--text);
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    opacity: 1;
+}
+
 .platforms-table td {
     padding: 1rem 1.25rem;
     border-bottom: 1px solid var(--border);
@@ -2832,14 +2868,73 @@ body.light-mode .hero-stat-val.highlight {
 
 /* Custom Checkbox */
 .custom-checkbox {
+    appearance: none;
+    -webkit-appearance: none;
     width: 18px;
     height: 18px;
+    min-width: 18px;
+    min-height: 18px;
+    margin: 0;
+    padding: 0;
     cursor: pointer;
-    accent-color: var(--primary);
+    border-radius: 5px;
+    border: 2px solid var(--border);
+    background: transparent;
+    position: relative;
+    display: inline-block;
+    vertical-align: middle;
+    box-sizing: border-box;
+    font-size: 0;
+    line-height: 1;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.custom-checkbox:hover {
+    border-color: var(--primary-light);
+    background: rgba(124, 58, 237, 0.08);
+}
+
+.custom-checkbox:checked {
+    border-color: var(--primary);
+    background: var(--primary);
+    box-shadow: 0 0 10px var(--primary-glow);
+}
+
+.custom-checkbox:checked::after {
+    content: '';
+    position: absolute;
+    left: 4.5px;
+    top: 3px;
+    width: 4px;
+    height: 7px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.custom-checkbox:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--primary-glow);
 }
 
 tr.selected {
     background: rgba(124, 58, 237, 0.08) !important;
+}
+
+/* Select All header checkbox */
+#select-all-savings.custom-checkbox {
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
+    min-height: 16px;
+}
+
+#select-all-savings.custom-checkbox:checked::after {
+    left: 3.5px;
+    top: 2px;
+    width: 4px;
+    height: 7px;
 }
 
 
