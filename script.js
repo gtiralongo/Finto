@@ -1465,6 +1465,143 @@ if (bulkEditForm) {
   });
 }
 
+// BULK SALE LOGIC
+const btnBulkSell = document.getElementById('btn-bulk-sell');
+const bulkSaleModal = document.getElementById('bulk-sale-modal');
+const bulkSaleForm = document.getElementById('bulk-sale-form');
+const bulkSaleAmount = document.getElementById('bulk-sale-amount');
+const bulkSaleCurrency = document.getElementById('bulk-sale-currency');
+const bulkSaleDate = document.getElementById('bulk-sale-date');
+const bulkPnlPreview = document.getElementById('bulk-pnl-preview');
+const bulkPnlAmount = document.getElementById('bulk-pnl-amount');
+const bulkPnlPercent = document.getElementById('bulk-pnl-percent');
+
+function openBulkSaleModal() {
+  const selected = savings.filter(s => selectedSavingsIds.includes(s.id));
+  if (selected.length === 0) return;
+
+  document.getElementById('bulk-sale-count').innerText = selected.length;
+
+  const totalCostBasis = selected.reduce((sum, s) => sum + (parseFloat(s.price) || 0), 0);
+  const summaryEl = document.getElementById('bulk-sale-summary');
+  summaryEl.innerHTML = selected.map(s =>
+    `<div style="display:flex;justify-content:space-between;padding:2px 0;font-size:0.8rem;">
+      <span><strong style="color:var(--primary-light);">${s.asset}</strong> <span style="color:var(--text-soft);">× ${s.quantity}</span></span>
+      <span style="font-weight:600;">${fmt(s.price)}</span>
+    </div>`
+  ).join('') +
+  `<div style="display:flex;justify-content:space-between;padding:6px 0 0;margin-top:4px;border-top:1px solid var(--border);font-size:0.85rem;">
+    <span style="font-weight:700;">Costo Total</span>
+    <span style="font-weight:800;">${fmt(totalCostBasis)}</span>
+  </div>`;
+
+  // Determine common currency or default to ARS
+  const currencies = [...new Set(selected.map(s => s.currency || 'ARS'))];
+  bulkSaleCurrency.value = currencies.length === 1 ? currencies[0] : 'ARS';
+
+  bulkSaleAmount.value = '';
+  bulkPnlPreview.style.display = 'none';
+  bulkSaleDate.valueAsDate = new Date();
+  bulkSaleModal.style.display = 'flex';
+}
+
+function closeBulkSaleModal() {
+  bulkSaleModal.style.display = 'none';
+}
+
+function updateBulkSalePNL() {
+  const selected = savings.filter(s => selectedSavingsIds.includes(s.id));
+  const totalAmount = parseFloat(bulkSaleAmount.value) || 0;
+  const totalCostBasis = selected.reduce((sum, s) => sum + (parseFloat(s.price) || 0), 0);
+
+  if (totalAmount > 0 && totalCostBasis > 0) {
+    const pnl = totalAmount - totalCostBasis;
+    const pnlPerc = (pnl / totalCostBasis) * 100;
+
+    bulkPnlPreview.style.display = 'block';
+    bulkPnlAmount.innerText = fmt(pnl);
+    bulkPnlPercent.innerText = (pnl >= 0 ? '+' : '') + pnlPerc.toFixed(2) + '%';
+
+    const color = pnl >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
+    bulkPnlAmount.style.color = color;
+    bulkPnlPercent.style.color = color;
+    bulkPnlPreview.style.borderColor = pnl >= 0 ? 'var(--income)' : 'var(--expense)';
+    bulkPnlPreview.style.background = pnl >= 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(244, 63, 94, 0.1)';
+  } else {
+    bulkPnlPreview.style.display = 'none';
+  }
+}
+
+if (btnBulkSell) {
+  btnBulkSell.addEventListener('click', openBulkSaleModal);
+}
+
+if (bulkSaleAmount) {
+  bulkSaleAmount.addEventListener('input', updateBulkSalePNL);
+}
+
+// Close bulk sale modal
+['close-bulk-sale', 'cancel-bulk-sale'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('click', closeBulkSaleModal);
+});
+
+if (bulkSaleForm) {
+  bulkSaleForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const totalAmount = parseFloat(bulkSaleAmount.value);
+    const currency = bulkSaleCurrency.value;
+    const saleDate = bulkSaleDate.value;
+
+    if (!totalAmount || totalAmount <= 0) return;
+
+    const selected = savings.filter(s => selectedSavingsIds.includes(s.id));
+    const totalCostBasis = selected.reduce((sum, s) => sum + (parseFloat(s.price) || 0), 0);
+
+    selected.forEach((item) => {
+      const proportion = totalCostBasis > 0 ? (parseFloat(item.price) || 0) / totalCostBasis : 1 / selected.length;
+      const receivedAmount = totalAmount * proportion;
+      const costBasis = parseFloat(item.price) || 0;
+      const pnl = receivedAmount - costBasis;
+      const pnlPercent = costBasis > 0 ? (pnl / costBasis) * 100 : 0;
+
+      closedTrades.push({
+        id: generateID(),
+        asset: item.asset,
+        quantitySold: item.quantity,
+        receivedAmount: receivedAmount,
+        costBasis: costBasis,
+        pnl: pnl,
+        pnlPercent: pnlPercent,
+        date: saleDate,
+        platform: item.platform,
+        currency: item.currency
+      });
+    });
+
+    // Single income transaction for the total amount
+    const first = selected[0];
+    const assetNames = selected.map(s => s.asset).join(', ');
+    transactions.push({
+      id: generateID(),
+      text: `Venta múltiple: ${assetNames}`,
+      amount: totalAmount,
+      date: saleDate,
+      platform: first ? first.platform : '',
+      currency: currency
+    });
+
+    // Remove all sold items from savings
+    savings = savings.filter(s => !selectedSavingsIds.includes(s.id));
+    selectedSavingsIds = [];
+
+    updateLocalStorage();
+    closeBulkSaleModal();
+    updateSavingsUI();
+    updateDashboard();
+  });
+}
+
 // Set initial date
 if (saveDate) saveDate.valueAsDate = new Date();
 
