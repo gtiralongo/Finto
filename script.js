@@ -947,11 +947,17 @@ function updateSavingsUI() {
     const isSelected = selectedSavingsIds.includes(s.id);
     if (isSelected) tr.classList.add('selected');
 
+    const days = getDaysHeld(s.date);
+    const daysColor = getDaysColor(days);
+    const daysDisplay = days >= 0
+      ? `<span style="font-size:0.65rem;color:${daysColor};font-weight:700;margin-left:4px;">${days}d</span>`
+      : '';
+
     tr.innerHTML = `
             <td style="padding: 1rem;">
                 <input type="checkbox" class="custom-checkbox row-checkbox" data-id="${s.id}" ${isSelected ? 'checked' : ''}>
             </td>
-            <td style="padding: 1rem;">${fmtDate(s.date)}</td>
+            <td style="padding: 1rem; white-space: nowrap;">${fmtDate(s.date)}${daysDisplay}</td>
             <td style="padding: 1rem; font-weight: 700; color: var(--primary-light);">${s.asset}</td>
             <td style="padding: 1rem;">
                 <div style="display:flex; flex-direction:column; gap:4px;">
@@ -1362,6 +1368,20 @@ function updateSavingsFilterClearBtn() {
   if (!btn) return;
   const hasFilter = savingsSearchQuery || savingsFilterPlatform || savingsFilterCategory;
   btn.style.display = hasFilter ? 'inline-flex' : 'none';
+}
+
+function getDaysHeld(dateStr) {
+  const bought = new Date(dateStr);
+  const now = new Date();
+  const diff = now - bought;
+  return Math.floor(diff / (1000 * 60 * 60 * 24));
+}
+
+function getDaysColor(days) {
+  if (days < 30) return 'var(--income)';
+  if (days < 90) return 'var(--savings)';
+  if (days < 180) return '#f97316';
+  return 'var(--expense)';
 }
 
 // BULK ACTIONS LOGIC
