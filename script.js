@@ -11,7 +11,7 @@ const list = document.getElementById('list');                 // History list
 const recentList = document.getElementById('recent-list');   // Dashboard mini list
 const emptyMsg = document.getElementById('empty-msg');
 
-const navItems = document.querySelectorAll('.nav-item, .mobile-nav-item, .btn-link');
+const navItems = document.querySelectorAll('.nav-item, .mobile-nav-item, .mobile-nav-center, .btn-link');
 const viewSections = document.querySelectorAll('.view-section');
 const viewTitle = document.getElementById('view-title');
 const headerSubtitle = document.getElementById('header-subtitle');
@@ -92,11 +92,11 @@ function generateID() {
 
 // ===== NAVIGATION =====
 const viewTitles = {
-  'dashboard': ['Dashboard', 'Resumen financiero'],
+  'dashboard': ['Panel', 'Resumen financiero'],
   'transactions-form': ['Movimientos', 'Registrar ingresos y gastos'],
   'history': ['Historial', 'Todos los movimientos'],
-  'savings': ['Mis Ahorros', 'Gestión de activos y capital'],
-  'platforms': ['Plataformas', 'Mis cuentas y balances']
+  'savings': ['Ahorros', 'Gestión de activos y capital'],
+  'platforms': ['Cuentas', 'Mis cuentas y balances']
 };
 
 navItems.forEach(item => {
@@ -270,10 +270,10 @@ function populateYearFilter() {
     ...savings.map(s => s.date)
   ].filter(d => d);
   const years = [...new Set(allDates.map(d => new Date(d + 'T00:00:00').getFullYear()))].sort((a, b) => b - a);
-  
+
   const filterYear = document.getElementById('filter-year');
   const filterYearMobile = document.getElementById('filter-year-mobile');
-  
+
   if (filterYear) {
     const currentSelection = filterYear.value;
     filterYear.innerHTML = '<option value="all">Todos los años</option>';
@@ -324,7 +324,7 @@ function updateKPIs(displayTransactions, displaySavings, displayTrades) {
   const balanceUsdContainer = document.getElementById('balance-usd-container');
   if (balanceUsdEl && balanceUsdContainer) {
     if (totalUSD !== 0) {
-      balanceUsdEl.innerText = `U$D ${totalUSD.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+      balanceUsdEl.innerText = `$${totalUSD.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
       balanceUsdContainer.style.display = 'flex';
     } else {
       balanceUsdContainer.style.display = 'none';
@@ -368,7 +368,7 @@ function updateKPIs(displayTransactions, displaySavings, displayTrades) {
   const fmtSav = (val, symbol) => `${symbol}${val.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
 
   if (totalSavingsArsEl) totalSavingsArsEl.innerText = fmtSav(totalSavByCur['ARS'] || 0, '$');
-  
+
   // Combine USD and USDT for the Dashboard KPI display
   const usdTotal = (totalSavByCur['USD'] || 0) + (totalSavByCur['USDT'] || 0);
   if (totalSavingsUsdEl) totalSavingsUsdEl.innerText = fmtSav(usdTotal, 'U$D ');
@@ -942,7 +942,7 @@ function updateSavingsUI() {
   sorted.forEach(s => {
     const costTotal = parseFloat(s.price) || 0;
     const cur = (s.currency || 'ARS').toUpperCase();
-    
+
     totalValueByCurrency[cur] = (totalValueByCurrency[cur] || 0) + costTotal;
     assetsData[s.asset] = (assetsData[s.asset] || 0) + costTotal;
     assetsQtyData[s.asset] = (assetsQtyData[s.asset] || 0) + s.quantity;
@@ -996,14 +996,14 @@ function updateSavingsUI() {
     // Add checkbox listener
     const cb = tr.querySelector('.row-checkbox');
     cb.addEventListener('change', (e) => {
-        const id = parseInt(e.target.dataset.id);
-        if (e.target.checked) {
-            if (!selectedSavingsIds.includes(id)) selectedSavingsIds.push(id);
-        } else {
-            selectedSavingsIds = selectedSavingsIds.filter(sid => sid !== id);
-        }
-        updateBulkToolbar();
-        updateSavingsUI(); // Refresh to update "Select All" state if needed
+      const id = parseInt(e.target.dataset.id);
+      if (e.target.checked) {
+        if (!selectedSavingsIds.includes(id)) selectedSavingsIds.push(id);
+      } else {
+        selectedSavingsIds = selectedSavingsIds.filter(sid => sid !== id);
+      }
+      updateBulkToolbar();
+      updateSavingsUI(); // Refresh to update "Select All" state if needed
     });
 
     tableBody.appendChild(tr);
@@ -1169,7 +1169,7 @@ function renderClosedTradesTable() {
       const symbol = (cur === 'USD' || cur === 'USDT') ? 'U$D ' : '$';
       return `${symbol}${val.toLocaleString('es-AR')}`;
     });
-    
+
     cashEl.innerText = cashParts.length > 0 ? cashParts.join(' / ') : '$0,00';
   }
 
@@ -1363,7 +1363,7 @@ function updateSavingsFilterPlatformDropdown() {
   if (!sel) return;
   const current = sel.value;
   // Keep first default option, rebuild the rest
-  sel.innerHTML = '<option value="">Todas las plataformas</option>';
+  sel.innerHTML = '<option value="">Todas las cuentas</option>';
   const used = [...new Set(savings.map(s => s.platform).filter(Boolean))].sort();
   used.forEach(p => {
     const opt = document.createElement('option');
@@ -1400,9 +1400,9 @@ function updateBulkToolbar() {
   const toolbar = document.getElementById('bulk-actions-toolbar');
   const countEl = document.getElementById('selected-count');
   const selectAllCb = document.getElementById('select-all-savings');
-  
+
   if (!toolbar) return;
-  
+
   const count = selectedSavingsIds.length;
   if (count > 0) {
     toolbar.style.display = 'flex';
@@ -1521,7 +1521,7 @@ function openBulkSaleModal() {
       <span style="font-weight:600;">${fmt(s.price)}</span>
     </div>`
   ).join('') +
-  `<div style="display:flex;justify-content:space-between;padding:6px 0 0;margin-top:4px;border-top:1px solid var(--border);font-size:0.85rem;">
+    `<div style="display:flex;justify-content:space-between;padding:6px 0 0;margin-top:4px;border-top:1px solid var(--border);font-size:0.85rem;">
     <span style="font-weight:700;">Costo Total</span>
     <span style="font-weight:800;">${fmt(totalCostBasis)}</span>
   </div>`;
@@ -2287,15 +2287,15 @@ window.addEventListener('resize', () => {
 function calculatePlatformBalance(platformName, currency = 'ARS') {
   const platformObj = platforms.find(p => p.name === platformName);
   let initial = 0;
-  
+
   if (platformObj) {
     if (currency === 'ARS') initial = parseFloat(platformObj.initialBalance) || 0;
     else if (currency === 'USD') initial = parseFloat(platformObj.initialBalanceUSD) || 0;
   }
-  
+
   const platformTransactions = transactions.filter(t => t.platform === platformName && (t.currency || 'ARS') === currency);
   const movementTotal = platformTransactions.reduce((acc, t) => acc + t.amount, 0);
-  
+
   return initial + movementTotal;
 }
 
@@ -2537,10 +2537,10 @@ function populatePlatformsDropdowns() {
   dropdowns.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
-    
+
     const currentVal = el.value;
     el.innerHTML = '<option value="" disabled selected>Seleccionar...</option>';
-    
+
     platforms.forEach(p => {
       const opt = document.createElement('option');
       opt.value = p.name;
@@ -2619,10 +2619,10 @@ function editPlatform(id) {
   document.getElementById('platform-name').value = p.name;
   document.getElementById('platform-initial-balance').value = p.initialBalance || 0;
   document.getElementById('platform-initial-balance-usd').value = p.initialBalanceUSD || 0;
-  
+
   document.getElementById('platform-form-title').innerText = 'Editar Plataforma';
   if (cancelPlatformEditBtn) cancelPlatformEditBtn.style.display = 'block';
-  
+
   platformForm.scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -2648,7 +2648,7 @@ function deletePlatform(id) {
 const transferForm = document.getElementById('transfer-form');
 if (transferForm) {
   document.getElementById('transfer-date').valueAsDate = new Date();
-  
+
   transferForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const from = document.getElementById('transfer-from').value;
@@ -2659,13 +2659,13 @@ if (transferForm) {
 
     if (!from || !to || !amount || !date) return;
     if (from === to) {
-      alert('Las plataformas de origen y destino deben ser diferentes');
+      alert('Las cuentas de origen y destino deben ser diferentes');
       return;
     }
 
     // Create 2 movements
     const transferId = generateID();
-    
+
     // 1. Withdrawal from source
     transactions.push({
       id: generateID(),
@@ -2693,11 +2693,11 @@ if (transferForm) {
     updateLocalStorage();
     transferForm.reset();
     document.getElementById('transfer-date').valueAsDate = new Date();
-    
+
     updatePlatformsUI();
     updateDashboard();
     renderHistoryList();
-    
+
     // Success feedback
     const btn = transferForm.querySelector('.btn-submit');
     const originalText = btn.innerHTML;

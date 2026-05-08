@@ -104,7 +104,7 @@
                         <line x1="3" y1="9" x2="21" y2="9" />
                         <line x1="9" y1="21" x2="9" y2="9" />
                     </svg>
-                    <span>Plataformas</span>
+                    <span>Cuentas</span>
                 </a>
             </nav>
             <div class="sidebar-footer">
@@ -156,15 +156,29 @@
         <main class="main-content">
             <header class="app-header">
                 <div class="header-left">
-                    <h2 id="view-title">Dashboard</h2>
+                    <div class="user-menu-container mobile-only header-avatar">
+                        <div class="header-user" id="user-menu-toggle">
+                            <span class="avatar-initials">US</span>
+                        </div>
+                        <div class="user-dropdown" id="user-dropdown">
+                            <button id="logout-btn-mobile" class="dropdown-item danger">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    style="width: 14px;">
+                                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+                                </svg>
+                                Salir
+                            </button>
+                        </div>
+                    </div>
+                    <h2 id="view-title">Panel</h2>
                 </div>
                 <div class="header-center">
                     <div class="header-balance-display">
-                        <span class="header-balance-label">Saldo Total</span>
-                        <div class="header-balance-amounts">
-                            <h3 id="balance" class="header-balance-ars">$0,00</h3>
+                        <div class="header-balance-grid">
+                            <span class="header-balance-currency">ARS</span>
+                            <span class="header-balance-currency">USD</span>
+                            <span id="balance" class="header-balance-ars">$0,00</span>
                             <div id="balance-usd-container" style="display: none;">
-                                <span class="header-balance-sep">/</span>
                                 <span id="balance-usd" class="header-balance-usd">U$D 0,00</span>
                             </div>
                         </div>
@@ -191,19 +205,7 @@
                             <option value="12">Diciembre</option>
                         </select>
                     </div>
-                    <div class="user-menu-container mobile-only">
-                        <div class="header-user" id="user-menu-toggle">
-                            <span class="avatar-initials">US</span>
-                        </div>
-                        <div class="user-dropdown" id="user-dropdown">
-                            <button id="logout-btn-mobile" class="dropdown-item danger">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px;">
-                                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
-                                </svg>
-                                Salir
-                            </button>
-                        </div>
-                    </div>
+
                 </div>
             </header>
 
@@ -213,7 +215,8 @@
                 <div class="mobile-filter-bar">
                     <div class="mobile-filter-header">
                         <span>Filtros de Período</span>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            style="width: 14px;">
                             <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
                         </svg>
                     </div>
@@ -484,8 +487,10 @@
                                             <input type="checkbox" id="expense-is-saving" hidden>
                                             <div class="toggle-control"></div>
                                             <div class="toggle-label">
-                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                    stroke-width="2">
+                                                    <path
+                                                        d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
                                                 </svg>
                                                 <span>Ahorro (Activo)</span>
                                             </div>
@@ -889,18 +894,20 @@
                     <div class="history-toolbar"
                         style="margin-top: 2rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
                         <h3>Detalle de Movimientos Activos</h3>
-                        <div style="display: flex; gap: 0.75rem; align-items: center; margin-left: auto; flex-wrap: wrap;">
+                        <div
+                            style="display: flex; gap: 0.75rem; align-items: center; margin-left: auto; flex-wrap: wrap;">
                             <div class="search-wrap" style="position: relative; min-width: 180px;">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                     style="position: absolute; left: 0.6rem; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: var(--text-muted); pointer-events: none;">
-                                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                    <circle cx="11" cy="11" r="8" />
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
                                 </svg>
                                 <input type="text" id="savings-search-input" placeholder="Buscar activo..."
                                     style="width: 100%; padding: 0.5rem 0.75rem 0.5rem 2rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font-size: 0.85rem;">
                             </div>
                             <select id="savings-filter-platform"
                                 style="padding: 0.5rem 0.75rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font-size: 0.85rem; min-width: 140px;">
-                                <option value="">Todas las plataformas</option>
+                                <option value="">Todas las cuentas</option>
                             </select>
                             <select id="savings-filter-category"
                                 style="padding: 0.5rem 0.75rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font-size: 0.85rem; min-width: 140px;">
@@ -918,7 +925,8 @@
                         </div>
                     </div>
                     <!-- Bulk Actions Toolbar (Relocated) -->
-                    <div id="bulk-actions-toolbar" class="bulk-toolbar" style="display: none; margin-bottom: 1rem; border-radius: 12px; background: var(--primary); padding: 10px 20px;">
+                    <div id="bulk-actions-toolbar" class="bulk-toolbar"
+                        style="display: none; margin-bottom: 1rem; border-radius: 12px; background: var(--primary); padding: 10px 20px;">
                         <div class="bulk-info">
                             <span id="selected-count" style="font-weight: 800;">0</span> seleccionados
                         </div>
@@ -930,15 +938,18 @@
                                 </svg>
                                 Editar
                             </button>
-                            <button class="btn-bulk" id="btn-bulk-sell" style="background: rgba(16, 185, 129, 0.25); border-color: rgba(16, 185, 129, 0.3);">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;">
+                            <button class="btn-bulk" id="btn-bulk-sell"
+                                style="background: rgba(16, 185, 129, 0.25); border-color: rgba(16, 185, 129, 0.3);">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    style="width:16px;height:16px;">
                                     <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
                                 </svg>
                                 Vender
                             </button>
                             <button class="btn-bulk danger" id="btn-bulk-delete">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                    <path
+                                        d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                                 </svg>
                                 Eliminar
                             </button>
@@ -1055,11 +1066,13 @@
                     </div>
                 </div>
 
-                <div class="view-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <div class="view-header"
+                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                     <h3>Mis Cuentas</h3>
                     <div class="view-toggle">
                         <button class="toggle-btn active" id="view-cards-btn" title="Vista Tarjetas">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                style="width:18px;height:18px;">
                                 <rect x="3" y="3" width="7" height="7" rx="1" />
                                 <rect x="14" y="3" width="7" height="7" rx="1" />
                                 <rect x="3" y="14" width="7" height="7" rx="1" />
@@ -1067,7 +1080,8 @@
                             </svg>
                         </button>
                         <button class="toggle-btn" id="view-table-btn" title="Vista Tabla">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                style="width:18px;height:18px;">
                                 <line x1="8" y1="6" x2="21" y2="6" />
                                 <line x1="8" y1="12" x2="21" y2="12" />
                                 <line x1="8" y1="18" x2="21" y2="18" />
@@ -1105,6 +1119,7 @@
         </main>
 
         <!-- Mobile Navigation -->
+        <!-- Nav anterior (5 botones iguales) - descomentar para volver
         <nav class="mobile-nav">
             <a href="#" class="mobile-nav-item active" data-view="dashboard">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1130,6 +1145,52 @@
                 <span>Historial</span>
             </a>
             <a href="#" class="mobile-nav-item" data-view="savings">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                </svg>
+                <span>Inv.</span>
+            </a>
+            <a href="#" class="mobile-nav-item" data-view="platforms">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                    <line x1="3" y1="9" x2="21" y2="9" />
+                    <line x1="9" y1="21" x2="9" y2="9" />
+                </svg>
+                <span>Cuentas</span>
+            </a>
+        </nav>
+        -->
+        <nav class="mobile-nav">
+            <a href="#" class="mobile-nav-item active" data-view="dashboard">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="7" height="7" rx="1" />
+                    <rect x="14" y="3" width="7" height="7" rx="1" />
+                    <rect x="3" y="14" width="7" height="7" rx="1" />
+                    <rect x="14" y="14" width="7" height="7" rx="1" />
+                </svg>
+                <span>Panel</span>
+            </a>
+            <a href="#" class="mobile-nav-item" data-view="history">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
+                </svg>
+                <span>Historial</span>
+            </a>
+            <a href="#" class="mobile-nav-center" data-view="transactions-form">
+                <!-- SVG actual: solo + -->
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                <!-- SVG anterior: circulo con + (descomentar para volver)
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="16" />
+                    <line x1="8" y1="12" x2="16" y2="12" />
+                </svg>
+                -->
+            </a>
+            <a href="#" class="mobile-nav-item" data-view="savings">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                     stroke-linejoin="round">
                     <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
@@ -1144,7 +1205,6 @@
                 </svg>
                 <span>Cuentas</span>
             </a>
-
         </nav>
     </div>
 
@@ -1329,9 +1389,11 @@
             </div>
             <div class="modal-body">
                 <p style="margin-bottom: 1rem; color: var(--text-soft); font-size: 0.9rem;">
-                    Vendiendo <span id="bulk-sale-count" style="font-weight: 700; color: var(--income-light);">0</span> activos en una sola operación.
+                    Vendiendo <span id="bulk-sale-count" style="font-weight: 700; color: var(--income-light);">0</span>
+                    activos en una sola operación.
                 </p>
-                <div id="bulk-sale-summary" style="background: var(--surface); padding: 0.75rem 1rem; border-radius: var(--radius-md); margin-bottom: 1.5rem; border: 1px solid var(--border); max-height: 160px; overflow-y: auto; font-size: 0.85rem;">
+                <div id="bulk-sale-summary"
+                    style="background: var(--surface); padding: 0.75rem 1rem; border-radius: var(--radius-md); margin-bottom: 1.5rem; border: 1px solid var(--border); max-height: 160px; overflow-y: auto; font-size: 0.85rem;">
                 </div>
                 <form id="bulk-sale-form">
                     <div class="form-group">
@@ -1351,14 +1413,19 @@
                             <input type="date" id="bulk-sale-date" required>
                         </div>
                     </div>
-                    <div id="bulk-pnl-preview" style="display: none; padding: 1rem; border-radius: var(--radius-md); margin-top: 1rem; border: 1px solid var(--income); background: rgba(16, 185, 129, 0.1); text-align: center;">
-                        <p style="font-size: 0.8rem; color: var(--text-soft); margin-bottom: 4px;">Resultado Estimado (PNL)</p>
-                        <h4 id="bulk-pnl-amount" style="font-size: 1.25rem; font-weight: 800; color: var(--income-light);">$0,00</h4>
-                        <span id="bulk-pnl-percent" style="font-size: 0.9rem; font-weight: 700; color: var(--income-light);">+0.00%</span>
+                    <div id="bulk-pnl-preview"
+                        style="display: none; padding: 1rem; border-radius: var(--radius-md); margin-top: 1rem; border: 1px solid var(--income); background: rgba(16, 185, 129, 0.1); text-align: center;">
+                        <p style="font-size: 0.8rem; color: var(--text-soft); margin-bottom: 4px;">Resultado Estimado
+                            (PNL)</p>
+                        <h4 id="bulk-pnl-amount"
+                            style="font-size: 1.25rem; font-weight: 800; color: var(--income-light);">$0,00</h4>
+                        <span id="bulk-pnl-percent"
+                            style="font-size: 0.9rem; font-weight: 700; color: var(--income-light);">+0.00%</span>
                     </div>
                     <div class="modal-footer" style="padding-top: 1.5rem;">
                         <button type="button" class="btn-secondary" id="cancel-bulk-sale">Cancelar</button>
-                        <button type="submit" class="btn-primary" style="background: var(--income);">Confirmar Venta Masiva</button>
+                        <button type="submit" class="btn-primary" style="background: var(--income);">Confirmar Venta
+                            Masiva</button>
                     </div>
                 </form>
             </div>
