@@ -314,8 +314,8 @@ function updateKPIs(displayTransactions, displaySavings, displayTrades) {
 
   // For generic Income/Expense KPIs, we use FILTERED transactions (of the selected period)
   const transactionsARS = displayTransactions.filter(t => (t.currency || 'ARS') === 'ARS');
-  const incomeARS = transactionsARS.filter(t => t.amount > 0 && !t.isTransfer).reduce((acc, t) => acc + t.amount, 0);
-  const expenseARS = Math.abs(transactionsARS.filter(t => t.amount < 0 && !t.isTransfer).reduce((acc, t) => acc + t.amount, 0));
+  const incomeARS = transactionsARS.filter(t => t.amount > 0 && !t.isTransfer && !t.isInvestment).reduce((acc, t) => acc + t.amount, 0);
+  const expenseARS = Math.abs(transactionsARS.filter(t => t.amount < 0 && !t.isTransfer && !t.isInvestment).reduce((acc, t) => acc + t.amount, 0));
 
   balance.innerText = fmt(totalARS);
   balance.style.color = totalARS >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
@@ -350,8 +350,8 @@ function updateKPIs(displayTransactions, displaySavings, displayTrades) {
     rateEl.style.color = rateValue >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
   }
 
-  if (incomeCount) incomeCount.innerText = `${transactionsARS.filter(t => t.amount > 0 && !t.isTransfer).length} mov. ARS`;
-  if (expenseCount) expenseCount.innerText = `${transactionsARS.filter(t => t.amount < 0 && !t.isTransfer).length} mov. ARS`;
+  if (incomeCount) incomeCount.innerText = `${transactionsARS.filter(t => t.amount > 0 && !t.isTransfer && !t.isInvestment).length} mov. ARS`;
+  if (expenseCount) expenseCount.innerText = `${transactionsARS.filter(t => t.amount < 0 && !t.isTransfer && !t.isInvestment).length} mov. ARS`;
 
 
   // Total Saved (Now Total Savings)
@@ -424,7 +424,7 @@ function updateCharts(displayTransactions, displaySavings) {
   // Monthly Bar Chart
   const monthlyData = {};
   displayTransactions.forEach(t => {
-    if (t.isTransfer) return;
+    if (t.isTransfer || t.isInvestment) return;
     const month = t.date.substring(0, 7);
     if (!monthlyData[month]) monthlyData[month] = { income: 0, expense: 0 };
     if (t.amount > 0) monthlyData[month].income += t.amount;
@@ -810,7 +810,8 @@ if (saveForm) {
       amount: -a, // Negative amount for expense
       date: saveDate.value,
       platform: document.getElementById('savings-platform-select').value,
-      currency: document.getElementById('savings-currency').value || 'ARS'
+      currency: document.getElementById('savings-currency').value || 'ARS',
+      isInvestment: true
     };
     transactions.push(expenseTransaction);
 
@@ -883,16 +884,26 @@ if (saleForm) {
     };
     closedTrades.push(closedTrade);
 
-    // 2. Add the received amount to available balance as income
-    const saleTransaction = {
+    // 2. Record capital return (cost basis) + realized gain/loss
+    transactions.push({
       id: generateID(),
-      text: `Venta de ${item.asset}`,
-      amount: sellAmount,
+      text: `Retorno capital - ${item.asset}`,
+      amount: costOfSoldPortion,
       date: sellDate,
       platform: item.platform,
-      currency: sellCurrency
-    };
-    transactions.push(saleTransaction);
+      currency: sellCurrency,
+      isInvestment: true
+    });
+    if (pnl !== 0) {
+      transactions.push({
+        id: generateID(),
+        text: pnl > 0 ? `Ganancia venta ${item.asset}` : `Pérdida venta ${item.asset}`,
+        amount: pnl,
+        date: sellDate,
+        platform: item.platform,
+        currency: sellCurrency
+      });
+    }
 
     // 3. Update Savings (Active Portfolio)
     if (sellQty >= item.quantity) {
@@ -1599,17 +1610,29 @@ if (bulkSaleForm) {
       });
     });
 
-    // Single income transaction for the total amount
+    // Record capital return + realized gain/loss
     const first = selected[0];
+    const totalPnl = totalAmount - totalCostBasis;
     const assetNames = selected.map(s => s.asset).join(', ');
     transactions.push({
       id: generateID(),
-      text: `Venta múltiple: ${assetNames}`,
-      amount: totalAmount,
+      text: `Retorno capital - ${assetNames}`,
+      amount: totalCostBasis,
       date: saleDate,
       platform: first ? first.platform : '',
-      currency: currency
+      currency: currency,
+      isInvestment: true
     });
+    if (totalPnl !== 0) {
+      transactions.push({
+        id: generateID(),
+        text: totalPnl > 0 ? `Ganancia venta ${assetNames}` : `Pérdida venta ${assetNames}`,
+        amount: totalPnl,
+        date: saleDate,
+        platform: first ? first.platform : '',
+        currency: currency
+      });
+    }
 
     // Remove all sold items from savings
     savings = savings.filter(s => !selectedSavingsIds.includes(s.id));
@@ -1726,7 +1749,7 @@ function updateFormSideStats() {
   const sorted = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
 
   // Expenses
-  const allExpenses = sorted.filter(t => t.amount < 0 && !t.isTransfer);
+  const allExpenses = sorted.filter(t => t.amount < 0 && !t.isTransfer && !t.isInvestment);
   const expMonth = allExpenses.filter(t => {
     const d = new Date(t.date + 'T00:00:00');
     return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
@@ -1744,7 +1767,7 @@ function updateFormSideStats() {
   fmtEl('form-expense-avg', expAvg);
 
   // Incomes
-  const allIncomes = sorted.filter(t => t.amount > 0 && !t.isTransfer);
+  const allIncomes = sorted.filter(t => t.amount > 0 && !t.isTransfer && !t.isInvestment);
   const incMonth = allIncomes.filter(t => {
     const d = new Date(t.date + 'T00:00:00');
     return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
@@ -1801,6 +1824,7 @@ function createTransactionFromForm(textVal, amountVal, sign, dateVal, platformVa
     platform: platformVal,
     currency: mainCurrency // Apply main currency to available balance
   };
+  if (isSaving && amount < 0) transaction.isInvestment = true;
   transactions.push(transaction);
 
   // Auto-savings
@@ -1881,11 +1905,6 @@ if (expenseForm) {
     createTransactionFromForm(text, amount, -1, date, platform, isSaving, false, qty, '', assetTicker, currency, category, mainCurrency);
     expenseForm.reset();
     document.getElementById('expense-date').valueAsDate = new Date();
-    if (document.getElementById('expense-saving-field')) {
-      document.getElementById('expense-saving-field').style.display = 'none';
-      document.getElementById('expense-qty-field').style.display = 'none';
-      document.getElementById('expense-currency-field').style.display = 'none';
-    }
 
     // Show success feedback
     const btn = expenseForm.querySelector('.btn-submit');
