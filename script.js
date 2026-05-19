@@ -38,6 +38,23 @@ var platforms = JSON.parse(localStorage.getItem('platforms')) || [
   { id: 3, name: 'Banco', initialBalance: 0 }
 ];
 let currentPrices = JSON.parse(localStorage.getItem('latest_prices')) || {};
+
+async function refreshMarketPrices() {
+  if (typeof fetchAllMarketPrices !== 'function') return;
+  try {
+    const cryptoSymbols = [...new Set(
+      savings.filter(s => s.category === 'crypto-ars').map(s => s.asset)
+    )];
+    const prices = await fetchAllMarketPrices(cryptoSymbols);
+    currentPrices = prices;
+    localStorage.setItem('latest_prices', JSON.stringify(prices));
+  } catch (e) {
+    console.warn('Error fetching market prices:', e);
+  }
+  if (document.getElementById('savings-view')?.style.display !== 'none') {
+    updateSavingsUI();
+  }
+}
 let currentFilter = 'all';
 let currentSearchQuery = '';
 let savingsSearchQuery = '';
@@ -227,7 +244,7 @@ internalTabs.forEach(tab => {
     document.getElementById('trades-panel').style.display = panelName === 'trades' ? 'block' : 'none';
 
     // Ensure data is refreshed on tab switch
-    if (typeof updateSavingsUI === 'function') updateSavingsUI();
+  if (typeof updateSavingsUI === 'function') updateSavingsUI();
   });
 });
 
@@ -743,6 +760,202 @@ if (saveQuantity && saveAmount) {
   });
 }
 
+// FCI search
+const saveCategory = document.getElementById('savings-category');
+const btnSearchFci = document.getElementById('btn-search-fci');
+const fciResults = document.getElementById('fci-search-results');
+let allFciData = null;
+
+function toggleFciSearchBtn() {
+  if (btnSearchFci) {
+    btnSearchFci.style.display = saveCategory?.value === 'fondos' ? 'inline-block' : 'none';
+  }
+  if (fciResults) fciResults.style.display = 'none';
+}
+
+if (saveCategory) {
+  saveCategory.addEventListener('change', toggleFciSearchBtn);
+}
+
+if (btnSearchFci) {
+  btnSearchFci.addEventListener('click', async () => {
+    if (!fciResults) return;
+    fciResults.innerHTML = '<div style="padding:8px;color:var(--text-muted);font-size:0.8rem;text-align:center;">Cargando...</div>';
+    fciResults.style.display = 'block';
+    try {
+      if (!allFciData) {
+        if (typeof fetchAllFci === 'function') {
+          allFciData = await fetchAllFci();
+        }
+      }
+      if (!allFciData || allFciData.length === 0) {
+        fciResults.innerHTML = '<div style="padding:8px;color:var(--expense-light);font-size:0.8rem;text-align:center;">Sin datos disponibles</div>';
+        return;
+      }
+      const names = allFciData.map(f => f.fondo).filter(Boolean);
+      renderFciResults(names, '');
+    } catch (e) {
+      fciResults.innerHTML = '<div style="padding:8px;color:var(--expense-light);font-size:0.8rem;text-align:center;">Error al obtener datos</div>';
+    }
+  });
+}
+
+function renderFciResults(names, filter) {
+  if (!fciResults) return;
+  const q = filter.toLowerCase().trim();
+  const filtered = q ? names.filter(n => n.toLowerCase().includes(q)) : names;
+
+  // Build filter bar only once
+  if (!fciResults.querySelector('#fci-filter-input')) {
+    const bar = document.createElement('div');
+    bar.style.cssText = 'padding:4px 0;border-bottom:1px solid var(--border);margin-bottom:4px;';
+    bar.innerHTML = '<input type="text" id="fci-filter-input" placeholder="Filtrar fondos..." style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-size:0.8rem;box-sizing:border-box;">';
+    fciResults.prepend(bar);
+    bar.querySelector('#fci-filter-input').addEventListener('input', (e) => {
+      renderFciResults(names, e.target.value);
+    });
+    bar.querySelector('#fci-filter-input').focus();
+  }
+
+  // Build results list
+  const listContainer = document.createElement('div');
+  listContainer.className = 'fci-list';
+  if (filtered.length === 0) {
+    listContainer.innerHTML = '<div style="padding:8px;color:var(--text-muted);font-size:0.8rem;text-align:center;">Sin resultados</div>';
+  } else {
+    const max = 80;
+    const list = filtered.slice(0, max);
+    for (const name of list) {
+      const display = name.length > 60 ? name.substring(0, 57) + '...' : name;
+      const el = document.createElement('div');
+      el.className = 'fci-result-item';
+      el.dataset.name = name;
+      el.textContent = display;
+      el.style.cssText = 'padding:6px 8px;cursor:pointer;border-radius:4px;font-size:0.8rem;color:var(--text);';
+      el.addEventListener('click', () => {
+        if (saveAsset) saveAsset.value = el.dataset.name;
+        fciResults.style.display = 'none';
+      });
+      el.addEventListener('mouseenter', () => el.style.background = 'rgba(255,255,255,0.05)');
+      el.addEventListener('mouseleave', () => el.style.background = 'transparent');
+      listContainer.appendChild(el);
+    }
+    if (filtered.length > max) {
+      const more = document.createElement('div');
+      more.style.cssText = 'padding:6px 8px;font-size:0.7rem;color:var(--text-muted);text-align:center;';
+      more.textContent = `... y ${filtered.length - max} más`;
+      listContainer.appendChild(more);
+    }
+  }
+
+  // Replace old list
+  const oldList = fciResults.querySelector('.fci-list');
+  if (oldList) oldList.remove();
+  fciResults.appendChild(listContainer);
+}
+
+// Also toggle on page load
+toggleFciSearchBtn();
+
+// ── Edit form FCI search ──
+const editCategory = document.getElementById('edit-savings-category');
+const btnEditSearchFci = document.getElementById('btn-edit-search-fci');
+const editFciResults = document.getElementById('edit-fci-search-results');
+
+function toggleEditFciSearchBtn() {
+  if (btnEditSearchFci) {
+    btnEditSearchFci.style.display = editCategory?.value === 'fondos' ? 'inline-block' : 'none';
+  }
+  if (editFciResults) editFciResults.style.display = 'none';
+}
+
+if (editCategory) {
+  editCategory.addEventListener('change', toggleEditFciSearchBtn);
+}
+
+if (btnEditSearchFci) {
+  btnEditSearchFci.addEventListener('click', async () => {
+    if (!editFciResults) return;
+    editFciResults.innerHTML = '<div style="padding:8px;color:var(--text-muted);font-size:0.8rem;text-align:center;">Cargando...</div>';
+    editFciResults.style.display = 'block';
+    try {
+      if (!allFciData) {
+        if (typeof fetchAllFci === 'function') {
+          allFciData = await fetchAllFci();
+        }
+      }
+      if (!allFciData || allFciData.length === 0) {
+        editFciResults.innerHTML = '<div style="padding:8px;color:var(--expense-light);font-size:0.8rem;text-align:center;">Sin datos disponibles</div>';
+        return;
+      }
+      const names = allFciData.map(f => f.fondo).filter(Boolean);
+      renderEditFciResults(names, '');
+    } catch (e) {
+      editFciResults.innerHTML = '<div style="padding:8px;color:var(--expense-light);font-size:0.8rem;text-align:center;">Error al obtener datos</div>';
+    }
+  });
+}
+
+function renderEditFciResults(names, filter) {
+  if (!editFciResults) return;
+  const q = filter.toLowerCase().trim();
+  const filtered = q ? names.filter(n => n.toLowerCase().includes(q)) : names;
+
+  if (!editFciResults.querySelector('#edit-fci-filter-input')) {
+    const bar = document.createElement('div');
+    bar.style.cssText = 'padding:4px 0;border-bottom:1px solid var(--border);margin-bottom:4px;';
+    bar.innerHTML = '<input type="text" id="edit-fci-filter-input" placeholder="Filtrar fondos..." style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-size:0.8rem;box-sizing:border-box;">';
+    editFciResults.prepend(bar);
+    bar.querySelector('#edit-fci-filter-input').addEventListener('input', (e) => {
+      renderEditFciResults(names, e.target.value);
+    });
+    bar.querySelector('#edit-fci-filter-input').focus();
+  }
+
+  const listContainer = document.createElement('div');
+  listContainer.className = 'edit-fci-list';
+  if (filtered.length === 0) {
+    listContainer.innerHTML = '<div style="padding:8px;color:var(--text-muted);font-size:0.8rem;text-align:center;">Sin resultados</div>';
+  } else {
+    const max = 80;
+    const list = filtered.slice(0, max);
+    for (const name of list) {
+      const display = name.length > 60 ? name.substring(0, 57) + '...' : name;
+      const el = document.createElement('div');
+      el.className = 'edit-fci-result-item';
+      el.dataset.name = name;
+      el.textContent = display;
+      el.style.cssText = 'padding:6px 8px;cursor:pointer;border-radius:4px;font-size:0.8rem;color:var(--text);';
+      el.addEventListener('click', () => {
+        const editAsset = document.getElementById('edit-savings-asset');
+        if (editAsset) editAsset.value = el.dataset.name;
+        editFciResults.style.display = 'none';
+      });
+      el.addEventListener('mouseenter', () => el.style.background = 'rgba(255,255,255,0.05)');
+      el.addEventListener('mouseleave', () => el.style.background = 'transparent');
+      listContainer.appendChild(el);
+    }
+    if (filtered.length > max) {
+      const more = document.createElement('div');
+      more.style.cssText = 'padding:6px 8px;font-size:0.7rem;color:var(--text-muted);text-align:center;';
+      more.textContent = `... y ${filtered.length - max} más`;
+      listContainer.appendChild(more);
+    }
+  }
+
+  const oldList = editFciResults.querySelector('.edit-fci-list');
+  if (oldList) oldList.remove();
+  editFciResults.appendChild(listContainer);
+}
+
+// Patch openEditModal to toggle search btn after setting category
+const origOpenEditModal = openEditModal;
+openEditModal = function(id) {
+  origOpenEditModal(id);
+  // Use a small delay to let the DOM update
+  setTimeout(toggleEditFciSearchBtn, 0);
+};
+
 // Sale Modal Preview Logic
 const saleQtyInput = document.getElementById('sale-savings-quantity');
 const saleAmountInput = document.getElementById('sale-savings-amount');
@@ -949,6 +1162,22 @@ function updateSavingsUI() {
     assetsQtyData[s.asset] = (assetsQtyData[s.asset] || 0) + s.quantity;
     assetsCurrencyData[s.asset] = cur;
 
+    const category = s.category || '';
+    const mult = (typeof UNIT_MULTIPLIER !== 'undefined' && UNIT_MULTIPLIER[category]) || 1;
+    const rawPrice = currentPrices && typeof getPrice === 'function' ? getPrice(s.asset, category, currentPrices) : null;
+    const currentPrice = rawPrice != null ? rawPrice : null;
+    const currentValue = currentPrice != null ? s.quantity * currentPrice * mult : null;
+    const gainLoss = (currentValue != null && costTotal) ? currentValue - costTotal : null;
+
+    const priceFmt = currentPrice != null ? fmt(currentPrice) : '<span style="color:var(--text-muted)">—</span>';
+    const valueFmt = currentValue != null ? fmt(currentValue) : '<span style="color:var(--text-muted)">—</span>';
+    const gainPct = (gainLoss != null && costTotal > 0) ? (gainLoss / costTotal) * 100 : null;
+    const gainColor = gainLoss != null ? (gainLoss >= 0 ? 'var(--income-light)' : 'var(--expense-light)') : 'var(--text-muted)';
+    const gainSign = gainLoss != null ? (gainLoss >= 0 ? '+' : '') : '';
+    const gainFmt = gainLoss != null
+      ? `<span style="color:${gainColor};font-weight:600;">${gainSign}${fmt(gainLoss)}</span><br><span style="color:${gainColor};font-size:0.7rem;">${gainPct != null ? `${gainSign}${gainPct.toLocaleString('es-AR', {minimumFractionDigits:2,maximumFractionDigits:2})}%` : ''}</span>`
+      : '<span style="color:var(--text-muted)">—</span>';
+
     const tr = document.createElement('tr');
     tr.style.borderBottom = '1px solid var(--border)';
 
@@ -979,6 +1208,9 @@ function updateSavingsUI() {
             </td>
             <td style="padding: 1rem; text-align: right;">${s.quantity}</td>
             <td style="padding: 1rem; text-align: right; font-weight: 700;">${fmt(costTotal)}</td>
+            <td style="padding: 1rem; text-align: right;">${priceFmt}</td>
+            <td style="padding: 1rem; text-align: right;">${valueFmt}</td>
+            <td style="padding: 1rem; text-align: right;">${gainFmt}</td>
             <td style="padding: 1.25rem 1rem; display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
                 <button class="btn-icon" style="color: var(--income-light);" onclick="openSaleModal(${s.id})" title="Informar Venta">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px;">
@@ -1077,6 +1309,50 @@ function updateSavingsUI() {
       const v = pnlByCurrencyTotal['USD'] || 0;
       kpiPnlUsd.innerText = fmtSimple(v, 'U$D ');
       kpiPnlUsd.style.color = v >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
+    }
+  }
+
+  // Unrealized P&L
+  const kpiUnrealizedArs = document.getElementById('savings-kpi-unrealized-ars');
+  const kpiUnrealizedUsd = document.getElementById('savings-kpi-unrealized-usd');
+  const kpiReturnPct = document.getElementById('savings-kpi-return-pct');
+
+  let unrealizedByCurrency = {};
+  let totalCostByCurrency = {};
+  savings.forEach(s => {
+    const cur = (s.currency || 'ARS').toUpperCase();
+    const costTotal = parseFloat(s.price) || 0;
+    const category = s.category || '';
+    const mult = (typeof UNIT_MULTIPLIER !== 'undefined' && UNIT_MULTIPLIER[category]) || 1;
+    const rawPrice = currentPrices && typeof getPrice === 'function' ? getPrice(s.asset, category, currentPrices) : null;
+    if (rawPrice != null) {
+      const currentValue = s.quantity * rawPrice * mult;
+      const gain = currentValue - costTotal;
+      unrealizedByCurrency[cur] = (unrealizedByCurrency[cur] || 0) + gain;
+    }
+    totalCostByCurrency[cur] = (totalCostByCurrency[cur] || 0) + costTotal;
+  });
+
+  if (kpiUnrealizedArs) {
+    const v = unrealizedByCurrency['ARS'] || 0;
+    kpiUnrealizedArs.innerText = fmtSimple(v, '$');
+    kpiUnrealizedArs.style.color = v >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
+  }
+  if (kpiUnrealizedUsd) {
+    const v = unrealizedByCurrency['USD'] || 0;
+    kpiUnrealizedUsd.innerText = fmtSimple(v, 'U$D ');
+    kpiUnrealizedUsd.style.color = v >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
+  }
+  if (kpiReturnPct) {
+    const totalCost = (totalCostByCurrency['ARS'] || 0) + (totalCostByCurrency['USD'] || 0);
+    const totalUnrealized = (unrealizedByCurrency['ARS'] || 0) + (unrealizedByCurrency['USD'] || 0);
+    if (totalCost > 0) {
+      const pct = (totalUnrealized / totalCost) * 100;
+      kpiReturnPct.innerText = `${pct >= 0 ? '+' : ''}${pct.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
+      kpiReturnPct.style.color = pct >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
+    } else {
+      kpiReturnPct.innerText = '0,00%';
+      kpiReturnPct.style.color = 'var(--text-muted)';
     }
   }
 
@@ -2294,6 +2570,8 @@ function init() {
   updatePlatformsUI();
 
   if (typeof updateSavingsUI === 'function') updateSavingsUI();
+
+  refreshMarketPrices();
 
   // Savings filter platform dropdown initial population
   updateSavingsFilterPlatformDropdown();

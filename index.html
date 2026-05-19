@@ -767,6 +767,33 @@
                                         stroke-width="2">
                                         <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
                                     </svg>
+                                    <span class="hero-stat-label">PNL No Realizado</span>
+                                </div>
+                                <div class="hero-stat-values">
+                                    <span class="hero-stat-val" id="savings-kpi-unrealized-ars">$0,00</span>
+                                    <span class="hero-stat-val text-muted" id="savings-kpi-unrealized-usd">U$D 0,00</span>
+                                </div>
+                            </div>
+                            <div class="hero-stat-divider"></div>
+                            <div class="hero-stat-box">
+                                <div class="hero-stat-header">
+                                    <svg viewBox="0 0 24 24" fill="none" class="hero-icon" stroke="currentColor"
+                                        stroke-width="2">
+                                        <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                                    </svg>
+                                    <span class="hero-stat-label">Rendimiento</span>
+                                </div>
+                                <div class="hero-stat-values center">
+                                    <span class="hero-stat-val highlight" id="savings-kpi-return-pct">0,00%</span>
+                                </div>
+                            </div>
+                            <div class="hero-stat-divider"></div>
+                            <div class="hero-stat-box">
+                                <div class="hero-stat-header">
+                                    <svg viewBox="0 0 24 24" fill="none" class="hero-icon" stroke="currentColor"
+                                        stroke-width="2">
+                                        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                                    </svg>
                                     <span class="hero-stat-label">Activos en Cartera</span>
                                 </div>
                                 <div class="hero-stat-values center">
@@ -818,8 +845,16 @@
                                 <div class="form-grid-2">
                                     <div class="form-group">
                                         <label>Activo (Ticker/Nombre)</label>
-                                        <input type="text" id="savings-asset" placeholder="Ej. AL30, BTC, SPY..."
-                                            required>
+                                        <div style="display:flex;gap:6px;">
+                                            <input type="text" id="savings-asset" placeholder="Ej. AL30, BTC, SPY..."
+                                                required style="flex:1;">
+                                            <button type="button" id="btn-search-fci" title="Buscar Fondo FCI"
+                                                style="display:none;padding:0.5rem 0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);cursor:pointer;white-space:nowrap;font-size:0.8rem;">
+                                                Buscar
+                                            </button>
+                                        </div>
+                                        <div id="fci-search-results" style="display:none;margin-top:6px;max-height:240px;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px;">
+                                        </div>
                                     </div>
                                     <div class="form-group">
                                         <label>Plataforma</label>
@@ -969,6 +1004,9 @@
                                     <th style="padding: 1rem;">Tipo / Plataforma</th>
                                     <th style="padding: 1rem; text-align: right;">Cant.</th>
                                     <th style="padding: 1rem; text-align: right;">Total Invertido</th>
+                                    <th style="padding: 1rem; text-align: right;">Precio Actual</th>
+                                    <th style="padding: 1rem; text-align: right;">Valor Actual</th>
+                                    <th style="padding: 1rem; text-align: right;">Gan./Pér.</th>
                                     <th style="padding: 1rem; text-align: right;">Acciones</th>
                                 </tr>
                             </thead>
@@ -1232,7 +1270,15 @@
                     <input type="hidden" id="edit-savings-id">
                     <div class="form-group">
                         <label>Activo (Ticker)</label>
-                        <input type="text" id="edit-savings-asset" required>
+                        <div style="display:flex;gap:6px;">
+                            <input type="text" id="edit-savings-asset" required style="flex:1;">
+                            <button type="button" id="btn-edit-search-fci" title="Buscar Fondo FCI"
+                                style="display:none;padding:0.5rem 0.7rem;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);cursor:pointer;white-space:nowrap;font-size:0.8rem;">
+                                Buscar
+                            </button>
+                        </div>
+                        <div id="edit-fci-search-results" style="display:none;margin-top:6px;max-height:240px;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px;">
+                        </div>
                     </div>
                     <div class="form-group">
                         <label>Plataforma</label>
@@ -1446,6 +1492,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="firebase-config.js"></script>
+    <script src="marketsApi.js"></script>
     <script src="script.js"></script>
     <script>
         if ('serviceWorker' in navigator) {

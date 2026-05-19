@@ -1,258 +1,188 @@
 /**
  * Markets API — APIs de mercado para precios de activos
- * --------------------------------------------------------------
- *  - Binance (crypto-global):      https://api.binance.com
- *  - CriptoYa (crypto-ars):        https://api.criptoya.com
- *  - Rava (bonos, ON, letras):    https://mercado.rava.com
- *  - Argentinadatos (fondos):    https://api.argentinadatos.com
+ * TradingView (acciones, cedears, bonos, ON, crypto-global)
+ * CriptoYa (crypto-ars)
+ * Argentinadatos (fondos FCI)
  */
 
-const BINANCE_BASE = 'https://api.binance.com/api/v3';
-const CRIPTOYA_BASE = 'https://api.criptoya.com';
-const RAVA_BASE = 'https://mercado.rava.com';
+// ── Constants ──
+const TV_BASE = 'https://scanner.tradingview.com';
+const CRIPTOYA_BASE = 'https://criptoya.com/api';
+const CRIPTOYA_EXCHANGE = 'letsbit';
+const CRIPTOYA_FEE = '0.1';
 const ARGDATOS_BASE = 'https://api.argentinadatos.com';
-const corsProxy = (url) => `https://api.codetabs.com/v1/proxy?quest=${url}`;
 
-export const UNIT_MULTIPLIER = {
-  bonos: 1000,
-  on: 1000,
-  letras: 1000,
-  fondos: 1000,
+const TV_COLS = ['name', 'close', 'change', 'currency'];
+
+const UNIT_MULTIPLIER = {
+  bonos: 1,
+  on: 1,
+  letras: 1,
+  fondos: 1,
   acciones: 1,
   cedears: 1,
   'crypto-ars': 1,
   'crypto-global': 1
 };
 
-export const CATEGORY_SOURCE = {
-  'crypto-ars': 'criptoya',
-  'crypto-global': 'binance',
-  acciones: 'rava',
-  cedears: 'rava',
-  bonos: 'rava',
-  on: 'rava',
-  letras: 'rava',
-  fondos: 'argentinadatos'
-};
+// ── TradingView Scanner ──
 
-// ----------------------------------------------------------------------------
-// BINANCE — Crypto Global (USDT)
-// ----------------------------------------------------------------------------
+async function fetchTV(endpoint, tickers = []) {
+  const resp = await fetch(`${TV_BASE}/${endpoint}/scan`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({
+      symbols: { query: { types: [] }, tickers },
+      columns: TV_COLS
+    })
+  });
+  if (!resp.ok) throw new Error(`TV HTTP ${resp.status}`);
+  const json = await resp.json();
+  if (!json.data) throw new Error('TV sin datos');
+  return json.data;
+}
 
-export async function fetchBinanceAllPrices() {
-  const r = await fetch(`${BINANCE_BASE}/ticker/price`);
-  if (!r.ok) throw new Error(`Binance HTTP ${r.status}`);
-  const data = await r.json();
-  const prices = {};
+function parseTVSymbol(s) {
+  const idx = s.indexOf(':');
+  return idx >= 0 ? s.substring(idx + 1) : s;
+}
+
+function tvDataToMap(data) {
+  const map = {};
   for (const item of data) {
-    if (item.symbol.endsWith('USDT')) {
-      prices[item.symbol] = parseFloat(item.price);
+    const ticker = parseTVSymbol(item.s);
+    const d = item.d;
+    if (d && d.length >= 2 && d[1] != null) {
+      map[ticker] = {
+        close: d[1],
+        change: d.length > 2 ? d[2] : null,
+        currency: d.length > 3 ? d[3] : null
+      };
     }
   }
-  return prices;
+  return map;
 }
 
-export async function fetchBinancePrices(symbols) {
-  const symbolsUpper = symbols.map(s => s.toUpperCase());
+async function fetchTVArgentina() {
+  const data = await fetchTV('argentina');
+  return tvDataToMap(data);
+}
+
+async function fetchTVCrypto() {
+  const data = await fetchTV('crypto');
+  return tvDataToMap(data);
+}
+
+// ── CriptoYa (Crypto ARS) ──
+
+async function fetchCriptoyaPrices(symbols) {
   const prices = {};
-  
-  for (const symbol of symbolsUpper) {
-    const pair = symbol.endsWith('USDT') ? symbol : `${symbol}USDT`;
-    try {
-      const r = await fetch(`${BINANCE_BASE}/ticker/price?symbol=${pair}`);
-      if (r.ok) {
-        const data = await r.json();
-        prices[symbol] = parseFloat(data.price);
-      }
-    } catch (e) {
-      prices[symbol] = null;
-    }
-  }
+  const entries = Object.entries(
+    symbols.reduce((acc, s) => { acc[s.toUpperCase()] = true; return acc; }, {})
+  );
+  const results = await Promise.allSettled(
+    entries.map(([sym]) =>
+      fetch(`${CRIPTOYA_BASE}/${CRIPTOYA_EXCHANGE}/${sym}/ARS/${CRIPTOYA_FEE}`)
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(d => { prices[sym] = d.ask; })
+        .catch(() => { prices[sym] = null; })
+    )
+  );
   return prices;
 }
 
-export async function fetchBinanceSinglePrice(symbol) {
-  const pair = symbol.endsWith('USDT') ? symbol : `${symbol}USDT`;
-  const r = await fetch(`${BINANCE_BASE}/ticker/price?symbol=${pair}`);
-  if (!r.ok) return null;
-  const data = await r.json();
-  return parseFloat(data.price);
-}
-
-// ----------------------------------------------------------------------------
-// CRIPTOYA — Crypto en Pesos (ARS)
-// ----------------------------------------------------------------------------
-
-export async function fetchCriptoyaAllPrices() {
-  const r = await fetch(`${CRIPTOYA_BASE}/coins`);
-  if (!r.ok) throw new Error(`CriptoYa HTTP ${r.status}`);
-  const data = await r.json();
-  const prices = {};
-  for (const [symbol, quote] of Object.entries(data)) {
-    if (quote.ars) {
-      prices[symbol.toUpperCase()] = quote.ars;
-    }
+async function fetchCriptoyaSinglePrice(symbol) {
+  const sym = symbol.toUpperCase();
+  try {
+    const r = await fetch(`${CRIPTOYA_BASE}/${CRIPTOYA_EXCHANGE}/${sym}/ARS/${CRIPTOYA_FEE}`);
+    if (!r.ok) return null;
+    const d = await r.json();
+    return d.ask ?? null;
+  } catch {
+    return null;
   }
-  return prices;
 }
 
-export async function fetchCriptoyaPrices(symbols) {
-  const allPrices = await fetchCriptoyaAllPrices();
-  const symbolsUpper = symbols.map(s => s.toUpperCase());
-  const prices = {};
-  for (const symbol of symbolsUpper) {
-    prices[symbol] = allPrices[symbol] ?? null;
-  }
-  return prices;
-}
+// ── Argentinadatos (Fondos FCI) ──
 
-export async function fetchCriptoyaSinglePrice(symbol) {
-  const r = await fetch(`${CRIPTOYA_BASE}/coin/${symbol.toUpperCase()}`);
-  if (!r.ok) return null;
-  const data = await r.json();
-  return data.ars ?? null;
-}
-
-// ----------------------------------------------------------------------------
-// RAVA — Bonos, ON, Letras, Acciones, CEDEARs
-// ----------------------------------------------------------------------------
-
-export async function fetchBonosRava() {
-  const r = await fetch(corsProxy(`${RAVA_BASE}/api/prices/bonos`));
-  if (!r.ok) throw new Error(`Rava bonos HTTP ${r.status}`);
-  const j = await r.json();
-  return j.datos ?? [];
-}
-
-export async function fetchOnRava() {
-  const r = await fetch(corsProxy(`${RAVA_BASE}/api/prices/ons`));
-  if (!r.ok) {
-    const arg = await fetch(corsProxy(`${RAVA_BASE}/api/prices/arg`));
-    const j = await arg.json();
-    return (j.datos ?? []).filter(i => i.simbolo?.startsWith('ON'));
-  }
-  const j = await r.json();
-  return j.datos ?? [];
-}
-
-export async function fetchLetrasRava() {
-  const r = await fetch(corsProxy(`${ARGDATOS_BASE}/v1/finanzas/letras`));
-  if (!r.ok) return [];
-  const j = await r.json();
-  return j.datos ?? [];
-}
-
-export async function fetchAccionesRava(symbols = []) {
-  const [def, mkt] = await Promise.all([
-    fetch(corsProxy(`${RAVA_BASE}/api/prices/defaults`)).then(r => r.json()),
-    fetch(corsProxy(`${RAVA_BASE}/api/prices/arg`)).then(r => r.json()),
-  ]);
-  
-  const especies = new Set(def.acciones?.especies ?? []);
-  let data = mkt.datos.filter(i => especies.has(i.simbolo));
-  
-  if (symbols.length > 0) {
-    const wanted = new Set(symbols.map(s => s.toUpperCase()));
-    data = data.filter(i => wanted.has(i.simbolo));
-  }
-  return data;
-}
-
-export async function fetchCedearsRava(symbols = []) {
-  const [def, mkt] = await Promise.all([
-    fetch(corsProxy(`${RAVA_BASE}/api/prices/defaults`)).then(r => r.json()),
-    fetch(corsProxy(`${RAVA_BASE}/api/prices/arg`)).then(r => r.json()),
-  ]);
-  
-  const especies = new Set(def.cedears?.especies ?? []);
-  let data = mkt.datos.filter(i => especies.has(i.simbolo));
-  
-  if (symbols.length > 0) {
-    const wanted = new Set(symbols.map(s => s.toUpperCase()));
-    data = data.filter(i => wanted.has(i.simbolo));
-  }
-  return data;
-}
-
-// ----------------------------------------------------------------------------
-// ARGENTINADATOS — Fondos FCI (proxy CORS)
-// ----------------------------------------------------------------------------
-
-export async function fetchFciByCategory(category) {
-  const url = corsProxy(`${ARGDATOS_BASE}/v1/finanzas/fci/${category}/ultimo`);
+async function fetchFciByCategory(category) {
+  const url = `${ARGDATOS_BASE}/v1/finanzas/fci/${category}/ultimo`;
   const r = await fetch(url);
   if (!r.ok) throw new Error(`FCI ${category} HTTP ${r.status}`);
   const datos = await r.json();
   return datos.filter(f => f.vcp != null);
 }
 
-export async function fetchAllFci() {
+async function fetchAllFci() {
   const cats = ['mercadoDinero', 'rentaFija', 'rentaVariable', 'rentaMixta'];
   const results = await Promise.all(cats.map(c => fetchFciByCategory(c)));
   return results.flat();
 }
 
-// ----------------------------------------------------------------------------
-// SERVICIO UNIFICADO
-// ----------------------------------------------------------------------------
+function fciToMap(fciData) {
+  const map = {};
+  for (const f of fciData) {
+    if (f.fondo && f.vcp != null) {
+      map[f.fondo.toUpperCase()] = { vcp: f.vcp };
+    }
+  }
+  return map;
+}
 
-export async function fetchAllMarketPrices() {
-  const [binance, criptoya, bonos, on, letras, acciones, cedears, fci] = await Promise.allSettled([
-    fetchBinanceAllPrices(),
-    fetchCriptoyaAllPrices(),
-    fetchBonosRava(),
-    fetchOnRava(),
-    fetchLetrasRava(),
-    fetchAccionesRava(),
-    fetchCedearsRava(),
+// ── Unified Service ──
+
+async function fetchAllMarketPrices(cryptoSymbols = []) {
+  const [argentina, crypto, criptoya, fci] = await Promise.allSettled([
+    fetchTVArgentina(),
+    fetchTVCrypto(),
+    cryptoSymbols.length > 0
+      ? fetchCriptoyaPrices(cryptoSymbols)
+      : Promise.resolve({}),
     fetchAllFci()
   ]);
 
   return {
-    cryptoGlobal: binance.status === 'fulfilled' ? binance.value : {},
-    cryptoARS: criptoya.status === 'fulfilled' ? criptoya.value : {},
-    bonos: bonos.status === 'fulfilled' ? bonos.value : [],
-    on: on.status === 'fulfilled' ? on.value : [],
-    letras: letras.status === 'fulfilled' ? letras.value : [],
-    acciones: acciones.status === 'fulfilled' ? acciones.value : [],
-    cedears: cedears.status === 'fulfilled' ? cedears.value : [],
-    fondos: fci.status === 'fulfilled' ? fci.value : []
+    argentina: argentina.status === 'fulfilled' ? argentina.value : {},
+    'crypto-global': crypto.status === 'fulfilled' ? crypto.value : {},
+    'crypto-ars': criptoya.status === 'fulfilled' ? criptoya.value : {},
+    fondos: fci.status === 'fulfilled' ? fciToMap(fci.value) : {}
   };
 }
 
-export function getPrice(asset, category, prices) {
+function getPrice(asset, category, prices) {
   const ticker = asset.toUpperCase();
-  
+
   switch (category) {
-    case 'crypto-global': {
-      const pair = ticker.endsWith('USDT') ? ticker : `${ticker}USDT`;
-      return prices.cryptoGlobal?.[pair] ?? null;
+    case 'acciones':
+    case 'cedears':
+    case 'bonos':
+    case 'on': {
+      const item = prices.argentina?.[ticker];
+      return item?.close ?? null;
     }
     case 'crypto-ars':
-      return prices.cryptoARS?.[ticker] ?? null;
-    case 'bonos': {
-      const b = prices.bonos?.find(i => i.simbolo === ticker);
-      return b?.ultimo ?? null;
-    }
-    case 'on': {
-      const o = prices.on?.find(i => i.simbolo === ticker);
-      return o?.ultimo ?? null;
-    }
-    case 'letras': {
-      const l = prices.letras?.find(i => i.simbolo === ticker);
-      return l?.vpv ?? l?.precio ?? null;
+      return prices['crypto-ars']?.[ticker] ?? null;
+    case 'crypto-global': {
+      const pair = ticker.endsWith('USDT') ? ticker : `${ticker}USDT`;
+      const item = prices['crypto-global']?.[pair.toUpperCase()];
+      return item?.close ?? null;
     }
     case 'fondos': {
-      const f = prices.fondos?.find(i => i.codigo === ticker);
-      return f?.vcp ?? null;
-    }
-    case 'acciones':
-    case 'cedears': {
-      const a = prices.acciones?.find(i => i.simbolo === ticker) ||
-               prices.cedears?.find(i => i.simbolo === ticker);
-      return a?.ultimo ?? null;
+      const item = prices.fondos?.[ticker];
+      return item?.vcp ?? null;
     }
     default:
       return null;
   }
 }
+
+// ── Expose globally for script.js ──
+window.TV_COLS = TV_COLS;
+window.UNIT_MULTIPLIER = UNIT_MULTIPLIER;
+window.fetchTVArgentina = fetchTVArgentina;
+window.fetchTVCrypto = fetchTVCrypto;
+window.fetchCriptoyaPrices = fetchCriptoyaPrices;
+window.fetchCriptoyaSinglePrice = fetchCriptoyaSinglePrice;
+window.fetchAllFci = fetchAllFci;
+window.fetchAllMarketPrices = fetchAllMarketPrices;
+window.getPrice = getPrice;
