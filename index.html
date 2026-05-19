@@ -999,6 +999,17 @@
                             </div>
                         </div>
                     </div>
+                    <div style="margin-bottom: 1rem;">
+                        <div class="search-wrap" style="position: relative; min-width: 180px; display: inline-block;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                style="position: absolute; left: 0.6rem; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: var(--text-muted); pointer-events: none;">
+                                <circle cx="11" cy="11" r="8" />
+                                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                            </svg>
+                            <input type="text" id="trades-search-input" placeholder="Buscar activo..."
+                                style="width: 100%; padding: 0.5rem 0.75rem 0.5rem 2rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font-size: 0.85rem; box-sizing: border-box;">
+                        </div>
+                    </div>
                     <div class="table-container tx-table-wrap">
                         <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
                             <thead>
@@ -1006,7 +1017,8 @@
                                     <th style="padding: 1rem;">Fecha</th>
                                     <th style="padding: 1rem;">Activo</th>
                                     <th style="padding: 1rem; text-align: right;">Cant. Vendida</th>
-                                    <th style="padding: 1rem; text-align: right;">Precio Unit. Venta</th>
+                                    <th style="padding: 1rem; text-align: right;">Precio Compra</th>
+                                    <th style="padding: 1rem; text-align: right;">Precio Venta</th>
                                     <th style="padding: 1rem; text-align: right;">Monto Recibido</th>
                                     <th style="padding: 1rem; text-align: right;">Resultado (PNL)</th>
                                     <th style="padding: 1rem;">Acciones</th>

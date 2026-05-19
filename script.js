@@ -41,6 +41,7 @@ let currentPrices = JSON.parse(localStorage.getItem('latest_prices')) || {};
 let currentFilter = 'all';
 let currentSearchQuery = '';
 let savingsSearchQuery = '';
+let tradesSearchQuery = '';
 let savingsFilterPlatform = '';
 let savingsFilterCategory = '';
 let platformViewMode = localStorage.getItem('platformViewMode') || 'cards';
@@ -1124,7 +1125,14 @@ function renderClosedTradesTable() {
   if (!tableBody) return;
   tableBody.innerHTML = '';
 
-  const sorted = [...closedTrades].sort((a, b) => new Date(b.date) - new Date(a.date));
+  let filtered = [...closedTrades];
+  if (tradesSearchQuery) {
+    filtered = filtered.filter(t =>
+      t.asset.toLowerCase().includes(tradesSearchQuery) ||
+      (t.platform || '').toLowerCase().includes(tradesSearchQuery)
+    );
+  }
+  const sorted = filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
   let totalCashARS = 0;
   let totalCashUSD = 0;
 
@@ -1138,11 +1146,15 @@ function renderClosedTradesTable() {
     const pnlColor = t.pnl >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
     const symbol = isUSD ? 'U$D ' : '$';
 
+    const unitPriceSold = t.quantitySold > 0 ? t.receivedAmount / t.quantitySold : 0;
+    const unitPriceBought = t.quantitySold > 0 && t.costBasis ? t.costBasis / t.quantitySold : 0;
+
     tr.innerHTML = `
       <td style="padding: 1rem;">${fmtDate(t.date)}</td>
       <td style="padding: 1rem; font-weight: 700;">${t.asset}</td>
       <td style="padding: 1rem; text-align: right;">${t.quantitySold.toLocaleString('es-AR')}</td>
-      <td style="padding: 1rem; text-align: right;">${symbol}${(t.receivedAmount / t.quantitySold).toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
+      <td style="padding: 1rem; text-align: right;">${symbol}${unitPriceBought.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
+      <td style="padding: 1rem; text-align: right;">${symbol}${unitPriceSold.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
       <td style="padding: 1rem; text-align: right;">${symbol}${t.receivedAmount.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
       <td style="padding: 1rem; text-align: right; color: ${pnlColor}; font-weight: 700;">
         ${t.pnl >= 0 ? '+' : '-'}${symbol}${Math.abs(t.pnl).toLocaleString('es-AR', { minimumFractionDigits: 2 })} (${t.pnlPercent ? t.pnlPercent.toFixed(2) : '---'}%)
@@ -1155,7 +1167,9 @@ function renderClosedTradesTable() {
   });
 
   const countEl = document.getElementById('closed-trades-count');
-  if (countEl) countEl.innerText = `${closedTrades.length} operacion${closedTrades.length !== 1 ? 'es' : ''}`;
+  const totalCount = closedTrades.length;
+  const shownCount = sorted.length;
+  if (countEl) countEl.innerText = tradesSearchQuery ? `${shownCount} de ${totalCount} operacion${totalCount !== 1 ? 'es' : ''}` : `${totalCount} operacion${totalCount !== 1 ? 'es' : ''}`;
 
   const cashEl = document.getElementById('investment-cash-total');
   if (cashEl) {
@@ -1175,7 +1189,12 @@ function renderClosedTradesTable() {
 
   const emptyEl = document.getElementById('closed-trades-empty');
   if (emptyEl) {
-    emptyEl.style.display = closedTrades.length === 0 ? 'block' : 'none';
+    emptyEl.style.display = sorted.length === 0 ? 'block' : 'none';
+    if (tradesSearchQuery && closedTrades.length > 0) {
+      emptyEl.innerText = `No se encontraron operaciones para "${tradesSearchQuery}"`;
+    } else {
+      emptyEl.innerText = 'No hay ventas registradas en el historial.';
+    }
   }
 }
 
@@ -1955,6 +1974,14 @@ if (savingsSearchInput) {
     savingsSearchQuery = savingsSearchInput.value.trim().toLowerCase();
     updateSavingsFilterClearBtn();
     updateSavingsUI();
+  });
+}
+
+const tradesSearchInput = document.getElementById('trades-search-input');
+if (tradesSearchInput) {
+  tradesSearchInput.addEventListener('input', () => {
+    tradesSearchQuery = tradesSearchInput.value.trim().toLowerCase();
+    renderClosedTradesTable();
   });
 }
 
