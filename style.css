@@ -809,25 +809,6 @@ option {
     margin-bottom: 1.75rem;
 }
 
-/* Dashboard Specific Layout: 3 on top, 2 on bottom on desktop */
-@media (min-width: 1200px) {
-    .dashboard-kpis {
-        grid-template-columns: repeat(12, 1fr);
-    }
-    .dashboard-kpis .kpi-card {
-        grid-column: span 3;
-    }
-}
-
-@media (max-width: 1199px) and (min-width: 769px) {
-    .dashboard-kpis {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    .dashboard-kpis .kpi-card:nth-child(1) {
-        grid-column: span 2;
-    }
-}
-
 .kpi-deposits .kpi-icon-wrap {
     background: rgba(124, 58, 237, 0.12);
     color: var(--primary-light);
@@ -1073,6 +1054,10 @@ option {
 
 .donut-wrapper {
     height: 220px;
+}
+
+.chart-full {
+    grid-column: 1 / -1;
 }
 
 /* ===== BOTTOM GRID ===== */

@@ -240,106 +240,93 @@
                     </div>
                 </div>
 
-                <!-- KPI Cards Row -->
-                <!-- Main KPIs Row -->
-                <div class="kpi-grid dashboard-kpis">
-                    <div class="kpi-card kpi-income">
-                        <div class="kpi-icon-wrap">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                stroke-linecap="round" stroke-linejoin="round">
-                                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
-                                <polyline points="17 6 23 6 23 12" />
-                            </svg>
+                <!-- Dashboard Hero Banner -->
+                <div class="portfolio-hero-banner">
+                    <div class="hero-glass-blob blob-1"></div>
+                    <div class="hero-glass-blob blob-2"></div>
+                    <div class="hero-glass-blob blob-3"></div>
+                    <div class="hero-content">
+                        <div class="hero-balances">
+                            <div class="hero-balance-card">
+                                <span class="hero-balance-label">Portfolio ARS</span>
+                                <div class="hero-balance-row">
+                                    <span class="hero-currency-pill sm">ARS</span>
+                                    <span class="hero-balance-amount" id="dash-portfolio-ars">$0,00</span>
+                                </div>
+                                <div class="hero-balance-row muted" style="margin-top:0.25rem; gap:1rem;">
+                                    <span class="hero-stat-sub" id="dash-portfolio-ars-cost"></span>
+                                    <span class="hero-stat-sub" id="dash-portfolio-ars-return"></span>
+                                </div>
+                            </div>
+                            <div class="hero-balance-divider"></div>
+                            <div class="hero-balance-card">
+                                <span class="hero-balance-label">Portfolio USD</span>
+                                <div class="hero-balance-row">
+                                    <span class="hero-currency-pill sm">USD</span>
+                                    <span class="hero-balance-amount" id="dash-portfolio-usd">U$D 0,00</span>
+                                </div>
+                                <div class="hero-balance-row muted" style="margin-top:0.25rem; gap:1rem;">
+                                    <span class="hero-stat-sub" id="dash-portfolio-usd-cost"></span>
+                                    <span class="hero-stat-sub" id="dash-portfolio-usd-return"></span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="kpi-content">
-                            <span class="kpi-label">Ingresos</span>
-                            <h3 id="money-plus" class="kpi-value">+$0,00</h3>
-                            <span class="kpi-trend" id="income-count">0 movimientos</span>
-                        </div>
-                    </div>
-                    <div class="kpi-card kpi-expense">
-                        <div class="kpi-icon-wrap">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                stroke-linecap="round" stroke-linejoin="round">
-                                <polyline points="23 18 13.5 8.5 8.5 13.5 1 6" />
-                                <polyline points="17 18 23 18 23 12" />
-                            </svg>
-                        </div>
-                        <div class="kpi-content">
-                            <span class="kpi-label">Gastos</span>
-                            <h3 id="money-minus" class="kpi-value">-$0,00</h3>
-                            <span class="kpi-trend" id="expense-count">0 movimientos</span>
-                        </div>
-                    </div>
-                    <div class="kpi-card kpi-surplus">
-                        <div class="kpi-icon-wrap">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-                            </svg>
-                        </div>
-                        <div class="kpi-content">
-                            <span class="kpi-label">Ahorro del Período</span>
-                            <h3 id="period-surplus" class="kpi-value">$0,00</h3>
-                            <span class="kpi-trend">Monto no gastado</span>
-                        </div>
-                    </div>
-                    <div class="kpi-card kpi-rate">
-                        <div class="kpi-icon-wrap">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="10" />
-                                <path d="M16 12l-4-4-4 4M12 8v8" />
-                            </svg>
-                        </div>
-                        <div class="kpi-content">
-                            <span class="kpi-label">Capacidad de Ahorro</span>
-                            <h3 id="savings-rate" class="kpi-value">0%</h3>
-                            <span class="kpi-trend">% respecto al ingreso</span>
-                        </div>
-                    </div>
-                    <div class="kpi-card kpi-savings-ars">
-                        <div class="kpi-icon-wrap">
-                            <span style="font-weight: 800; color: var(--primary-light);">ARS</span>
-                        </div>
-                        <div class="kpi-content">
-                            <span class="kpi-label">Capital Ahorrado (ARS)</span>
-                            <h3 id="total-savings-ars" class="kpi-value">$0,00</h3>
-                        </div>
-                    </div>
-                    <div class="kpi-card kpi-savings-usd">
-                        <div class="kpi-icon-wrap">
-                            <span style="font-weight: 800; color: var(--primary-light);">USD</span>
-                        </div>
-                        <div class="kpi-content">
-                            <span class="kpi-label">Capital Ahorrado (USD)</span>
-                            <h3 id="total-savings-usd" class="kpi-value">U$D 0,00</h3>
-                        </div>
-                    </div>
-                    <div class="kpi-card kpi-pnl">
-                        <div class="kpi-icon-wrap">
-                            <span style="font-weight: 800; color: var(--income-light);">%</span>
-                        </div>
-                        <div class="kpi-content">
-                            <span class="kpi-label">Resultado Realizado (ARS)</span>
-                            <h3 id="pnl-realized-ars" class="kpi-value">$0,00</h3>
-                            <span class="kpi-trend" id="pnl-percent-ars">0.00% pnl</span>
-                        </div>
-                    </div>
-                    <div class="kpi-card kpi-pnl-usd">
-                        <div class="kpi-icon-wrap">
-                            <span style="font-weight: 800; color: var(--income-light);">%</span>
-                        </div>
-                        <div class="kpi-content">
-                            <span class="kpi-label">Resultado Realizado (USD)</span>
-                            <h3 id="pnl-realized-usd" class="kpi-value">U$D 0,00</h3>
-                            <span class="kpi-trend" id="pnl-percent-usd">0.00% pnl</span>
+                        <div class="hero-stats-grid">
+                            <div class="hero-stat-item">
+                                <div class="hero-stat-header">
+                                    <svg viewBox="0 0 24 24" fill="none" class="hero-stat-icon" stroke="currentColor" stroke-width="2">
+                                        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                                        <polyline points="17 6 23 6 23 12" />
+                                    </svg>
+                                    <span class="hero-stat-label">Ingresos</span>
+                                </div>
+                                <div class="hero-stat-body">
+                                    <span class="hero-stat-val" id="money-plus" style="color:var(--income-light);"></span>
+                                    <span class="hero-stat-sub" id="income-count">0 mov.</span>
+                                </div>
+                            </div>
+                            <div class="hero-stat-item">
+                                <div class="hero-stat-header">
+                                    <svg viewBox="0 0 24 24" fill="none" class="hero-stat-icon" stroke="currentColor" stroke-width="2">
+                                        <polyline points="23 18 13.5 8.5 8.5 13.5 1 6" />
+                                        <polyline points="17 18 23 18 23 12" />
+                                    </svg>
+                                    <span class="hero-stat-label">Gastos</span>
+                                </div>
+                                <div class="hero-stat-body">
+                                    <span class="hero-stat-val" id="money-minus" style="color:var(--expense-light);"></span>
+                                    <span class="hero-stat-sub" id="expense-count">0 mov.</span>
+                                </div>
+                            </div>
+                            <div class="hero-stat-item">
+                                <div class="hero-stat-header">
+                                    <svg viewBox="0 0 24 24" fill="none" class="hero-stat-icon" stroke="currentColor" stroke-width="2">
+                                        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                                        <polyline points="17 6 23 6 23 12" />
+                                    </svg>
+                                    <span class="hero-stat-label">Realizado ARS</span>
+                                </div>
+                                <div class="hero-stat-body">
+                                    <span class="hero-stat-val" id="pnl-realized-ars">$0,00</span>
+                                    <span class="hero-stat-sub" id="pnl-percent-ars"></span>
+                                </div>
+                            </div>
+                            <div class="hero-stat-item">
+                                <div class="hero-stat-header">
+                                    <svg viewBox="0 0 24 24" fill="none" class="hero-stat-icon" stroke="currentColor" stroke-width="2">
+                                        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                                        <polyline points="17 6 23 6 23 12" />
+                                    </svg>
+                                    <span class="hero-stat-label">Realizado USD</span>
+                                </div>
+                                <div class="hero-stat-body">
+                                    <span class="hero-stat-val" id="pnl-realized-usd">U$D 0,00</span>
+                                    <span class="hero-stat-sub" id="pnl-percent-usd"></span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-
-                <!-- Investment KPIs Row -->
-                <!-- <div class="kpi-grid investment-kpis">
-
-                </div> -->
 
                 <!-- Dashboard Analytics Grid -->
                 <div class="charts-grid">
@@ -360,12 +347,12 @@
                         </div>
                     </div>
 
-                    <!-- Portfolio: Por Activo -->
+                    <!-- Portfolio: Rendimiento por Activo -->
                     <div class="chart-card chart-side">
                         <div class="chart-card-header">
                             <div>
-                                <h3>Portfolio (Inversión total)</h3>
-                                <p>Distribución por valor monetario</p>
+                                <h3>Rendimiento por Activo</h3>
+                                <p>Ganancia o pérdida no realizada por activo</p>
                             </div>
                         </div>
                         <div class="chart-wrapper donut-wrapper">
@@ -383,6 +370,18 @@
                         </div>
                         <div class="chart-wrapper donut-wrapper">
                             <canvas id="dashSavingsQtyChart"></canvas>
+                        </div>
+                    </div>
+                    <!-- P&L Realizado por Activo -->
+                    <div class="chart-card chart-full">
+                        <div class="chart-card-header">
+                            <div>
+                                <h3>P&L Realizado por Activo</h3>
+                                <p>Ganancia o pérdida realizada en operaciones cerradas</p>
+                            </div>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="pnlByAssetChart"></canvas>
                         </div>
                     </div>
                 </div>

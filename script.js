@@ -72,9 +72,7 @@ let platformSortColumn = localStorage.getItem('platformSortColumn') || 'name';
 let platformSortDirection = parseInt(localStorage.getItem('platformSortDirection')) || 1;
 
 // Chart Instances
-let transactionChartInstance = null;
-let categoryChartInstance = null;
-let trendChartInstance = null;
+let monthlyChartInstance = null;
 
 // ===== HELPERS =====
 function fmt(amount) {
@@ -293,7 +291,8 @@ function getDashboardFilteredTrades() {
 function populateYearFilter() {
   const allDates = [
     ...transactions.map(t => t.date),
-    ...savings.map(s => s.date)
+    ...savings.map(s => s.date),
+    ...closedTrades.map(t => t.date)
   ].filter(d => d);
   const years = [...new Set(allDates.map(d => new Date(d + 'T00:00:00').getFullYear()))].sort((a, b) => b - a);
 
@@ -360,51 +359,78 @@ function updateKPIs(displayTransactions, displaySavings, displayTrades) {
   money_plus.innerText = '+' + fmt(incomeARS);
   money_minus.innerText = '-' + fmt(expenseARS);
 
-  const surplusARS = incomeARS - expenseARS;
-  const rateValue = incomeARS > 0 ? (surplusARS / incomeARS) * 100 : 0;
-
-  const surplusEl = document.getElementById('period-surplus');
-  const rateEl = document.getElementById('savings-rate');
-
-  if (surplusEl) {
-    surplusEl.innerText = fmt(surplusARS);
-    surplusEl.style.color = surplusARS >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
-  }
-
-  if (rateEl) {
-    rateEl.innerText = `${rateValue.toFixed(1)}%`;
-    rateEl.style.color = rateValue >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
-  }
-
   if (incomeCount) incomeCount.innerText = `${transactionsARS.filter(t => t.amount > 0 && !t.isTransfer && !t.isInvestment).length} mov. ARS`;
   if (expenseCount) expenseCount.innerText = `${transactionsARS.filter(t => t.amount < 0 && !t.isTransfer && !t.isInvestment).length} mov. ARS`;
 
-
-  // Total Saved (Now Total Savings)
-  const totalSavByCur = {};
-  (displaySavings || savings).forEach(s => {
-    const cur = (s.currency || 'ARS').toUpperCase();
-    const val = parseFloat(s.price) || parseFloat(s.amount) || 0;
-    totalSavByCur[cur] = (totalSavByCur[cur] || 0) + val;
-  });
-
-  const totalSavingsArsEl = document.getElementById('total-savings-ars');
-  const totalSavingsUsdEl = document.getElementById('total-savings-usd');
-
   const fmtSav = (val, symbol) => `${symbol}${val.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
 
-  if (totalSavingsArsEl) totalSavingsArsEl.innerText = fmtSav(totalSavByCur['ARS'] || 0, '$');
+  // ── Portfolio Market Value & Return per Currency ──
+  const rate = currentPrices?.arsUsdRate || 1;
+  const mkByCur = {};
+  const costByCur = {};
+  (displaySavings || savings).forEach(s => {
+    const cur = (s.currency || 'ARS').toUpperCase();
+    const cost = parseFloat(s.price) || 0;
+    costByCur[cur] = (costByCur[cur] || 0) + cost;
+    const cat = s.category || '';
+    const mult = (typeof UNIT_MULTIPLIER !== 'undefined' && UNIT_MULTIPLIER[cat]) || 1;
+    const raw = typeof getPrice === 'function' ? getPrice(s.asset, cat, currentPrices) : null;
+    let curPrice = raw;
+    if (raw != null && cur === 'USD' && ['bonos','on','letras'].includes(cat) && rate > 0) {
+      curPrice = raw / rate;
+    }
+    if (curPrice != null) {
+      mkByCur[cur] = (mkByCur[cur] || 0) + s.quantity * curPrice * mult;
+    }
+  });
+  // ARS
+  const costArs = costByCur['ARS'] || 0;
+  const mkArs = mkByCur['ARS'] || 0;
+  const retArs = costArs > 0 ? ((mkArs - costArs) / costArs) * 100 : 0;
+  const mkArsEl = document.getElementById('savings-ars-market-val');
+  const costArsEl = document.getElementById('savings-ars-cost');
+  const retArsEl = document.getElementById('savings-ars-return');
+  if (mkArsEl) mkArsEl.innerText = mkArs > 0 ? fmtSav(mkArs, '$') : '$0,00';
+  if (costArsEl) {
+    costArsEl.innerText = `Invertido: ${fmtSav(costArs, '$')}`;
+    costArsEl.style.display = costArs > 0 ? 'block' : 'none';
+  }
+  if (retArsEl) {
+    if (costArs > 0) {
+      retArsEl.innerText = `Retorno: ${retArs >= 0 ? '+' : ''}${retArs.toFixed(2)}%`;
+      retArsEl.style.color = retArs >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
+      retArsEl.style.display = 'block';
+    } else {
+      retArsEl.style.display = 'none';
+    }
+  }
+  // USD
+  const costUsd = (costByCur['USD'] || 0) + (costByCur['USDT'] || 0);
+  const mkUsd = (mkByCur['USD'] || 0) + (mkByCur['USDT'] || 0);
+  const retUsd = costUsd > 0 ? ((mkUsd - costUsd) / costUsd) * 100 : 0;
+  const mkUsdEl = document.getElementById('savings-usd-market-val');
+  const costUsdEl = document.getElementById('savings-usd-cost');
+  const retUsdEl = document.getElementById('savings-usd-return');
+  if (mkUsdEl) mkUsdEl.innerText = mkUsd > 0 ? fmtSav(mkUsd, 'U$D ') : 'U$D 0,00';
+  if (costUsdEl) {
+    costUsdEl.innerText = `Invertido: ${fmtSav(costUsd, 'U$D ')}`;
+    costUsdEl.style.display = costUsd > 0 ? 'block' : 'none';
+  }
+  if (retUsdEl) {
+    if (costUsd > 0) {
+      retUsdEl.innerText = `Retorno: ${retUsd >= 0 ? '+' : ''}${retUsd.toFixed(2)}%`;
+      retUsdEl.style.color = retUsd >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
+      retUsdEl.style.display = 'block';
+    } else {
+      retUsdEl.style.display = 'none';
+    }
+  }
 
-  // Combine USD and USDT for the Dashboard KPI display
-  const usdTotal = (totalSavByCur['USD'] || 0) + (totalSavByCur['USDT'] || 0);
-  if (totalSavingsUsdEl) totalSavingsUsdEl.innerText = fmtSav(usdTotal, 'U$D ');
-
-  // Realized PNL
+  // ── Realized P&L (Dashboard KPIs) ──
   const tradesARS = (displayTrades || []).filter(t => (t.currency || 'ARS') === 'ARS');
   const pnlARS = tradesARS.reduce((acc, t) => acc + (t.pnl || 0), 0);
   const costARS = tradesARS.reduce((acc, t) => acc + (t.costBasis || 0), 0);
   const pnlPctARS = costARS > 0 ? (pnlARS / costARS) * 100 : 0;
-
   const pnlArsEl = document.getElementById('pnl-realized-ars');
   const pnlPctArsEl = document.getElementById('pnl-percent-ars');
   if (pnlArsEl) {
@@ -415,12 +441,10 @@ function updateKPIs(displayTransactions, displaySavings, displayTrades) {
     pnlPctArsEl.innerText = `${pnlPctARS >= 0 ? '+' : ''}${pnlPctARS.toFixed(2)}% pnl`;
     pnlPctArsEl.style.color = pnlPctARS >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
   }
-
   const tradesUSD = (displayTrades || []).filter(t => (t.currency || 'ARS') === 'USD' || (t.currency || 'ARS') === 'USDT');
   const pnlUSD = tradesUSD.reduce((acc, t) => acc + (t.pnl || 0), 0);
   const costUSD = tradesUSD.reduce((acc, t) => acc + (t.costBasis || 0), 0);
   const pnlPctUSD = costUSD > 0 ? (pnlUSD / costUSD) * 100 : 0;
-
   const pnlUsdEl = document.getElementById('pnl-realized-usd');
   const pnlPctUsdEl = document.getElementById('pnl-percent-usd');
   if (pnlUsdEl) {
@@ -431,13 +455,51 @@ function updateKPIs(displayTransactions, displaySavings, displayTrades) {
     pnlPctUsdEl.innerText = `${pnlPctUSD >= 0 ? '+' : ''}${pnlPctUSD.toFixed(2)}% pnl`;
     pnlPctUsdEl.style.color = pnlPctUSD >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
   }
+
+  // ── Dashboard Hero Portfolio cards + Rendimiento ──
+  const dashPortArs = document.getElementById('dash-portfolio-ars');
+  const dashPortArsCost = document.getElementById('dash-portfolio-ars-cost');
+  const dashPortArsRet = document.getElementById('dash-portfolio-ars-return');
+  const dashPortUsd = document.getElementById('dash-portfolio-usd');
+  const dashPortUsdCost = document.getElementById('dash-portfolio-usd-cost');
+  const dashPortUsdRet = document.getElementById('dash-portfolio-usd-return');
+
+  if (dashPortArs) dashPortArs.innerText = mkArs > 0 ? fmtSav(mkArs, '$') : '$0,00';
+  if (dashPortArsCost) {
+    dashPortArsCost.innerText = `Invertido: ${fmtSav(costArs, '$')}`;
+    dashPortArsCost.style.display = costArs > 0 ? 'inline' : 'none';
+  }
+  if (dashPortArsRet) {
+    if (costArs > 0) {
+      dashPortArsRet.innerText = `Retorno: ${retArs >= 0 ? '+' : ''}${retArs.toFixed(2)}%`;
+      dashPortArsRet.style.color = retArs >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
+      dashPortArsRet.style.display = 'inline';
+    } else {
+      dashPortArsRet.style.display = 'none';
+    }
+  }
+
+  if (dashPortUsd) dashPortUsd.innerText = mkUsd > 0 ? fmtSav(mkUsd, 'U$D ') : 'U$D 0,00';
+  if (dashPortUsdCost) {
+    dashPortUsdCost.innerText = `Invertido: ${fmtSav(costUsd, 'U$D ')}`;
+    dashPortUsdCost.style.display = costUsd > 0 ? 'inline' : 'none';
+  }
+  if (dashPortUsdRet) {
+    if (costUsd > 0) {
+      dashPortUsdRet.innerText = `Retorno: ${retUsd >= 0 ? '+' : ''}${retUsd.toFixed(2)}%`;
+      dashPortUsdRet.style.color = retUsd >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
+      dashPortUsdRet.style.display = 'inline';
+    } else {
+      dashPortUsdRet.style.display = 'none';
+    }
+  }
 }
 
 // ===== CHARTS =====
-let monthlyChartInstance = null;
 let balanceEvolutionChartInstance = null;
 let dashSavingsChartInstance = null;
 let dashSavingsQtyChartInstance = null;
+let pnlByAssetChartInstance = null;
 
 function updateCharts(displayTransactions, displaySavings) {
   const monthlyCanvas = document.getElementById('monthlyChart');
@@ -529,27 +591,48 @@ function updateCharts(displayTransactions, displaySavings) {
     });
   }
 
-  // 4. Portfolio Assets Distribution
+  // ── Rendimiento por Activo (% ganancia no realizada) ──
   if (dashSavingsCanvas) {
-    const assetsData = {};
+    const rate = currentPrices?.arsUsdRate || 1;
+    const assetAgg = {};
     (displaySavings || savings).forEach(s => {
-      const val = parseFloat(s.price) || parseFloat(s.amount) || 0;
-      assetsData[s.asset] = (assetsData[s.asset] || 0) + val;
+      const cost = parseFloat(s.price) || 0;
+      const cat = s.category || '';
+      const mult = (typeof UNIT_MULTIPLIER !== 'undefined' && UNIT_MULTIPLIER[cat]) || 1;
+      const cur = (s.currency || 'ARS').toUpperCase();
+      const raw = typeof getPrice === 'function' ? getPrice(s.asset, cat, currentPrices) : null;
+      let curPrice = raw;
+      if (raw != null && cur === 'USD' && ['bonos','on','letras'].includes(cat) && rate > 0) {
+        curPrice = raw / rate;
+      }
+      if (!assetAgg[s.asset]) assetAgg[s.asset] = { cost: 0, mktVal: 0 };
+      assetAgg[s.asset].cost += cost;
+      if (curPrice != null) {
+        assetAgg[s.asset].mktVal += s.quantity * curPrice * mult;
+      } else {
+        assetAgg[s.asset].mktVal += cost;
+      }
     });
 
-    const labels = Object.keys(assetsData);
-    const values = Object.values(assetsData);
-
     if (dashSavingsChartInstance) dashSavingsChartInstance.destroy();
+
+    const entries = Object.entries(assetAgg).map(([asset, d]) => ({
+      asset,
+      val: d.mktVal - d.cost,
+      pct: d.cost > 0 ? ((d.mktVal - d.cost) / d.cost) * 100 : 0
+    })).filter(e => e.val !== 0);
+    const labels = entries.map(e => `${e.asset} (${e.pct >= 0 ? '+' : ''}${e.pct.toFixed(1)}%)`);
+    const values = entries.map(e => Math.abs(e.val));
+    const barColors = entries.map(e => e.val >= 0 ? 'rgba(16, 185, 129, 0.8)' : 'rgba(244, 63, 94, 0.8)');
 
     if (labels.length > 0) {
       dashSavingsChartInstance = new Chart(dashSavingsCanvas, {
         type: 'doughnut',
         data: {
-          labels: labels,
+          labels,
           datasets: [{
             data: values,
-            backgroundColor: palette,
+            backgroundColor: barColors,
             borderWidth: 0,
             hoverOffset: 4
           }]
@@ -562,7 +645,7 @@ function updateCharts(displayTransactions, displaySavings) {
             tooltip: {
               backgroundColor: 'rgba(6,9,20,0.95)',
               callbacks: {
-                label: (ctx) => ` ${ctx.label}: $${ctx.parsed.toLocaleString('es-AR')}`
+                label: (ctx) => ` ${ctx.label}`
               }
             }
           },
@@ -624,6 +707,75 @@ function updateCharts(displayTransactions, displaySavings) {
       });
     }
   }
+}
+
+// ===== P&L POR ACTIVO CHART =====
+function updatePnLByAssetChart(displayTrades) {
+  const canvas = document.getElementById('pnlByAssetChart');
+  if (!canvas) return;
+  if (pnlByAssetChartInstance) pnlByAssetChartInstance.destroy();
+
+  const trades = displayTrades || [];
+  if (trades.length === 0) {
+    if (pnlByAssetChartInstance) pnlByAssetChartInstance.destroy();
+    return;
+  }
+
+  const pnlByAsset = {};
+  trades.forEach(t => {
+    const asset = t.asset || 'S/T';
+    pnlByAsset[asset] = (pnlByAsset[asset] || 0) + (t.pnl || 0);
+  });
+
+  let entries = Object.entries(pnlByAsset).sort((a, b) => a[1] - b[1]);
+  const labels = entries.map(e => e[0]);
+  const values = entries.map(e => e[1]);
+
+  pnlByAssetChartInstance = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: values.map(v => v >= 0 ? 'rgba(16, 185, 129, 0.8)' : 'rgba(244, 63, 94, 0.8)'),
+        borderRadius: 4,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(6,9,20,0.95)',
+          padding: 14,
+          cornerRadius: 12,
+          callbacks: {
+            label: (ctx) => ` $${ctx.parsed.x.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: {
+            color: '#64748b',
+            font: { size: 10, family: 'Inter' },
+            callback: (v) => '$' + v.toLocaleString('es-AR', { maximumFractionDigits: 0 })
+          },
+          grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false },
+          border: { display: false }
+        },
+        y: {
+          ticks: { color: '#94a3b8', font: { size: 11, family: 'Inter' } },
+          grid: { display: false },
+          border: { display: false }
+        }
+      },
+      datasets: { bar: { maxBarThickness: 24 } }
+    }
+  });
 }
 
 // ===== BALANCE EVOLUTION CHART =====
@@ -1268,32 +1420,7 @@ function updateSavingsUI() {
     }).join(' / ');
   };
 
-  const pnlArsEl = document.getElementById('savings-stat-pnl-ars');
-  const pnlUsdEl = document.getElementById('savings-stat-pnl-usd');
-
-  const pnlByCurrency = {};
-  closedTrades.forEach(t => {
-    const cur = (t.currency || 'ARS').toUpperCase();
-    pnlByCurrency[cur] = (pnlByCurrency[cur] || 0) + (parseFloat(t.pnl) || 0);
-  });
-
   const fmtSimple = (val, symbol) => `${symbol}${val.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
-
-  if (pnlArsEl) {
-    const val = pnlByCurrency['ARS'] || 0;
-    pnlArsEl.innerText = fmtSimple(val, '$');
-    pnlArsEl.style.color = val >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
-  }
-  if (pnlUsdEl) {
-    const val = pnlByCurrency['USD'] || 0;
-    pnlUsdEl.innerText = fmtSimple(val, 'U$D ');
-    pnlUsdEl.style.color = val >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
-  }
-
-  const totalArsEl = document.getElementById('savings-stat-total-ars');
-  const totalUsdEl = document.getElementById('savings-stat-total-usd');
-  if (totalArsEl) totalArsEl.innerText = fmtSimple(totalValueByCurrency['ARS'] || 0, '$');
-  if (totalUsdEl) totalUsdEl.innerText = fmtSimple(totalValueByCurrency['USD'] || 0, 'U$D ');
 
   // Populate New KPI Cards
   const kpiTotalArs = document.getElementById('savings-kpi-total-ars');
@@ -1304,12 +1431,37 @@ function updateSavingsUI() {
   const kpiPnlUsd = document.getElementById('savings-kpi-pnl-usd');
   const kpiCount = document.getElementById('savings-kpi-count');
 
-  if (kpiTotalArs) kpiTotalArs.innerText = fmtSimple(totalValueByCurrency['ARS'] || 0, '$');
-  if (kpiTotalUsd) kpiTotalUsd.innerText = fmtSimple(totalValueByCurrency['USD'] || 0, 'U$D ');
+  // Build filtered savings/trades for hero banner (respects dashboard year/month filters + savings table filters)
+  const dashFilterYear = document.getElementById('filter-year');
+  const dashFilterMonth = document.getElementById('filter-month');
+  const filteredSavings = applySavingsFilters([...savings]).filter(s => {
+    if (!dashFilterYear || !dashFilterMonth) return true;
+    const sDate = new Date(s.date + 'T00:00:00');
+    const sYear = sDate.getFullYear().toString();
+    const sMonth = (sDate.getMonth() + 1).toString().padStart(2, '0');
+    const yearMatch = dashFilterYear.value === 'all' || sYear === dashFilterYear.value;
+    const monthMatch = dashFilterMonth.value === 'all' || sMonth === dashFilterMonth.value;
+    return yearMatch && monthMatch;
+  });
 
-  // Valor Actual (market value)
+  // Total Invertido (filter-aware)
+  if (kpiTotalArs) {
+    const filteredTotalArs = filteredSavings.reduce((acc, s) => acc + (parseFloat(s.price) || 0), 0);
+    const totalArs = totalValueByCurrency['ARS'] || 0;
+    kpiTotalArs.innerText = fmtSimple(dashFilterYear?.value !== 'all' ? filteredTotalArs : totalArs, '$');
+  }
+  if (kpiTotalUsd) {
+    const filteredTotalUsd = filteredSavings.reduce((acc, s) => {
+      const cur = (s.currency || 'ARS').toUpperCase();
+      return cur === 'USD' || cur === 'USDT' ? acc + (parseFloat(s.price) || 0) : acc;
+    }, 0);
+    const totalUsd = totalValueByCurrency['USD'] || 0;
+    kpiTotalUsd.innerText = fmtSimple(dashFilterYear?.value !== 'all' ? filteredTotalUsd : totalUsd, 'U$D ');
+  }
+
+  // Valor Actual (market value) — filtered by dashboard filters
   let actualByCurrency = {};
-  savings.forEach(s => {
+  filteredSavings.forEach(s => {
     const cur = (s.currency || 'ARS').toUpperCase();
     const costTotal = parseFloat(s.price) || 0;
     const category = s.category || '';
@@ -1327,11 +1479,23 @@ function updateSavingsUI() {
   if (kpiActualArs) kpiActualArs.innerText = fmtSimple(actualByCurrency['ARS'] || 0, '$');
   if (kpiActualUsd) kpiActualUsd.innerText = fmtSimple(actualByCurrency['USD'] || 0, 'U$D ');
 
-  if (kpiCount) kpiCount.innerText = Object.keys(assetsData).length;
+  if (kpiCount) {
+    const uniqueAssets = [...new Set(filteredSavings.map(s => s.asset))];
+    kpiCount.innerText = uniqueAssets.length;
+  }
 
   if (kpiPnlArs || kpiPnlUsd) {
+    const closedFiltered = closedTrades.filter(t => {
+      if (!dashFilterYear || !dashFilterMonth) return true;
+      const tDate = new Date(t.date + 'T00:00:00');
+      const tYear = tDate.getFullYear().toString();
+      const tMonth = (tDate.getMonth() + 1).toString().padStart(2, '0');
+      const yearMatch = dashFilterYear.value === 'all' || tYear === dashFilterYear.value;
+      const monthMatch = dashFilterMonth.value === 'all' || tMonth === dashFilterMonth.value;
+      return yearMatch && monthMatch;
+    });
     const pnlByCurrencyTotal = {};
-    closedTrades.forEach(t => {
+    closedFiltered.forEach(t => {
       const cur = (t.currency || 'ARS').toUpperCase();
       const pVal = parseFloat(t.pnl) || 0;
       pnlByCurrencyTotal[cur] = (pnlByCurrencyTotal[cur] || 0) + pVal;
@@ -1357,7 +1521,7 @@ function updateSavingsUI() {
 
   let unrealizedByCurrency = {};
   let totalCostByCurrency = {};
-  savings.forEach(s => {
+  filteredSavings.forEach(s => {
     const cur = (s.currency || 'ARS').toUpperCase();
     const costTotal = parseFloat(s.price) || 0;
     const category = s.category || '';
@@ -2080,8 +2244,10 @@ function updateDashboard() {
   const displayTrades = getDashboardFilteredTrades();
   updateKPIs(displayTransactions, displaySavings, displayTrades);
   updateCharts(displayTransactions, displaySavings);
+  updatePnLByAssetChart(displayTrades);
   updateBalanceEvolutionChart(displayTransactions);
   updateRecentList(displayTransactions);
+  updateSavingsUI();
 }
 
 // ===== HISTORY LIST =====
@@ -2248,13 +2414,6 @@ function createTransactionFromForm(textVal, amountVal, sign, dateVal, platformVa
   updateDashboard();
   renderHistoryList();
 }
-
-// Override updateLocalStorage if it was just using localStorage.setItem
-// function updateLocalStorage() {
-//   localStorage.setItem('transactions', JSON.stringify(transactions));
-//   localStorage.setItem('savings', JSON.stringify(savings));
-//   localStorage.setItem('closedTrades', JSON.stringify(closedTrades));
-// }
 
 
 // ===== REMOVE TRANSACTION =====
@@ -2656,8 +2815,8 @@ function processCSV(csv) {
 function seedPersonalSavings() {
   const seedData = [{ "id": 37158155, "asset": "SPY", "platform": "IOL", "quantity": 1.0, "price": 49500.0, "date": "2026-03-17" }, { "id": 21140851, "asset": "FSLR", "platform": "IOL", "quantity": 12.0, "price": 191400.0, "date": "2026-03-10" }, { "id": 25501307, "asset": "GOOGL", "platform": "IOL", "quantity": 25.0, "price": 193750.0, "date": "2026-02-13" }, { "id": 75846083, "asset": "FXI", "platform": "IOL", "quantity": 12.0, "price": 144000.0, "date": "2026-01-30" }, { "id": 70934678, "asset": "F", "platform": "IOL", "quantity": 7.0, "price": 143780.0, "date": "2026-01-27" }, { "id": 81669968, "asset": "SHOP", "platform": "IOL", "quantity": 75.0, "price": 145200.0, "date": "2026-01-26" }, { "id": 10377480, "asset": "SPY", "platform": "IOL", "quantity": 6.0, "price": 315600.0, "date": "2026-01-26" }, { "id": 68914973, "asset": "QCOM", "platform": "IOL", "quantity": 6.0, "price": 129900.0, "date": "2026-01-22" }, { "id": 20287443, "asset": "PYPL", "platform": "IOL", "quantity": 16.0, "price": 168000.0, "date": "2026-01-20" }, { "id": 77122218, "asset": "MA", "platform": "IOL", "quantity": 6.0, "price": 150000.0, "date": "2026-01-15" }, { "id": 76759041, "asset": "NIOD", "platform": "IOL", "quantity": 120.0, "price": 150.0, "date": "2026-01-13" }, { "id": 15153854, "asset": "SONY", "platform": "IOL", "quantity": 22.0, "price": 105380.0, "date": "2026-01-12" }, { "id": 48835800, "asset": "AAPL", "platform": "IOL", "quantity": 10.0, "price": 197000.0, "date": "2026-01-09" }, { "id": 71805320, "asset": "AVGO", "platform": "IOL", "quantity": 20.0, "price": 268800.0, "date": "2026-01-07" }, { "id": 73637071, "asset": "TSLA", "platform": "IOL", "quantity": 4.0, "price": 178000.0, "date": "2026-01-07" }, { "id": 19935659, "asset": "TXAR", "platform": "IOL", "quantity": 42.0, "price": 31710.0, "date": "2026-01-07" }, { "id": 80575966, "asset": "NKE", "platform": "IOL", "quantity": 5.0, "price": 36850.0, "date": "2025-12-23" }, { "id": 66279136, "asset": "BABA", "platform": "IOL", "quantity": 8.0, "price": 207360.0, "date": "2025-12-22" }, { "id": 43673307, "asset": "OZC7O", "platform": "IOL", "quantity": 157000.0, "price": 157000.0, "date": "2025-12-18" }, { "id": 54662699, "asset": "TXAR", "platform": "IOL", "quantity": 275.0, "price": 203500.0, "date": "2025-12-18" }, { "id": 83747445, "asset": "AMZN", "platform": "IOL", "quantity": 30.0, "price": 72450.0, "date": "2025-12-17" }, { "id": 15877896, "asset": "MSFT", "platform": "IOL", "quantity": 6.0, "price": 147600.0, "date": "2025-12-17" }, { "id": 84615107, "asset": "GLD", "platform": "IOL", "quantity": 10.0, "price": 118500.0, "date": "2025-12-12" }, { "id": 78463327, "asset": "FXI", "platform": "IOL", "quantity": 10.0, "price": 118100.0, "date": "2025-12-11" }, { "id": 80282313, "asset": "NFLX", "platform": "IOL", "quantity": 35.0, "price": 105000.0, "date": "2025-12-09" }, { "id": 33857992, "asset": "SPOT", "platform": "IOL", "quantity": 2.0, "price": 62920.0, "date": "2025-12-09" }, { "id": 89955360, "asset": "XLU", "platform": "IOL", "quantity": 10.0, "price": 42800.0, "date": "2025-12-09" }, { "id": 55696975, "asset": "NVDA", "platform": "IOL", "quantity": 20.0, "price": 228400.0, "date": "2025-11-26" }, { "id": 91703308, "asset": "ARKK", "platform": "IOL", "quantity": 10.0, "price": 116000.0, "date": "2025-11-13" }, { "id": 64690175, "asset": "XROX", "platform": "IOL", "quantity": 30.0, "price": 127800.0, "date": "2025-11-13" }, { "id": 14562534, "asset": "IBIT", "platform": "IOL", "quantity": 24.0, "price": 211680.0, "date": "2025-11-05" }, { "id": 86357220, "asset": "YM41D", "platform": "IOL", "quantity": 150.0, "price": 150.0, "date": "2025-10-08" }, { "id": 86030994, "asset": "MELI", "platform": "IOL", "quantity": 7.0, "price": 197960.0, "date": "2025-10-03" }, { "id": 82971779, "asset": "RVS1O", "platform": "IOL", "quantity": 45956.0, "price": 44990.92, "date": "2025-04-30" }, { "id": 83475356, "asset": "IBIT", "platform": "IOL", "quantity": 8.0, "price": 49440.0, "date": "2025-03-21" }, { "id": 24504051, "asset": "PAMP", "platform": "IOL", "quantity": 1.0, "price": 4250.0, "date": "2025-03-21" }, { "id": 57179668, "asset": "COME", "platform": "IOL", "quantity": 240.0, "price": 39960.0, "date": "2025-03-10" }, { "id": 63911217, "asset": "IBIT", "platform": "IOL", "quantity": 20.0, "price": 109800.0, "date": "2025-03-10" }, { "id": 67815354, "asset": "HSAT", "platform": "IOL", "quantity": 43.0, "price": 9374.0, "date": "2025-01-20" }, { "id": 79717201, "asset": "IBIT", "platform": "IOL", "quantity": 13.0, "price": 99710.0, "date": "2025-01-20" }, { "id": 91136652, "asset": "PRPEDOB", "platform": "IOL", "quantity": 7.368, "price": 10.86, "date": "2025-01-16" }, { "id": 28937829, "asset": "HSAT", "platform": "IOL", "quantity": 135.0, "price": 30341.25, "date": "2025-01-14" }, { "id": 33255164, "asset": "ALUA", "platform": "IOL", "quantity": 2.0, "price": 1786.0, "date": "2025-01-13" }, { "id": 96823732, "asset": "IBIT", "platform": "IOL", "quantity": 2.0, "price": 12500.0, "date": "2025-01-13" }, { "id": 39865311, "asset": "ALUA", "platform": "IOL", "quantity": 3.0, "price": 2772.0, "date": "2025-01-10" }, { "id": 88546013, "asset": "PRPEDOB", "platform": "IOL", "quantity": 3.878, "price": 5.77, "date": "2025-01-10" }, { "id": 41389524, "asset": "PRPEDOB", "platform": "IOL", "quantity": 8.214, "price": 12.3, "date": "2025-01-09" }, { "id": 21855569, "asset": "PRPEDOB", "platform": "IOL", "quantity": 4.241, "price": 6.35, "date": "2025-01-09" }, { "id": 99322015, "asset": "ALUA", "platform": "IOL", "quantity": 1.0, "price": 900.0, "date": "2025-01-03" }, { "id": 81195895, "asset": "IBIT", "platform": "IOL", "quantity": 2.0, "price": 13100.0, "date": "2025-01-03" }, { "id": 26452636, "asset": "DGCU2", "platform": "IOL", "quantity": 51.0, "price": 99450.0, "date": "2025-01-02" }, { "id": 32646666, "asset": "IBIT", "platform": "IOL", "quantity": 2.0, "price": 12640.0, "date": "2024-12-30" }, { "id": 11134897, "asset": "ALUA", "platform": "IOL", "quantity": 3.0, "price": 2715.0, "date": "2024-12-27" }, { "id": 91386113, "asset": "CELU", "platform": "IOL", "quantity": 30.0, "price": 28950.0, "date": "2024-12-27" }, { "id": 15446318, "asset": "IBIT", "platform": "IOL", "quantity": 5.0, "price": 32600.0, "date": "2024-12-27" }, { "id": 71773270, "asset": "AL29", "platform": "IOL", "quantity": 55.0, "price": 50957.5, "date": "2024-12-20" }, { "id": 94885458, "asset": "EAC3D", "platform": "IOL", "quantity": 140.0, "price": 140.0, "date": "2024-12-20" }, { "id": 62197670, "asset": "IBIT", "platform": "IOL", "quantity": 14.0, "price": 94500.0, "date": "2024-12-19" }, { "id": 55021853, "asset": "TZXD7", "platform": "IOL", "quantity": 70931.0, "price": 101040.6, "date": "2024-12-19" }, { "id": 75630623, "asset": "ETHA", "platform": "IOL", "quantity": 1.0, "price": 6900.0, "date": "2024-12-17" }, { "id": 67534775, "asset": "IBIT", "platform": "IOL", "quantity": 2.0, "price": 13920.0, "date": "2024-12-17" }, { "id": 66100888, "asset": "PRERMDB", "platform": "IOL", "quantity": 5.298, "price": 5.0, "date": "2024-12-16" }, { "id": 60433398, "asset": "AL30", "platform": "IOL", "quantity": 12.0, "price": 9370.8, "date": "2024-12-13" }, { "id": 41128322, "asset": "GD30", "platform": "IOL", "quantity": 76.0, "price": 59637.2, "date": "2024-12-13" }, { "id": 51685635, "asset": "TX26", "platform": "IOL", "quantity": 3169.0, "price": 52177.59, "date": "2024-12-06" }, { "id": 13136996, "asset": "COME", "platform": "IOL", "quantity": 371.0, "price": 88390.75, "date": "2024-12-03" }, { "id": 64998073, "asset": "YMCIO", "platform": "IOL", "quantity": 46.0, "price": 54178.8, "date": "2024-12-02" }, { "id": 77072917, "asset": "IOLDOLD", "platform": "IOL", "quantity": 494.209, "price": 500.0, "date": "2024-11-21" }, { "id": 60019627, "asset": "IOLDOLD", "platform": "IOL", "quantity": 16.255, "price": 16.43, "date": "2024-11-14" }, { "id": 28533498, "asset": "PRERMDB", "platform": "IOL", "quantity": 11.554, "price": 10.99, "date": "2024-11-14" }, { "id": 18102557, "asset": "PRPEDOB", "platform": "IOL", "quantity": 23.455, "price": 32.95, "date": "2024-11-14" }, { "id": 42609578, "asset": "IOLDOLD", "platform": "IOL", "quantity": 182.072, "price": 183.34, "date": "2024-11-12" }, { "id": 12418074, "asset": "QCOM", "platform": "IOL", "quantity": 5.0, "price": 94125.0, "date": "2024-10-17" }, { "id": 79055745, "asset": "CARP", "platform": "IOL", "quantity": 17.0, "price": 202640.0, "date": "2024-10-07" }, { "id": 92696541, "asset": "VIST", "platform": "IOL", "quantity": 5.0, "price": 96375.0, "date": "2024-10-02" }, { "id": 62286185, "asset": "YMCOO", "platform": "IOL", "quantity": 38.0, "price": 36191.2, "date": "2024-09-11" }, { "id": 86018516, "asset": "KO", "platform": "IOL", "quantity": 2.0, "price": 35650.0, "date": "2024-08-19" }, { "id": 56921102, "asset": "BP", "platform": "IOL", "quantity": 2.0, "price": 17560.0, "date": "2024-08-16" }, { "id": 33269928, "asset": "PFE", "platform": "IOL", "quantity": 2.0, "price": 18120.0, "date": "2024-08-16" }, { "id": 90763576, "asset": "AL30", "platform": "IOL", "quantity": 100.0, "price": 71500.0, "date": "2024-07-12" }, { "id": 41188748, "asset": "MGCEO", "platform": "IOL", "quantity": 58.0, "price": 54050.2, "date": "2024-07-10" }, { "id": 42906252, "asset": "PRERMDB", "platform": "IOL", "quantity": 62.185, "price": 50.0, "date": "2024-07-03" }, { "id": 67997162, "asset": "PRPEDOB", "platform": "IOL", "quantity": 48.474, "price": 50.0, "date": "2024-07-03" }, { "id": 76468123, "asset": "TZXD7", "platform": "IOL", "quantity": 17818.0, "price": 24588.84, "date": "2024-07-01" }, { "id": 92094085, "asset": "GLOB", "platform": "IOL", "quantity": 1.0, "price": 10887.0, "date": "2024-05-16" }, { "id": 76767331, "asset": "GLOB", "platform": "IOL", "quantity": 2.0, "price": 23111.0, "date": "2024-05-03" }, { "id": 36192085, "asset": "MELI", "platform": "IOL", "quantity": 2.0, "price": 30820.0, "date": "2024-05-03" }];
 
-  // Combine with existing
-  savings = [...savings, ...seedData];
+  // Combine with existing, add defaults for missing fields
+  savings = [...savings, ...seedData.map(s => ({ ...s, category: s.category || 'cedears', currency: s.currency || 'ARS' }))];
 
   // Update store and UI
   updateLocalStorage();

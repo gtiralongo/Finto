@@ -179,14 +179,17 @@ function getPrice(asset, category, prices) {
 
   switch (category) {
     case 'acciones':
-    case 'cedears':
+    case 'cedears': {
+      const item = prices.argentina?.[ticker];
+      if (item?.close != null) return item.close;
+      const fallback = prices.bonds?.[ticker];
+      return fallback?.close != null ? fallback.close / 100 : null;
+    }
     case 'bonos':
     case 'on':
     case 'letras': {
       const item = prices.bonds?.[ticker];
-      if (item?.close != null) return item.close / 100;
-      const fallback = prices.argentina?.[ticker];
-      return fallback?.close ?? null;
+      return item?.close != null ? item.close / 100 : null;
     }
     case 'crypto-ars':
       return prices['crypto-ars']?.[ticker] ?? null;
