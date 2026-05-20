@@ -45,7 +45,13 @@ async function refreshMarketPrices() {
     const cryptoSymbols = [...new Set(
       savings.filter(s => s.category === 'crypto-ars').map(s => s.asset)
     )];
-    const prices = await fetchAllMarketPrices(cryptoSymbols);
+    const argentinaTickers = [...new Set(
+      savings.filter(s => ['acciones', 'cedears'].includes(s.category)).map(s => `BCBA:${s.asset}`)
+    )];
+    const bondTickers = [...new Set(
+      savings.filter(s => ['bonos', 'on', 'letras'].includes(s.category)).map(s => `BCBA:${s.asset}`)
+    )];
+    const prices = await fetchAllMarketPrices(cryptoSymbols, argentinaTickers, bondTickers);
     currentPrices = prices;
     localStorage.setItem('latest_prices', JSON.stringify(prices));
   } catch (e) {
@@ -157,6 +163,7 @@ function switchView(view) {
 
   if (view === 'savings') {
     updateSavingsUI();
+    refreshMarketPrices();
   }
 
   if (view === 'platforms') {
@@ -245,6 +252,7 @@ internalTabs.forEach(tab => {
 
     // Ensure data is refreshed on tab switch
   if (typeof updateSavingsUI === 'function') updateSavingsUI();
+  if (panelName === 'portfolio') refreshMarketPrices();
   });
 });
 
@@ -1152,6 +1160,7 @@ function updateSavingsUI() {
   const assetsData = {};
   const assetsQtyData = {};
   const assetsCurrencyData = {};
+  const assetsCategoryData = {};
 
   sorted.forEach(s => {
     const costTotal = parseFloat(s.price) || 0;
@@ -1161,21 +1170,26 @@ function updateSavingsUI() {
     assetsData[s.asset] = (assetsData[s.asset] || 0) + costTotal;
     assetsQtyData[s.asset] = (assetsQtyData[s.asset] || 0) + s.quantity;
     assetsCurrencyData[s.asset] = cur;
+    assetsCategoryData[s.asset] = s.category || '';
 
     const category = s.category || '';
     const mult = (typeof UNIT_MULTIPLIER !== 'undefined' && UNIT_MULTIPLIER[category]) || 1;
     const rawPrice = currentPrices && typeof getPrice === 'function' ? getPrice(s.asset, category, currentPrices) : null;
-    const currentPrice = rawPrice != null ? rawPrice : null;
+    const currentPrice = rawPrice != null && s.currency === 'USD' && ['bonos','on','letras'].includes(category) && currentPrices?.arsUsdRate
+      ? rawPrice / currentPrices.arsUsdRate : rawPrice;
     const currentValue = currentPrice != null ? s.quantity * currentPrice * mult : null;
     const gainLoss = (currentValue != null && costTotal) ? currentValue - costTotal : null;
 
-    const priceFmt = currentPrice != null ? fmt(currentPrice) : '<span style="color:var(--text-muted)">—</span>';
+    const priceDecimals = category === 'fondos' ? 4 : 2;
+    const priceFmt = currentPrice != null
+      ? `$${currentPrice.toLocaleString('es-AR', { minimumFractionDigits: priceDecimals, maximumFractionDigits: priceDecimals })}`
+      : '<span style="color:var(--text-muted)">—</span>';
     const valueFmt = currentValue != null ? fmt(currentValue) : '<span style="color:var(--text-muted)">—</span>';
     const gainPct = (gainLoss != null && costTotal > 0) ? (gainLoss / costTotal) * 100 : null;
     const gainColor = gainLoss != null ? (gainLoss >= 0 ? 'var(--income-light)' : 'var(--expense-light)') : 'var(--text-muted)';
     const gainSign = gainLoss != null ? (gainLoss >= 0 ? '+' : '') : '';
     const gainFmt = gainLoss != null
-      ? `<span style="color:${gainColor};font-weight:600;">${gainSign}${fmt(gainLoss)}</span><br><span style="color:${gainColor};font-size:0.7rem;">${gainPct != null ? `${gainSign}${gainPct.toLocaleString('es-AR', {minimumFractionDigits:2,maximumFractionDigits:2})}%` : ''}</span>`
+      ? `<span style="color:${gainColor};font-weight:600;">${gainSign}${fmt(gainLoss)}</span><br><span style="color:${gainColor};font-size:0.7rem;">${gainPct != null ? `${gainSign}${gainPct.toLocaleString('es-AR', {minimumFractionDigits:2,maximumFractionDigits:2})}%` : ''}</span><span style="font-size:0.5rem;font-weight:700;padding:1px 3px;border-radius:2px;margin-left:3px;${(s.currency || 'ARS') === 'USD' ? 'background:rgba(16,185,129,0.15);color:var(--income-light);' : 'background:rgba(99,102,241,0.15);color:#818cf8;'}">${(s.currency || 'ARS') === 'USD' ? 'USD' : 'ARS'}</span>`
       : '<span style="color:var(--text-muted)">—</span>';
 
     const tr = document.createElement('tr');
@@ -1284,12 +1298,35 @@ function updateSavingsUI() {
   // Populate New KPI Cards
   const kpiTotalArs = document.getElementById('savings-kpi-total-ars');
   const kpiTotalUsd = document.getElementById('savings-kpi-total-usd');
+  const kpiActualArs = document.getElementById('savings-kpi-actual-ars');
+  const kpiActualUsd = document.getElementById('savings-kpi-actual-usd');
   const kpiPnlArs = document.getElementById('savings-kpi-pnl-ars');
   const kpiPnlUsd = document.getElementById('savings-kpi-pnl-usd');
   const kpiCount = document.getElementById('savings-kpi-count');
 
   if (kpiTotalArs) kpiTotalArs.innerText = fmtSimple(totalValueByCurrency['ARS'] || 0, '$');
   if (kpiTotalUsd) kpiTotalUsd.innerText = fmtSimple(totalValueByCurrency['USD'] || 0, 'U$D ');
+
+  // Valor Actual (market value)
+  let actualByCurrency = {};
+  savings.forEach(s => {
+    const cur = (s.currency || 'ARS').toUpperCase();
+    const costTotal = parseFloat(s.price) || 0;
+    const category = s.category || '';
+    const mult = (typeof UNIT_MULTIPLIER !== 'undefined' && UNIT_MULTIPLIER[category]) || 1;
+    const rawPrice = currentPrices && typeof getPrice === 'function' ? getPrice(s.asset, category, currentPrices) : null;
+    const currentPrice = rawPrice != null && cur === 'USD' && ['bonos','on','letras'].includes(category) && currentPrices?.arsUsdRate
+      ? rawPrice / currentPrices.arsUsdRate : rawPrice;
+    if (currentPrice != null) {
+      const currentValue = s.quantity * currentPrice * mult;
+      actualByCurrency[cur] = (actualByCurrency[cur] || 0) + currentValue;
+    } else {
+      actualByCurrency[cur] = (actualByCurrency[cur] || 0) + costTotal;
+    }
+  });
+  if (kpiActualArs) kpiActualArs.innerText = fmtSimple(actualByCurrency['ARS'] || 0, '$');
+  if (kpiActualUsd) kpiActualUsd.innerText = fmtSimple(actualByCurrency['USD'] || 0, 'U$D ');
+
   if (kpiCount) kpiCount.innerText = Object.keys(assetsData).length;
 
   if (kpiPnlArs || kpiPnlUsd) {
@@ -1315,7 +1352,8 @@ function updateSavingsUI() {
   // Unrealized P&L
   const kpiUnrealizedArs = document.getElementById('savings-kpi-unrealized-ars');
   const kpiUnrealizedUsd = document.getElementById('savings-kpi-unrealized-usd');
-  const kpiReturnPct = document.getElementById('savings-kpi-return-pct');
+  const kpiReturnArs = document.getElementById('savings-kpi-return-ars');
+  const kpiReturnUsd = document.getElementById('savings-kpi-return-usd');
 
   let unrealizedByCurrency = {};
   let totalCostByCurrency = {};
@@ -1325,8 +1363,10 @@ function updateSavingsUI() {
     const category = s.category || '';
     const mult = (typeof UNIT_MULTIPLIER !== 'undefined' && UNIT_MULTIPLIER[category]) || 1;
     const rawPrice = currentPrices && typeof getPrice === 'function' ? getPrice(s.asset, category, currentPrices) : null;
-    if (rawPrice != null) {
-      const currentValue = s.quantity * rawPrice * mult;
+    const currentPrice = rawPrice != null && cur === 'USD' && ['bonos','on','letras'].includes(category) && currentPrices?.arsUsdRate
+      ? rawPrice / currentPrices.arsUsdRate : rawPrice;
+    if (currentPrice != null) {
+      const currentValue = s.quantity * currentPrice * mult;
       const gain = currentValue - costTotal;
       unrealizedByCurrency[cur] = (unrealizedByCurrency[cur] || 0) + gain;
     }
@@ -1343,18 +1383,26 @@ function updateSavingsUI() {
     kpiUnrealizedUsd.innerText = fmtSimple(v, 'U$D ');
     kpiUnrealizedUsd.style.color = v >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
   }
-  if (kpiReturnPct) {
-    const totalCost = (totalCostByCurrency['ARS'] || 0) + (totalCostByCurrency['USD'] || 0);
-    const totalUnrealized = (unrealizedByCurrency['ARS'] || 0) + (unrealizedByCurrency['USD'] || 0);
-    if (totalCost > 0) {
-      const pct = (totalUnrealized / totalCost) * 100;
-      kpiReturnPct.innerText = `${pct >= 0 ? '+' : ''}${pct.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
-      kpiReturnPct.style.color = pct >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
+  function fmtPct(pct) {
+    if (pct == null) return '—';
+    return `${pct >= 0 ? '+' : ''}${pct.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
+  }
+  function setPctEl(el, pct, prefix) {
+    if (!el) return;
+    if (pct != null) {
+      el.innerText = prefix + fmtPct(pct);
+      el.style.color = pct >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
     } else {
-      kpiReturnPct.innerText = '0,00%';
-      kpiReturnPct.style.color = 'var(--text-muted)';
+      el.innerText = '—';
+      el.style.color = 'var(--text-muted)';
     }
   }
+  const costArs = totalCostByCurrency['ARS'] || 0;
+  const costUsd = totalCostByCurrency['USD'] || 0;
+  const unrlArs = unrealizedByCurrency['ARS'] || 0;
+  const unrlUsd = unrealizedByCurrency['USD'] || 0;
+  setPctEl(kpiReturnArs, costArs > 0 ? (unrlArs / costArs) * 100 : null, '');
+  setPctEl(kpiReturnUsd, costUsd > 0 ? (unrlUsd / costUsd) * 100 : null, 'U$D ');
 
   // Summary List
   const summaryEl = document.getElementById('savings-asset-summary');
@@ -1369,7 +1417,18 @@ function updateSavingsUI() {
     assetsEntries.forEach(([asset, val]) => {
       const qty = assetsQtyData[asset] || 0;
       const cur = assetsCurrencyData[asset] || 'ARS';
+      const category = assetsCategoryData[asset] || '';
+      const mult = (typeof UNIT_MULTIPLIER !== 'undefined' && UNIT_MULTIPLIER[category]) || 1;
+      const rawPrice = currentPrices && typeof getPrice === 'function' ? getPrice(asset, category, currentPrices) : null;
+      const currentPrice = rawPrice != null && cur === 'USD' && ['bonos','on','letras'].includes(category) && currentPrices?.arsUsdRate
+        ? rawPrice / currentPrices.arsUsdRate : rawPrice;
+      const currentValue = currentPrice != null ? qty * currentPrice * mult : null;
+      const gainLoss = currentValue != null ? currentValue - val : null;
+      const gainPct = gainLoss != null && val > 0 ? (gainLoss / val) * 100 : null;
+      const gainColor = gainLoss != null ? (gainLoss >= 0 ? 'var(--income-light)' : 'var(--expense-light)') : 'var(--text-muted)';
+      const gainSign = gainLoss != null ? (gainLoss >= 0 ? '+' : '') : '';
       const symbol = cur === 'USD' ? 'U$D ' : '$';
+
       const item = document.createElement('div');
       item.style.cssText = 'display:flex; justify-content:space-between; padding:10px 14px; background:rgba(255,255,255,0.03); border-radius:12px; align-items:center; border: 1px solid rgba(255,255,255,0.05);';
       item.innerHTML = `
@@ -1380,8 +1439,10 @@ function updateSavingsUI() {
             </span>
           </div>
           <div style="text-align: right;">
-            <span style="font-weight:800; font-size: 0.75rem; color: var(--text-soft); display: block;">${symbol}</span>
-            <span style="font-size:0.95rem; font-weight:800; color:var(--text);">${val.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+            <span style="font-weight:800; font-size: 0.75rem; color: var(--text-soft); display: block;">${symbol}${val.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+            ${gainPct != null
+              ? `<span style="font-size:0.8rem;font-weight:700;color:${gainColor};">${gainSign}${gainPct.toLocaleString('es-AR', {minimumFractionDigits:2,maximumFractionDigits:2})}%</span>`
+              : '<span style="font-size:0.7rem;color:var(--text-muted)">—</span>'}
           </div>
         `;
       summaryEl.appendChild(item);
@@ -1774,11 +1835,18 @@ if (bulkEditForm) {
     e.preventDefault();
     const newPlatform = document.getElementById('bulk-platform-select').value;
     const newCategory = document.getElementById('bulk-category-select').value;
+    const newAsset = document.getElementById('bulk-asset-name').value.trim();
+    const findText = document.getElementById('bulk-find-text').value;
+    const replaceText = document.getElementById('bulk-replace-text').value;
 
     savings.forEach(s => {
       if (selectedSavingsIds.includes(s.id)) {
         if (newPlatform !== 'no-change') s.platform = newPlatform;
         if (newCategory !== 'no-change') s.category = newCategory;
+        if (newAsset) s.asset = newAsset.toUpperCase();
+        else if (findText) {
+          s.asset = s.asset.replaceAll(findText, replaceText);
+        }
       }
     });
 
@@ -1790,6 +1858,43 @@ if (bulkEditForm) {
     bulkEditForm.reset();
   });
 }
+
+// Bulk rename preview
+document.getElementById('btn-bulk-rename-preview')?.addEventListener('click', () => {
+  const previewEl = document.getElementById('bulk-rename-preview');
+  if (!previewEl) return;
+  const findText = document.getElementById('bulk-find-text').value;
+  const replaceText = document.getElementById('bulk-replace-text').value;
+  const newAsset = document.getElementById('bulk-asset-name').value.trim();
+
+  const selected = savings.filter(s => selectedSavingsIds.includes(s.id));
+  if (selected.length === 0) {
+    previewEl.innerHTML = '<div style="padding:4px;color:var(--text-muted);font-size:0.75rem;">Sin registros seleccionados</div>';
+    previewEl.style.display = 'block';
+    return;
+  }
+
+  let html = '';
+  for (const s of selected) {
+    let newName;
+    if (newAsset) newName = newAsset.toUpperCase();
+    else if (findText) newName = s.asset.replaceAll(findText, replaceText);
+    else newName = s.asset;
+
+    if (newName !== s.asset) {
+      html += `<div style="padding:3px 6px;font-size:0.75rem;border-bottom:1px solid var(--border);">
+        <span style="color:var(--text-muted);text-decoration:line-through;">${s.asset}</span>
+        <span style="color:var(--income-light);"> → ${newName}</span>
+      </div>`;
+    }
+  }
+
+  if (!html) {
+    html = '<div style="padding:4px;color:var(--text-muted);font-size:0.75rem;">Ningún cambio</div>';
+  }
+  previewEl.innerHTML = html;
+  previewEl.style.display = 'block';
+});
 
 // BULK SALE LOGIC
 const btnBulkSell = document.getElementById('btn-bulk-sell');

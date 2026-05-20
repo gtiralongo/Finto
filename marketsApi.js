@@ -63,8 +63,13 @@ function tvDataToMap(data) {
   return map;
 }
 
-async function fetchTVArgentina() {
-  const data = await fetchTV('argentina');
+async function fetchTVArgentina(tickers = []) {
+  const data = await fetchTV('argentina', tickers);
+  return tvDataToMap(data);
+}
+
+async function fetchTVBonds(tickers = []) {
+  const data = await fetchTV('bond', tickers);
   return tvDataToMap(data);
 }
 
@@ -129,23 +134,43 @@ function fciToMap(fciData) {
   return map;
 }
 
+// ── Exchange Rate ──
+
+async function fetchArsUsdRate() {
+  try {
+    const r = await fetch('https://api.argentinadatos.com/v1/cotizaciones/dolares');
+    if (!r.ok) return null;
+    const data = await r.json();
+    const latest = data.filter(d => d.casa === 'bolsa').pop();
+    return latest?.venta ?? null;
+  } catch {
+    return null;
+  }
+}
+
 // ── Unified Service ──
 
-async function fetchAllMarketPrices(cryptoSymbols = []) {
-  const [argentina, crypto, criptoya, fci] = await Promise.allSettled([
-    fetchTVArgentina(),
+async function fetchAllMarketPrices(cryptoSymbols = [], argentinaTickers = [], bondTickers = []) {
+  const [argentina, crypto, bonds, criptoya, fci, rate] = await Promise.allSettled([
+    fetchTVArgentina(argentinaTickers),
     fetchTVCrypto(),
+    bondTickers.length > 0
+      ? fetchTVBonds(bondTickers)
+      : Promise.resolve({}),
     cryptoSymbols.length > 0
       ? fetchCriptoyaPrices(cryptoSymbols)
       : Promise.resolve({}),
-    fetchAllFci()
+    fetchAllFci(),
+    fetchArsUsdRate()
   ]);
 
   return {
     argentina: argentina.status === 'fulfilled' ? argentina.value : {},
     'crypto-global': crypto.status === 'fulfilled' ? crypto.value : {},
+    bonds: bonds.status === 'fulfilled' ? bonds.value : {},
     'crypto-ars': criptoya.status === 'fulfilled' ? criptoya.value : {},
-    fondos: fci.status === 'fulfilled' ? fciToMap(fci.value) : {}
+    fondos: fci.status === 'fulfilled' ? fciToMap(fci.value) : {},
+    arsUsdRate: rate.status === 'fulfilled' ? rate.value : null
   };
 }
 
@@ -156,9 +181,12 @@ function getPrice(asset, category, prices) {
     case 'acciones':
     case 'cedears':
     case 'bonos':
-    case 'on': {
-      const item = prices.argentina?.[ticker];
-      return item?.close ?? null;
+    case 'on':
+    case 'letras': {
+      const item = prices.bonds?.[ticker];
+      if (item?.close != null) return item.close / 100;
+      const fallback = prices.argentina?.[ticker];
+      return fallback?.close ?? null;
     }
     case 'crypto-ars':
       return prices['crypto-ars']?.[ticker] ?? null;
@@ -169,7 +197,8 @@ function getPrice(asset, category, prices) {
     }
     case 'fondos': {
       const item = prices.fondos?.[ticker];
-      return item?.vcp ?? null;
+      const vcp = item?.vcp;
+      return vcp != null ? vcp / 1000 : null;
     }
     default:
       return null;
@@ -180,7 +209,9 @@ function getPrice(asset, category, prices) {
 window.TV_COLS = TV_COLS;
 window.UNIT_MULTIPLIER = UNIT_MULTIPLIER;
 window.fetchTVArgentina = fetchTVArgentina;
+window.fetchTVBonds = fetchTVBonds;
 window.fetchTVCrypto = fetchTVCrypto;
+window.fetchArsUsdRate = fetchArsUsdRate;
 window.fetchCriptoyaPrices = fetchCriptoyaPrices;
 window.fetchCriptoyaSinglePrice = fetchCriptoyaSinglePrice;
 window.fetchAllFci = fetchAllFci;
