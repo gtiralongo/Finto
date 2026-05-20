@@ -362,6 +362,21 @@ function updateKPIs(displayTransactions, displaySavings, displayTrades) {
   if (incomeCount) incomeCount.innerText = `${transactionsARS.filter(t => t.amount > 0 && !t.isTransfer && !t.isInvestment).length} mov. ARS`;
   if (expenseCount) expenseCount.innerText = `${transactionsARS.filter(t => t.amount < 0 && !t.isTransfer && !t.isInvestment).length} mov. ARS`;
 
+  // USD income/expense for dashboard hero
+  const transactionsUSD = displayTransactions.filter(t => (t.currency || 'ARS') === 'USD');
+  const incomeUSD = transactionsUSD.filter(t => t.amount > 0 && !t.isTransfer && !t.isInvestment).reduce((acc, t) => acc + t.amount, 0);
+  const expenseUSD = Math.abs(transactionsUSD.filter(t => t.amount < 0 && !t.isTransfer && !t.isInvestment).reduce((acc, t) => acc + t.amount, 0));
+  const dashIncomeUsd = document.getElementById('dash-income-usd');
+  const dashExpenseUsd = document.getElementById('dash-expense-usd');
+  if (dashIncomeUsd) {
+    dashIncomeUsd.innerText = incomeUSD > 0 ? `U$D +${incomeUSD.toLocaleString('es-AR', { minimumFractionDigits: 2 })}` : '';
+    dashIncomeUsd.style.color = incomeUSD > 0 ? 'var(--income-light)' : 'var(--text-muted)';
+  }
+  if (dashExpenseUsd) {
+    dashExpenseUsd.innerText = expenseUSD > 0 ? `U$D ${expenseUSD.toLocaleString('es-AR', { minimumFractionDigits: 2 })}` : '';
+    dashExpenseUsd.style.color = expenseUSD > 0 ? 'var(--expense-light)' : 'var(--text-muted)';
+  }
+
   const fmtSav = (val, symbol) => `${symbol}${val.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
 
   // ── Portfolio Market Value & Return per Currency ──
