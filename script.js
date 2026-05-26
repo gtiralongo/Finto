@@ -396,6 +396,8 @@ function updateKPIs(displayTransactions, displaySavings, displayTrades) {
     }
     if (curPrice != null) {
       mkByCur[cur] = (mkByCur[cur] || 0) + s.quantity * curPrice * mult;
+    } else {
+      mkByCur[cur] = (mkByCur[cur] || 0) + cost;
     }
   });
   // ARS
