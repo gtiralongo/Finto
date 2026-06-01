@@ -1271,7 +1271,8 @@ if (saleForm) {
       pnlPercent: pnlPercent,
       date: sellDate,
       platform: item.platform,
-      currency: item.currency // Use original purchase currency
+      currency: item.currency, // Use original purchase currency
+      purchaseDate: item.date
     };
     closedTrades.push(closedTrade);
 
@@ -1659,6 +1660,14 @@ function renderClosedTradesTable() {
     if (isUSD) totalCashUSD += t.receivedAmount;
     else totalCashARS += t.receivedAmount;
 
+    const daysHeld = t.purchaseDate
+      ? Math.floor((new Date(t.date) - new Date(t.purchaseDate)) / (1000 * 60 * 60 * 24))
+      : -1;
+    const daysColor = getDaysColor(daysHeld);
+    const daysDisplay = daysHeld >= 0
+      ? `<span style="font-size:0.65rem;color:${daysColor};font-weight:700;margin-left:4px;">${daysHeld}d</span>`
+      : '';
+
     const tr = document.createElement('tr');
     tr.style.borderBottom = '1px solid var(--border)';
     const pnlColor = t.pnl >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
@@ -1668,7 +1677,7 @@ function renderClosedTradesTable() {
     const unitPriceBought = t.quantitySold > 0 && t.costBasis ? t.costBasis / t.quantitySold : 0;
 
     tr.innerHTML = `
-      <td style="padding: 1rem;">${fmtDate(t.date)}</td>
+      <td style="padding: 1rem; white-space: nowrap;">${fmtDate(t.date)}${daysDisplay}</td>
       <td style="padding: 1rem; font-weight: 700;">${t.asset}</td>
       <td style="padding: 1rem; text-align: right;">${t.quantitySold.toLocaleString('es-AR')}</td>
       <td style="padding: 1rem; text-align: right;">${symbol}${unitPriceBought.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
@@ -2187,7 +2196,8 @@ if (bulkSaleForm) {
         pnlPercent: pnlPercent,
         date: saleDate,
         platform: item.platform,
-        currency: item.currency
+        currency: item.currency,
+        purchaseDate: item.date
       });
     });
 
