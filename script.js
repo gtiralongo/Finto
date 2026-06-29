@@ -3140,7 +3140,17 @@ function populatePlatformsDropdowns() {
     platforms.forEach(p => {
       const opt = document.createElement('option');
       opt.value = p.name;
-      opt.textContent = p.name;
+
+      const balARS = calculatePlatformBalance(p.name, 'ARS');
+      const balUSD = calculatePlatformBalance(p.name, 'USD');
+      const fmt = (n) => n.toLocaleString('es-AR', { minimumFractionDigits: 0 });
+
+      if (balUSD !== 0) {
+        opt.textContent = `${p.name}  ($${fmt(balARS)} / U$D ${fmt(balUSD)})`;
+      } else {
+        opt.textContent = `${p.name}  ($${fmt(balARS)})`;
+      }
+
       el.appendChild(opt);
     });
 
