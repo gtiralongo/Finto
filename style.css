@@ -3314,3 +3314,11 @@ tr.selected {
     }
 }
 
+/* ===== Payment Modal Button ===== */
+.btn-payment {
+    transition: opacity 0.15s;
+}
+.btn-payment:hover {
+    opacity: 0.8;
+}
+

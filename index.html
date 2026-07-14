@@ -707,6 +707,10 @@
                         <button class="pill" data-filter="income">Ingresos</button>
                         <button class="pill" data-filter="expense">Gastos</button>
                     </div>
+                    <select id="transactions-filter-platform"
+                        style="padding: 0.4rem 0.6rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font-size: 0.8rem; min-width: 130px;">
+                        <option value="">Todas las cuentas</option>
+                    </select>
                     <div class="history-search">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="11" cy="11" r="8" />
@@ -840,6 +844,14 @@
                                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
                             </svg>
                             Carga Masiva (CSV)
+                        </button>
+                        <button class="btn-outline" id="btn-bulk-payments"
+                            style="display: flex; align-items: center; gap: 8px; font-size: 0.8rem; padding: 0.5rem 1rem;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                style="width: 16px; height: 16px;">
+                                <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                            </svg>
+                            Carga Masiva Pagos
                         </button>
                     </div>
                 </div>
@@ -1402,6 +1414,140 @@
                             Venta</button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Register Payment Modal -->
+    <div id="payment-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="payment-modal-title">Registrar Pago</h3>
+                <button type="button" class="btn-icon" onclick="closePaymentModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="payment-form">
+                    <input type="hidden" id="payment-savings-id">
+                    <div id="payment-info-header"
+                        style="background: var(--surface); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.5rem; border: 1px solid var(--border);">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span class="text-muted">Activo:</span>
+                            <span id="payment-asset-name" style="font-weight: 700; color: var(--primary-light);">---</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span class="text-muted">Costo Actual:</span>
+                            <span id="payment-cost-basis" style="font-weight: 600;">$0,00</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Tipo de Pago</label>
+                        <select id="payment-type" required>
+                            <option value="amortization">Amortización</option>
+                            <option value="coupon">Cupón / Dividendo</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Monto Recibido</label>
+                        <input type="number" id="payment-amount" placeholder="0.00" step="0.01" required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Moneda del Pago</label>
+                            <select id="payment-currency" required>
+                                <option value="ARS">ARS</option>
+                                <option value="USD">USD</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Fecha</label>
+                            <input type="date" id="payment-date" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Plataforma</label>
+                        <select id="payment-platform" required>
+                            <option value="" disabled selected>Seleccionar...</option>
+                        </select>
+                    </div>
+
+                    <div id="payment-validation-msg"
+                        style="display:none; color: var(--expense-light); font-size: 0.8rem; margin-top: 0.5rem;"></div>
+
+                    <div class="modal-footer" style="padding-top: 1.5rem;">
+                        <button type="button" class="btn-secondary" onclick="closePaymentModal()">Cancelar</button>
+                        <button type="submit" class="btn-primary" id="payment-submit-btn">Confirmar Pago</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Payments Modal -->
+    <div id="bulk-payments-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-card" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3>Carga Masiva de Pagos</h3>
+                <button type="button" class="btn-icon" onclick="closeBulkPaymentsModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div style="background: var(--surface); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.5rem; border: 1px solid var(--border); font-size: 0.8rem; color: var(--text-soft); line-height: 1.6;">
+                    <strong style="color: var(--text);">Formato esperado</strong> (columnas separadas por TAB o punto y coma):<br>
+                    <code style="background: var(--bg); padding: 2px 6px; border-radius: 4px; font-size: 0.75rem;">
+                        ACTIVO&nbsp;&nbsp;&nbsp;TIPO&nbsp;&nbsp;&nbsp;MONTO&nbsp;&nbsp;&nbsp;FECHA&nbsp;&nbsp;&nbsp;PLATAFORMA&nbsp;&nbsp;&nbsp;MONEDA
+                    </code><br>
+                    <span style="font-size:0.75rem;">Copiá desde Excel/Sheets y pegá en el cuadro, o subí un archivo CSV.</span><br>
+                    <span style="font-size:0.75rem;"><strong>TIPO:</strong> "Amortización" o "Cupón"</span>
+                </div>
+
+                <div class="form-group">
+                    <label>Pegar datos (TAB separado) o CSV</label>
+                    <textarea id="bulk-payments-text" rows="8" placeholder="ACTIVO&#9;TIPO&#9;MONTO&#9;FECHA&#9;PLATAFORMA&#9;MONEDA&#10;AL30&#9;Amortización&#9;5.50&#9;2025-01-15&#9;IOL&#9;USD&#10;AL30&#9;Cupón&#9;3.25&#9;2025-02-15&#9;IOL&#9;USD"
+                        style="font-family: monospace; font-size: 0.8rem; width: 100%; resize: vertical;"></textarea>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 1rem;">
+                    <span style="font-size: 0.8rem; color: var(--text-soft);">o subir archivo:</span>
+                    <input type="file" id="bulk-payments-file" accept=".csv,.tsv,.txt" style="display: none;">
+                    <button type="button" class="btn-outline" id="btn-bulk-payments-file"
+                        style="font-size: 0.8rem; padding: 0.4rem 0.8rem;">
+                        Seleccionar archivo
+                    </button>
+                    <span id="bulk-payments-filename" style="font-size: 0.75rem; color: var(--text-soft);"></span>
+                </div>
+
+                <div id="bulk-payments-preview" style="display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <strong style="font-size: 0.85rem;">Vista previa</strong>
+                        <span id="bulk-payments-count" style="font-size: 0.75rem; color: var(--text-soft);"></span>
+                    </div>
+                    <div style="max-height: 250px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius-md);">
+                        <table style="width: 100%; font-size: 0.78rem; border-collapse: collapse;">
+                            <thead style="position: sticky; top: 0; background: var(--surface);">
+                                <tr>
+                                    <th style="padding: 0.5rem; text-align: left; border-bottom: 1px solid var(--border);">Activo</th>
+                                    <th style="padding: 0.5rem; text-align: left; border-bottom: 1px solid var(--border);">Tipo</th>
+                                    <th style="padding: 0.5rem; text-align: right; border-bottom: 1px solid var(--border);">Monto</th>
+                                    <th style="padding: 0.5rem; text-align: left; border-bottom: 1px solid var(--border);">Fecha</th>
+                                    <th style="padding: 0.5rem; text-align: left; border-bottom: 1px solid var(--border);">Plataforma</th>
+                                    <th style="padding: 0.5rem; text-align: left; border-bottom: 1px solid var(--border);">Moneda</th>
+                                    <th style="padding: 0.5rem; text-align: center; border-bottom: 1px solid var(--border);">OK</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bulk-payments-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="bulk-payments-errors" style="display: none; margin-top: 1rem; padding: 0.75rem; background: rgba(239,68,68,0.1); border: 1px solid var(--expense); border-radius: var(--radius-md); font-size: 0.8rem; color: var(--expense-light); max-height: 120px; overflow-y: auto;"></div>
+
+                <div class="modal-footer" style="padding-top: 1.5rem;">
+                    <button type="button" class="btn-secondary" onclick="closeBulkPaymentsModal()">Cancelar</button>
+                    <button type="button" class="btn-primary" id="btn-bulk-payments-import" disabled>Importar</button>
+                </div>
             </div>
         </div>
     </div>

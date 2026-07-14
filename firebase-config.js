@@ -46,6 +46,8 @@ auth.onAuthStateChanged(user => {
         window.savings = [];
         window.closedTrades = [];
         window.platforms = [];
+        window.amortizations = [];
+        window.coupons = [];
         if (typeof window.init === 'function') window.init();
     }
 });
@@ -82,6 +84,8 @@ function updateLocalStorage() {
     localStorage.setItem('savings', JSON.stringify(window.savings || []));
     localStorage.setItem('closedTrades', JSON.stringify(window.closedTrades || []));
     localStorage.setItem('platforms', JSON.stringify(window.platforms || []));
+    localStorage.setItem('amortizations', JSON.stringify(window.amortizations || []));
+    localStorage.setItem('coupons', JSON.stringify(window.coupons || []));
 
     const user = auth.currentUser;
     if (user) {
@@ -89,7 +93,9 @@ function updateLocalStorage() {
             transactions: window.transactions || [],
             savings: window.savings || [],
             closedTrades: window.closedTrades || [],
-            platforms: window.platforms || []
+            platforms: window.platforms || [],
+            amortizations: window.amortizations || [],
+            coupons: window.coupons || []
         }).catch(err => console.error("Error saving to Firebase: ", err));
     }
 }
@@ -102,12 +108,16 @@ function loadUserTransactions(uid) {
         window.savings = data.savings || [];
         window.closedTrades = data.closedTrades || [];
         window.platforms = data.platforms || [];
+        window.amortizations = data.amortizations || [];
+        window.coupons = data.coupons || [];
         
         // Caching locally so it shows immediately on next reload
         localStorage.setItem('transactions', JSON.stringify(window.transactions));
         localStorage.setItem('savings', JSON.stringify(window.savings));
         localStorage.setItem('closedTrades', JSON.stringify(window.closedTrades));
         localStorage.setItem('platforms', JSON.stringify(window.platforms));
+        localStorage.setItem('amortizations', JSON.stringify(window.amortizations));
+        localStorage.setItem('coupons', JSON.stringify(window.coupons));
 
         if (typeof window.init === 'function') window.init();
     }).catch(err => {

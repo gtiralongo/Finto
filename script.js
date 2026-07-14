@@ -37,6 +37,8 @@ var platforms = JSON.parse(localStorage.getItem('platforms')) || [
   { id: 2, name: 'Mercado Pago', initialBalance: 0 },
   { id: 3, name: 'Banco', initialBalance: 0 }
 ];
+var amortizations = JSON.parse(localStorage.getItem('amortizations')) || [];
+var coupons = JSON.parse(localStorage.getItem('coupons')) || [];
 let currentPrices = JSON.parse(localStorage.getItem('latest_prices')) || {};
 
 async function refreshMarketPrices() {
@@ -63,6 +65,7 @@ async function refreshMarketPrices() {
 }
 let currentFilter = 'all';
 let currentSearchQuery = '';
+let transactionsFilterPlatform = '';
 let savingsSearchQuery = '';
 let tradesSearchQuery = '';
 let savingsFilterPlatform = '';
@@ -1239,6 +1242,398 @@ function closeSaleModal() {
   document.getElementById('sale-savings-modal').style.display = 'none';
 }
 
+// ===== PAYMENT MODAL (Amortization + Coupon) =====
+const PAYMENT_CATEGORIES = ['bonos', 'on', 'letras', 'acciones', 'cedears'];
+const AMORTIZATION_CATEGORIES = ['bonos', 'on', 'letras'];
+
+function openPaymentModal(id) {
+  const item = savings.find(s => s.id === id);
+  if (!item) return;
+
+  document.getElementById('payment-savings-id').value = item.id;
+  document.getElementById('payment-asset-name').innerText = item.asset;
+  document.getElementById('payment-cost-basis').innerText = `${fmt(item.price)} (${item.currency})`;
+
+  const typeSelect = document.getElementById('payment-type');
+  if (AMORTIZATION_CATEGORIES.includes(item.category)) {
+    typeSelect.innerHTML = `
+      <option value="amortization">Amortización</option>
+      <option value="coupon">Cupón / Dividendo</option>`;
+    typeSelect.disabled = false;
+  } else {
+    typeSelect.innerHTML = `<option value="coupon">Cupón / Dividendo</option>`;
+    typeSelect.disabled = true;
+  }
+
+  document.getElementById('payment-amount').value = '';
+  document.getElementById('payment-currency').value = item.currency || 'ARS';
+  document.getElementById('payment-date').valueAsDate = new Date();
+  document.getElementById('payment-validation-msg').style.display = 'none';
+
+  const platformSelect = document.getElementById('payment-platform');
+  platformSelect.innerHTML = '<option value="" disabled selected>Seleccionar...</option>';
+  platforms.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.name;
+    opt.textContent = p.name;
+    if (p.name === item.platform) opt.selected = true;
+    platformSelect.appendChild(opt);
+  });
+
+  document.getElementById('payment-modal').style.display = 'flex';
+}
+
+function closePaymentModal() {
+  document.getElementById('payment-modal').style.display = 'none';
+}
+
+const paymentForm = document.getElementById('payment-form');
+if (paymentForm) {
+  paymentForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const id = parseInt(document.getElementById('payment-savings-id').value);
+    const type = document.getElementById('payment-type').value;
+    const amount = parseFloat(document.getElementById('payment-amount').value);
+    const currency = document.getElementById('payment-currency').value;
+    const date = document.getElementById('payment-date').value;
+    const platform = document.getElementById('payment-platform').value;
+    const msgEl = document.getElementById('payment-validation-msg');
+
+    if (!amount || amount <= 0) {
+      msgEl.textContent = 'El monto debe ser mayor a 0.';
+      msgEl.style.display = 'block';
+      return;
+    }
+
+    const index = savings.findIndex(s => s.id === id);
+    if (index === -1) return;
+    const item = savings[index];
+
+    if (type === 'amortization') {
+      if (amount > item.price) {
+        msgEl.textContent = `El monto no puede exceder el costo actual (${fmt(item.price)}).`;
+        msgEl.style.display = 'block';
+        return;
+      }
+
+      item.price = item.price - amount;
+
+      transactions.push({
+        id: generateID(),
+        text: `Amortización - ${item.asset}`,
+        amount: amount,
+        date: date,
+        platform: platform,
+        currency: currency,
+        isInvestment: true
+      });
+
+      amortizations.push({
+        id: generateID(),
+        asset: item.asset,
+        amount: amount,
+        date: date,
+        platform: platform,
+        currency: currency
+      });
+    } else {
+      transactions.push({
+        id: generateID(),
+        text: `Cupón - ${item.asset}`,
+        amount: amount,
+        date: date,
+        platform: platform,
+        currency: currency
+      });
+
+      coupons.push({
+        id: generateID(),
+        asset: item.asset,
+        amount: amount,
+        date: date,
+        platform: platform,
+        currency: currency
+      });
+    }
+
+    updateLocalStorage();
+    closePaymentModal();
+    updateSavingsUI();
+    updateDashboard();
+  });
+}
+
+// ===== BULK PAYMENTS (Amortization + Coupon mass import) =====
+let bulkPaymentsData = [];
+
+function findSavingsByAsset(ticker) {
+  const t = ticker.toUpperCase().trim();
+  let match = savings.find(s => s.asset.toUpperCase() === t);
+  if (match) return match;
+  match = savings.find(s => s.asset.toUpperCase().includes(t) || t.includes(s.asset.toUpperCase()));
+  if (match) return match;
+  match = savings.find(s => s.asset.toUpperCase().replace(/D$/, '') === t.replace(/D$/, ''));
+  if (match) return match;
+  match = savings.find(s => s.asset.toUpperCase().replace(/D$/, '').includes(t.replace(/D$/, '')));
+  return match || null;
+}
+
+function openBulkPaymentsModal() {
+  document.getElementById('bulk-payments-text').value = '';
+  document.getElementById('bulk-payments-filename').innerText = '';
+  document.getElementById('bulk-payments-preview').style.display = 'none';
+  document.getElementById('bulk-payments-errors').style.display = 'none';
+  document.getElementById('btn-bulk-payments-import').disabled = true;
+  document.getElementById('bulk-payments-file').value = '';
+  bulkPaymentsData = [];
+  document.getElementById('bulk-payments-modal').style.display = 'flex';
+}
+
+function closeBulkPaymentsModal() {
+  document.getElementById('bulk-payments-modal').style.display = 'none';
+}
+
+function parseBulkPaymentsInput(text) {
+  if (!text || !text.trim()) return [];
+
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  if (lines.length === 0) return [];
+
+  const firstLine = lines[0];
+  const separator = firstLine.includes('\t') ? '\t' : firstLine.includes(';') ? ';' : ',';
+
+  const isHeader = (line) => {
+    const upper = line.toUpperCase();
+    return upper.includes('ACTIVO') || upper.includes('TIPO') || upper.includes('TICKER');
+  };
+
+  let startIdx = 0;
+  let headers = null;
+  if (isHeader(lines[0])) {
+    headers = lines[0].split(separator).map(h => h.trim().replace(/^["']|["']$/g, '').toUpperCase());
+    startIdx = 1;
+  } else {
+    headers = ['ACTIVO', 'TIPO', 'MONTO', 'FECHA', 'PLATAFORMA', 'MONEDA'];
+  }
+
+  const getCol = (row, keys) => {
+    const idx = headers.findIndex(h => keys.some(k => h.includes(k)));
+    return idx >= 0 ? (row[idx] || '').trim().replace(/^["']|["']$/g, '') : '';
+  };
+
+  const parseSmart = (val) => {
+    if (!val || val === '') return 0;
+    let n = val.toString().trim().replace(/[^\d,.-]/g, '');
+    if (n.includes(',') && n.includes('.')) {
+      if (n.indexOf('.') < n.indexOf(',')) n = n.replace(/\./g, '').replace(',', '.');
+      else n = n.replace(/,/g, '');
+    } else if (n.includes(',')) {
+      n = n.replace(',', '.');
+    }
+    if (n.split('.').length > 2) n = n.replace(/\./g, '');
+    return parseFloat(n) || 0;
+  };
+
+  const results = [];
+  for (let i = startIdx; i < lines.length; i++) {
+    const cols = lines[i].split(separator).map(v => v.trim().replace(/^["']|["']$/g, ''));
+    if (cols.length < 3) continue;
+
+    const asset = getCol(cols, ['ACTIVO', 'TICKER', 'INSTRUMENTO']).toUpperCase();
+    const tipoRaw = getCol(cols, ['TIPO', 'TYPE', 'KIND']).toLowerCase();
+    const monto = parseSmart(getCol(cols, ['MONTO', 'IMPORTE', 'AMOUNT', 'TOTAL', 'RECIBIDO']));
+    const fecha = getCol(cols, ['FECHA', 'DATE']);
+    const platform = getCol(cols, ['PLATAFORMA', 'BROKER', 'CUENTA', 'PLATFORM']) || (platforms.length > 0 ? platforms[0].name : '');
+    const currency = getCol(cols, ['MONEDA', 'CURRENCY', 'MONEDA_PAGO']).toUpperCase();
+
+    let type = '';
+    if (tipoRaw.includes('amort')) type = 'amortization';
+    else if (tipoRaw.includes('cup') || tipoRaw.includes('div') || tipoRaw.includes('rent')) type = 'coupon';
+    else type = tipoRaw;
+
+    const validCurrency = currency === 'USD' || currency === 'ARSt' ? currency === 'ARSt' ? 'ARS' : 'USD' : (currency || 'ARS');
+    const fixedCurrency = validCurrency === 'ARSt' ? 'ARS' : validCurrency;
+
+    results.push({ asset, type, monto, fecha, platform, currency: fixedCurrency, valid: true, error: '' });
+  }
+
+  return results;
+}
+
+function validateBulkPayments(data) {
+  const errors = [];
+  data.forEach((row, i) => {
+    if (!row.asset) { row.valid = false; row.error = 'Sin activo'; errors.push(`Fila ${i + 1}: sin activo`); return; }
+    if (!['amortization', 'coupon'].includes(row.type)) { row.valid = false; row.error = 'Tipo inválido'; errors.push(`Fila ${i + 1}: tipo "${row.type}" inválido (usar "Amortización" o "Cupón")`); return; }
+    if (!row.monto || row.monto <= 0) { row.valid = false; row.error = 'Monto inválido'; errors.push(`Fila ${i + 1}: monto inválido`); return; }
+    if (!row.fecha || !row.fecha.match(/^\d{4}-\d{2}-\d{2}$/)) { row.valid = false; row.error = 'Fecha (usar YYYY-MM-DD)'; errors.push(`Fila ${i + 1}: fecha inválida (usar YYYY-MM-DD)`); return; }
+    if (row.type === 'amortization') {
+      const savingsItem = findSavingsByAsset(row.asset);
+      if (savingsItem) row._matchedAsset = savingsItem.asset;
+      if (savingsItem && row.monto > savingsItem.price) { row.valid = false; row.error = `Excede costo (${fmt(savingsItem.price)})`; errors.push(`Fila ${i + 1}: ${row.asset} monto ${fmt(row.monto)} excede costo ${fmt(savingsItem.price)}`); return; }
+      if (!savingsItem) { row.warning = 'Activo no está en portafolio'; }
+    }
+    row.valid = true;
+    row.error = '';
+  });
+  return errors;
+}
+
+function renderBulkPaymentsPreview(data) {
+  const tbody = document.getElementById('bulk-payments-tbody');
+  tbody.innerHTML = '';
+  let validCount = 0;
+
+  data.forEach(row => {
+    if (row.valid) validCount++;
+    const tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid var(--border)';
+    tr.innerHTML = `
+      <td style="padding:0.4rem 0.5rem;font-weight:600;color:${row.valid ? (row.warning ? '#f59e0b' : 'var(--primary-light)') : 'var(--expense-light)'};">${row.asset || '---'}${row.warning ? ' ⚠' : ''}</td>
+      <td style="padding:0.4rem 0.5rem;">${row.type === 'amortization' ? 'Amortización' : 'Cupón'}</td>
+      <td style="padding:0.4rem 0.5rem;text-align:right;">${row.monto ? fmt(row.monto) : '---'}</td>
+      <td style="padding:0.4rem 0.5rem;">${row.fecha || '---'}</td>
+      <td style="padding:0.4rem 0.5rem;">${row.platform || '---'}</td>
+      <td style="padding:0.4rem 0.5rem;">${row.currency}</td>
+      <td style="padding:0.4rem 0.5rem;text-align:center;">${row.valid ? '<span style="color:var(--income-light);">✓</span>' : `<span style="color:var(--expense-light);font-size:0.7rem;" title="${row.error}">✕</span>`}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('bulk-payments-count').innerText = `${validCount}/${data.length} válidos`;
+  document.getElementById('bulk-payments-preview').style.display = 'block';
+  document.getElementById('btn-bulk-payments-import').disabled = validCount === 0;
+}
+
+function processBulkPayments() {
+  let addedAmort = 0;
+  let addedCoupon = 0;
+
+  bulkPaymentsData.forEach(row => {
+    if (!row.valid) return;
+
+    if (row.type === 'amortization') {
+      const item = findSavingsByAsset(row.asset);
+      if (item) {
+        item.price = Math.max(0, item.price - row.monto);
+      }
+      const assetLabel = (item ? item.asset : row.asset).toUpperCase();
+      transactions.push({
+        id: generateID(),
+        text: `Amortización - ${assetLabel}`,
+        amount: row.monto,
+        date: row.fecha,
+        platform: row.platform,
+        currency: row.currency,
+        isInvestment: true
+      });
+      amortizations.push({
+        id: generateID(),
+        asset: assetLabel,
+        amount: row.monto,
+        date: row.fecha,
+        platform: row.platform,
+        currency: row.currency
+      });
+      addedAmort++;
+    } else {
+      transactions.push({
+        id: generateID(),
+        text: `Cupón - ${row.asset}`,
+        amount: row.monto,
+        date: row.fecha,
+        platform: row.platform,
+        currency: row.currency
+      });
+      coupons.push({
+        id: generateID(),
+        asset: row.asset,
+        amount: row.monto,
+        date: row.fecha,
+        platform: row.platform,
+        currency: row.currency
+      });
+      addedCoupon++;
+    }
+  });
+
+  updateLocalStorage();
+  closeBulkPaymentsModal();
+  updateSavingsUI();
+  updateDashboard();
+
+  const msg = [];
+  if (addedAmort > 0) msg.push(`${addedAmort} amortización(es)`);
+  if (addedCoupon > 0) msg.push(`${addedCoupon} cupón(es)`);
+  if (msg.length > 0) alert(`Importados: ${msg.join(' y ')}`);
+}
+
+// Bulk payments button
+const btnBulkPayments = document.getElementById('btn-bulk-payments');
+if (btnBulkPayments) {
+  btnBulkPayments.addEventListener('click', openBulkPaymentsModal);
+}
+
+// Bulk payments file upload
+const btnBulkPaymentsFile = document.getElementById('btn-bulk-payments-file');
+const bulkPaymentsFileInput = document.getElementById('bulk-payments-file');
+if (btnBulkPaymentsFile && bulkPaymentsFileInput) {
+  btnBulkPaymentsFile.addEventListener('click', () => bulkPaymentsFileInput.click());
+  bulkPaymentsFileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    document.getElementById('bulk-payments-filename').innerText = file.name;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      document.getElementById('bulk-payments-text').value = event.target.result;
+      bulkPaymentsData = parseBulkPaymentsInput(event.target.result);
+      validateBulkPayments(bulkPaymentsData);
+      renderBulkPaymentsPreview(bulkPaymentsData);
+      const errs = bulkPaymentsData.filter(r => !r.valid);
+      const errEl = document.getElementById('bulk-payments-errors');
+      if (errs.length > 0) {
+        errEl.innerHTML = errs.map(e => `<div>• Fila: ${e.error}</div>`).join('');
+        errEl.style.display = 'block';
+      } else {
+        errEl.style.display = 'none';
+      }
+    };
+    reader.readAsText(file);
+    bulkPaymentsFileInput.value = '';
+  });
+}
+
+// Bulk payments textarea - parse on paste
+const bulkPaymentsText = document.getElementById('bulk-payments-text');
+if (bulkPaymentsText) {
+  bulkPaymentsText.addEventListener('input', () => {
+    const text = bulkPaymentsText.value;
+    if (!text.trim()) {
+      document.getElementById('bulk-payments-preview').style.display = 'none';
+      document.getElementById('bulk-payments-errors').style.display = 'none';
+      document.getElementById('btn-bulk-payments-import').disabled = true;
+      return;
+    }
+    bulkPaymentsData = parseBulkPaymentsInput(text);
+    validateBulkPayments(bulkPaymentsData);
+    renderBulkPaymentsPreview(bulkPaymentsData);
+    const errs = bulkPaymentsData.filter(r => !r.valid);
+    const errEl = document.getElementById('bulk-payments-errors');
+    if (errs.length > 0) {
+      errEl.innerHTML = errs.map(e => `<div>• Fila ${bulkPaymentsData.indexOf(e) + 1}: ${e.error}</div>`).join('');
+      errEl.style.display = 'block';
+    } else {
+      errEl.style.display = 'none';
+    }
+  });
+}
+
+// Bulk payments import button
+const btnBulkPaymentsImport = document.getElementById('btn-bulk-payments-import');
+if (btnBulkPaymentsImport) {
+  btnBulkPaymentsImport.addEventListener('click', processBulkPayments);
+}
+
 const saleForm = document.getElementById('sale-savings-form');
 if (saleForm) {
   saleForm.addEventListener('submit', (e) => {
@@ -1396,6 +1791,12 @@ function updateSavingsUI() {
             <td style="padding: 1rem; text-align: right;">${valueFmt}</td>
             <td style="padding: 1rem; text-align: right;">${gainFmt}</td>
             <td style="padding: 1.25rem 1rem; display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
+                ${PAYMENT_CATEGORIES.includes(s.category) ? `
+                <button class="btn-icon btn-payment" style="color: var(--primary-light);" onclick="openPaymentModal(${s.id})" title="Registrar Pago">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px;">
+                        <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                    </svg>
+                </button>` : ''}
                 <button class="btn-icon" style="color: var(--income-light);" onclick="openSaleModal(${s.id})" title="Informar Venta">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px; height:14px;">
                         <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
@@ -1908,9 +2309,23 @@ function updateSavingsFilterPlatformDropdown() {
   const sel = document.getElementById('savings-filter-platform');
   if (!sel) return;
   const current = sel.value;
-  // Keep first default option, rebuild the rest
   sel.innerHTML = '<option value="">Todas las cuentas</option>';
   const used = [...new Set(savings.map(s => s.platform).filter(Boolean))].sort();
+  used.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p;
+    opt.textContent = p;
+    if (p === current) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function updateTransactionsFilterPlatformDropdown() {
+  const sel = document.getElementById('transactions-filter-platform');
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '<option value="">Todas las cuentas</option>';
+  const used = [...new Set(transactions.map(t => t.platform).filter(Boolean))].sort();
   used.forEach(p => {
     const opt = document.createElement('option');
     opt.value = p;
@@ -2281,6 +2696,7 @@ function updateDashboard() {
 function renderHistoryList() {
   if (!list) return;
   list.innerHTML = '';
+  updateTransactionsFilterPlatformDropdown();
 
   let filtered = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
 
@@ -2293,6 +2709,10 @@ function renderHistoryList() {
       t.text.toLowerCase().includes(q) ||
       t.platform.toLowerCase().includes(q)
     );
+  }
+
+  if (transactionsFilterPlatform) {
+    filtered = filtered.filter(t => (t.platform || '') === transactionsFilterPlatform);
   }
 
   // Update summary
@@ -2532,6 +2952,14 @@ filterPills.forEach(pill => {
 if (searchInput) {
   searchInput.addEventListener('input', () => {
     currentSearchQuery = searchInput.value.trim();
+    renderHistoryList();
+  });
+}
+
+const transactionsFilterPlatformEl = document.getElementById('transactions-filter-platform');
+if (transactionsFilterPlatformEl) {
+  transactionsFilterPlatformEl.addEventListener('change', () => {
+    transactionsFilterPlatform = transactionsFilterPlatformEl.value;
     renderHistoryList();
   });
 }
@@ -2866,6 +3294,7 @@ function init() {
 
   // Savings filter platform dropdown initial population
   updateSavingsFilterPlatformDropdown();
+  updateTransactionsFilterPlatformDropdown();
 
   // One-time seed for user data
   if (!localStorage.getItem('finto_savings_imported_v2')) {
