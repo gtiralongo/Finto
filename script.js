@@ -1215,6 +1215,7 @@ if (saveForm) {
     savePriceDisplay.value = '$0,00';
     updateSavingsUI();
     updateDashboard();
+    updatePlatformsUI();
   });
 }
 
@@ -1360,6 +1361,7 @@ if (paymentForm) {
     closePaymentModal();
     updateSavingsUI();
     updateDashboard();
+    updatePlatformsUI();
   });
 }
 
@@ -1561,6 +1563,7 @@ function processBulkPayments() {
   closeBulkPaymentsModal();
   updateSavingsUI();
   updateDashboard();
+  updatePlatformsUI();
 
   const msg = [];
   if (addedAmort > 0) msg.push(`${addedAmort} amortización(es)`);
@@ -1704,6 +1707,7 @@ if (saleForm) {
     updateLocalStorage();
     updateSavingsUI();
     updateDashboard();
+    updatePlatformsUI();
     closeSaleModal();
   });
 }
