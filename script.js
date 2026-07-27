@@ -3745,4 +3745,14 @@ if (transferForm) {
   });
 }
 
+// ===== BUTTON CLICK ANIMATION =====
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.btn-submit, .btn-outline, .btn-primary, .btn-bulk, .mobile-nav-center, .delete-btn, .delete-table-btn');
+  if (!btn) return;
+  btn.classList.remove('btn-click');
+  void btn.offsetWidth;
+  btn.classList.add('btn-click');
+  btn.addEventListener('animationend', () => btn.classList.remove('btn-click'), { once: true });
+});
+
 init();

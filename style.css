@@ -1381,6 +1381,27 @@ option {
     height: 18px;
 }
 
+.btn-submit:active,
+.btn-expense:active,
+.btn-income:active,
+.btn-outline:active,
+.btn-primary:active,
+.btn-bulk:active,
+.mobile-nav-center:active {
+    transform: scale(0.96) translateY(1px);
+    transition: transform 0.08s ease;
+}
+
+@keyframes btnPulse {
+    0% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0.5); }
+    50% { box-shadow: 0 0 0 10px rgba(124, 58, 237, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(124, 58, 237, 0); }
+}
+
+.btn-click {
+    animation: btnPulse 0.5s ease-out;
+}
+
 .btn-expense {
     background: linear-gradient(135deg, var(--expense), #be123c);
     color: white;
