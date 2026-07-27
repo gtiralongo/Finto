@@ -1684,6 +1684,15 @@ option {
     color: var(--expense-light);
 }
 
+.transaction-list li.transfer {
+    border-left-color: var(--primary-light);
+}
+
+.tx-type-dot.transfer {
+    background: var(--primary-bg);
+    color: var(--primary-light);
+}
+
 .tx-info {
     flex: 1;
     min-width: 0;
@@ -1746,6 +1755,10 @@ option {
 
 .tx-amount.minus {
     color: var(--expense-light);
+}
+
+.tx-amount.transfer {
+    color: var(--primary-light);
 }
 
 .delete-btn {

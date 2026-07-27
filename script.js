@@ -250,10 +250,12 @@ internalTabs.forEach(tab => {
     const panelName = tab.getAttribute('data-tab-internal');
     document.getElementById('portfolio-panel').style.display = panelName === 'portfolio' ? 'block' : 'none';
     document.getElementById('trades-panel').style.display = panelName === 'trades' ? 'block' : 'none';
+    document.getElementById('payments-panel').style.display = panelName === 'payments' ? 'block' : 'none';
 
     // Ensure data is refreshed on tab switch
   if (typeof updateSavingsUI === 'function') updateSavingsUI();
   if (panelName === 'portfolio') refreshMarketPrices();
+  if (panelName === 'payments') renderPaymentsList();
   });
 });
 
@@ -1577,6 +1579,69 @@ if (btnBulkPayments) {
   btnBulkPayments.addEventListener('click', openBulkPaymentsModal);
 }
 
+// Bulk payments button in payments tab
+const btnBulkPayments2 = document.getElementById('btn-bulk-payments2');
+if (btnBulkPayments2) {
+  btnBulkPayments2.addEventListener('click', openBulkPaymentsModal);
+}
+
+// New payment button in payments tab
+const btnNewPayment = document.getElementById('btn-new-payment');
+if (btnNewPayment) {
+  btnNewPayment.addEventListener('click', () => {
+    const sorted = [...savings].sort((a, b) => new Date(b.date) - new Date(a.date));
+    if (sorted.length > 0) {
+      openPaymentModal(sorted[0].id);
+    } else {
+      alert('No hay activos en el portafolio para registrar un pago.');
+    }
+  });
+}
+
+// ===== RENDER PAYMENTS LIST =====
+function renderPaymentsList() {
+  const container = document.getElementById('payments-list');
+  const emptyMsg = document.getElementById('payments-empty');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const allPayments = [
+    ...amortizations.map(a => ({ ...a, type: 'amortization', typeLabel: 'Amortización' })),
+    ...coupons.map(c => ({ ...c, type: 'coupon', typeLabel: 'Dividendo / Cupón' }))
+  ].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  if (allPayments.length === 0) {
+    if (emptyMsg) emptyMsg.style.display = 'block';
+    return;
+  }
+  if (emptyMsg) emptyMsg.style.display = 'none';
+
+  allPayments.forEach(p => {
+    const isAmort = p.type === 'amortization';
+    const color = isAmort ? 'var(--income-light)' : 'var(--primary-light)';
+    const symbol = (p.currency === 'USD') ? 'U$D ' : '$';
+    const icon = isAmort
+      ? '<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>'
+      : '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>';
+
+    const li = document.createElement('div');
+    li.className = 'payment-list-item';
+    li.style.cssText = 'display:flex; align-items:center; gap:1rem; padding:0.75rem 1rem; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md); border-left: 3px solid ' + color + ';';
+
+    li.innerHTML = `
+      <div style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:${isAmort ? 'var(--income-bg)' : 'var(--primary-bg)'};color:${color};">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;">${icon}</svg>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:0.85rem;font-weight:600;color:var(--text);">${p.asset}</div>
+        <div style="font-size:0.75rem;color:var(--text-soft);">${p.typeLabel} &middot; ${fmtDate(p.date)} &middot; ${p.platform || 'S/P'}</div>
+      </div>
+      <span style="font-size:0.9rem;font-weight:700;color:${color};white-space:nowrap;">+${symbol}${p.amount.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+    `;
+    container.appendChild(li);
+  });
+}
+
 // Bulk payments file upload
 const btnBulkPaymentsFile = document.getElementById('btn-bulk-payments-file');
 const bulkPaymentsFileInput = document.getElementById('bulk-payments-file');
@@ -2742,8 +2807,10 @@ function addTransactionToHistory(t) {
   const sign = t.amount < 0 ? 'minus' : 'plus';
   const li = document.createElement('li');
   li.classList.add(sign);
+  if (t.isTransfer) li.classList.add('transfer');
+  const icon = t.isTransfer ? '↔' : t.amount < 0 ? '↓' : '↑';
   li.innerHTML = `
-    <div class="tx-type-dot ${sign}">${t.amount < 0 ? '↓' : '↑'}</div>
+    <div class="tx-type-dot ${sign}${t.isTransfer ? ' transfer' : ''}">${icon}</div>
     <div class="tx-info">
       <div class="tx-desc">${t.text}</div>
       <div class="tx-meta">
@@ -2751,7 +2818,7 @@ function addTransactionToHistory(t) {
         <span class="tx-platform">${t.platform}</span>
       </div>
     </div>
-    <span class="tx-amount ${sign}">${t.amount > 0 ? '+' : ''}${fmt(t.amount)}</span>
+    <span class="tx-amount ${sign}${t.isTransfer ? ' transfer' : ''}">${t.amount > 0 ? '+' : ''}${fmt(t.amount)}</span>
     <button class="delete-btn" onclick="removeTransaction(${t.id})">✕</button>
   `;
   list.appendChild(li);
