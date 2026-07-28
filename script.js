@@ -115,6 +115,21 @@ function generateID() {
   return Math.floor(Math.random() * 100000000);
 }
 
+function animateButtonLoading(btn, successText, originalHTML, callback) {
+  if (!btn) return;
+  btn.disabled = true;
+  btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;animation:spin 1s linear infinite;"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10"/></svg> Procesando...';
+  
+  setTimeout(() => {
+    callback();
+    btn.innerText = `✓ ${successText}`;
+    setTimeout(() => {
+      btn.innerHTML = originalHTML;
+      btn.disabled = false;
+    }, 2000);
+  }, 600);
+}
+
 // ===== NAVIGATION =====
 const viewTitles = {
   'dashboard': ['Panel', 'Resumen financiero'],
@@ -1187,37 +1202,42 @@ if (saveForm) {
     const a = parseFloat(saveAmount.value) || 0;
     const p = q > 0 ? a / q : 0;
 
-    const item = {
-      id: generateID(),
-      asset: saveAsset.value.toUpperCase(),
-      platform: document.getElementById('savings-platform-select').value,
-      category: document.getElementById('savings-category').value,
-      quantity: q,
-      price: a, // now stores Total Amount
-      currency: document.getElementById('savings-currency').value || 'ARS',
-      date: saveDate.value
-    };
-    savings.push(item);
+    const btn = saveForm.querySelector('.btn-submit');
+    const originalText = btn.innerHTML;
+    
+    animateButtonLoading(btn, 'Inversión registrada', originalText, () => {
+      const item = {
+        id: generateID(),
+        asset: saveAsset.value.toUpperCase(),
+        platform: document.getElementById('savings-platform-select').value,
+        category: document.getElementById('savings-category').value,
+        quantity: q,
+        price: a, // now stores Total Amount
+        currency: document.getElementById('savings-currency').value || 'ARS',
+        date: saveDate.value
+      };
+      savings.push(item);
 
-    // Create expense transaction to deduct from available balance
-    const expenseTransaction = {
-      id: generateID(),
-      text: `Inversión en ${saveAsset.value.toUpperCase()}`,
-      amount: -a, // Negative amount for expense
-      date: saveDate.value,
-      platform: document.getElementById('savings-platform-select').value,
-      currency: document.getElementById('savings-currency').value || 'ARS',
-      isInvestment: true
-    };
-    transactions.push(expenseTransaction);
+      // Create expense transaction to deduct from available balance
+      const expenseTransaction = {
+        id: generateID(),
+        text: `Inversión en ${saveAsset.value.toUpperCase()}`,
+        amount: -a, // Negative amount for expense
+        date: saveDate.value,
+        platform: document.getElementById('savings-platform-select').value,
+        currency: document.getElementById('savings-currency').value || 'ARS',
+        isInvestment: true
+      };
+      transactions.push(expenseTransaction);
 
-    updateLocalStorage();
-    saveForm.reset();
-    saveDate.valueAsDate = new Date();
-    savePriceDisplay.value = '$0,00';
-    updateSavingsUI();
-    updateDashboard();
-    updatePlatformsUI();
+      updateLocalStorage();
+      saveForm.reset();
+      saveDate.valueAsDate = new Date();
+      savePriceDisplay.value = '$0,00';
+      updateSavingsUI();
+      updateDashboard();
+      updatePlatformsUI();
+    });
   });
 }
 
@@ -2979,14 +2999,15 @@ if (expenseForm) {
     const mainCurrency = document.getElementById('expense-main-currency').value;
 
     if (!text || !amount || !date || !platform) return;
-    createTransactionFromForm(text, amount, -1, date, platform, isSaving, false, qty, '', assetTicker, currency, category, mainCurrency);
-    expenseForm.reset();
-    document.getElementById('expense-date').valueAsDate = new Date();
-
-    // Show success feedback
+    
     const btn = expenseForm.querySelector('.btn-submit');
-    btn.innerText = '✓ Gasto registrado';
-    setTimeout(() => { btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg> Confirmar Gasto'; }, 2000);
+    const originalHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg> Confirmar Gasto';
+    
+    animateButtonLoading(btn, 'Gasto registrado', originalHTML, () => {
+      createTransactionFromForm(text, amount, -1, date, platform, isSaving, false, qty, '', assetTicker, currency, category, mainCurrency);
+      expenseForm.reset();
+      document.getElementById('expense-date').valueAsDate = new Date();
+    });
   });
 }
 
@@ -2999,12 +3020,15 @@ if (incomeForm) {
     const platform = document.getElementById('income-platform-select').value;
     const mainCurrency = document.getElementById('income-main-currency').value;
     if (!text || !amount || !date || !platform) return;
-    createTransactionFromForm(text, amount, 1, date, platform, false, false, 1, '', '', 'ARS', 'acciones', mainCurrency);
-    incomeForm.reset();
-    document.getElementById('income-date').valueAsDate = new Date();
+
     const btn = incomeForm.querySelector('.btn-submit');
-    btn.innerText = '✓ Ingreso registrado';
-    setTimeout(() => { btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg> Confirmar Ingreso'; }, 2000);
+    const originalHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg> Confirmar Ingreso';
+    
+    animateButtonLoading(btn, 'Ingreso registrado', originalHTML, () => {
+      createTransactionFromForm(text, amount, 1, date, platform, false, false, 1, '', '', 'ARS', 'acciones', mainCurrency);
+      incomeForm.reset();
+      document.getElementById('income-date').valueAsDate = new Date();
+    });
   });
 }
 
@@ -3769,46 +3793,42 @@ if (transferForm) {
       return;
     }
 
-    // Create 2 movements
-    const transferId = generateID();
-
-    // 1. Withdrawal from source
-    transactions.push({
-      id: generateID(),
-      text: `Transferencia a ${to}`,
-      amount: -amount,
-      date: date,
-      platform: from,
-      currency: currency,
-      isTransfer: true,
-      transferRef: transferId
-    });
-
-    // 2. Deposit to destination
-    transactions.push({
-      id: generateID(),
-      text: `Transferencia desde ${from}`,
-      amount: amount,
-      date: date,
-      platform: to,
-      currency: currency,
-      isTransfer: true,
-      transferRef: transferId
-    });
-
-    updateLocalStorage();
-    transferForm.reset();
-    document.getElementById('transfer-date').valueAsDate = new Date();
-
-    updatePlatformsUI();
-    updateDashboard();
-    renderHistoryList();
-
-    // Success feedback
     const btn = transferForm.querySelector('.btn-submit');
     const originalText = btn.innerHTML;
-    btn.innerText = '✓ Transferencia realizada';
-    setTimeout(() => { btn.innerHTML = originalText; }, 2000);
+    
+    animateButtonLoading(btn, 'Transferencia realizada', originalText, () => {
+      const transferId = generateID();
+
+      transactions.push({
+        id: generateID(),
+        text: `Transferencia a ${to}`,
+        amount: -amount,
+        date: date,
+        platform: from,
+        currency: currency,
+        isTransfer: true,
+        transferRef: transferId
+      });
+
+      transactions.push({
+        id: generateID(),
+        text: `Transferencia desde ${from}`,
+        amount: amount,
+        date: date,
+        platform: to,
+        currency: currency,
+        isTransfer: true,
+        transferRef: transferId
+      });
+
+      updateLocalStorage();
+      transferForm.reset();
+      document.getElementById('transfer-date').valueAsDate = new Date();
+
+      updatePlatformsUI();
+      updateDashboard();
+      renderHistoryList();
+    });
   });
 }
 
