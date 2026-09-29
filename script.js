@@ -1248,16 +1248,30 @@ if (saveForm) {
 // ===== Transactions Tab Investment & Account Form Handlers =====
 const savingsFormTrans = document.getElementById('savings-form-in-transactions');
 if (savingsFormTrans) {
+  const savingsAssetTrans = document.getElementById('savings-asset-trans');
+  const savingsQuantityTrans = document.getElementById('savings-quantity-trans');
+  const savingsAmountTrans = document.getElementById('savings-amount-trans');
+  const savingsPriceDisplayTrans = document.getElementById('savings-price-display-trans');
+  // Auto calculate price display
+  [savingsQuantityTrans, savingsAmountTrans].forEach(input => {
+    if (input) input.addEventListener('input', () => {
+      const q = parseFloat(savingsQuantityTrans?.value) || 0;
+      const a = parseFloat(savingsAmountTrans?.value) || 0;
+      const p = q > 0 ? a / q : 0;
+      if (savingsPriceDisplayTrans) savingsPriceDisplayTrans.value = fmt(p);
+    });
+  });
+
   savingsFormTrans.addEventListener('submit', (e) => {
     e.preventDefault();
-    const asset = document.getElementById('savings-asset-trans').value.trim().toUpperCase();
+    const asset = savingsAssetTrans?.value.trim().toUpperCase() || '';
     const platform = document.getElementById('savings-platform-trans').value;
-    const cantidad = parseFloat(document.getElementById('savings-amount-trans').value) || 0;
-    const precioUnit = parseFloat(document.getElementById('savings-price-trans').value) || 0;
+    const q = parseFloat(savingsQuantityTrans?.value) || 0;
+    const a = parseFloat(savingsAmountTrans?.value) || 0;
     const currency = document.getElementById('savings-currency-trans').value || 'ARS';
     const fecha = document.getElementById('savings-date-trans').value;
-    if (!asset || !platform || cantidad <= 0 || precioUnit <= 0 || !fecha) return;
-    const totalAmount = cantidad * precioUnit;
+    const category = document.getElementById('savings-category-trans').value;
+    if (!asset || !platform || q <= 0 || a <= 0 || !fecha || !category) return;
 
     const btn = savingsFormTrans.querySelector('.btn-submit');
     const originalText = btn.innerHTML;
@@ -1266,9 +1280,9 @@ if (savingsFormTrans) {
         id: generateID(),
         asset,
         platform,
-        category: 'acciones',
-        quantity: cantidad,
-        price: totalAmount,
+        category,
+        quantity: q,
+        price: a,
         currency,
         date: fecha
       };
@@ -1276,7 +1290,7 @@ if (savingsFormTrans) {
       transactions.push({
         id: generateID(),
         text: `Inversión en ${asset}`,
-        amount: -totalAmount,
+        amount: -a,
         date: fecha,
         platform,
         currency,
@@ -1284,6 +1298,7 @@ if (savingsFormTrans) {
       });
       updateLocalStorage();
       savingsFormTrans.reset();
+      if (savingsPriceDisplayTrans) savingsPriceDisplayTrans.value = '$0,00';
       updateSavingsUI();
       updateDashboard();
       updatePlatformsUI();
@@ -1296,8 +1311,9 @@ if (platformFormTrans) {
   platformFormTrans.addEventListener('submit', (e) => {
     e.preventDefault();
     const name = document.getElementById('platform-name-trans').value.trim();
-    const type = document.getElementById('platform-type-trans').value;
-    if (!name || !type) return;
+    const initialBalance = parseFloat(document.getElementById('platform-initial-balance-trans').value) || 0;
+    const initialBalanceUSD = parseFloat(document.getElementById('platform-initial-balance-usd-trans').value) || 0;
+    if (!name) return;
     const exists = platforms.some(p => p.name.toLowerCase() === name.toLowerCase());
     if (exists) {
       alert('Plataforma ya existe');
@@ -1306,7 +1322,12 @@ if (platformFormTrans) {
     const btn = platformFormTrans.querySelector('.btn-submit');
     const originalText = btn.innerHTML;
     animateButtonLoading(btn, 'Plataforma guardada', originalText, () => {
-      platforms.push({ name, type });
+      platforms.push({
+        id: generateID(),
+        name,
+        initialBalance,
+        initialBalanceUSD
+      });
       updateLocalStorage();
       platformFormTrans.reset();
       updatePlatformsUI();
