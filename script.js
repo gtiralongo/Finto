@@ -3935,11 +3935,11 @@ function closeQuickActionMenu() {
 if (quickActionBtn) {
   quickActionBtn.addEventListener('click', (e) => {
     e.preventDefault();
-    if (quickActionMenu.classList.contains('active')) {
-      closeQuickActionMenu();
-    } else {
-      openQuickActionMenu();
-    }
+    // Direct navigation to Movimientos with 5 forms as requested
+    switchView('transactions-form');
+    // Ensure first tab is active
+    const firstTab = document.querySelector('#transactions-form-view .form-tab');
+    if (firstTab) firstTab.click();
   });
 }
 if (quickActionBackdrop) {
@@ -4015,8 +4015,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const state = localStorage.getItem(key);
     if (state === 'closed') {
       collapseCollapsible(card);
-    } else {
+    } else if (state === 'open') {
       expandCollapsible(card);
+    } else {
+      // Respect initial HTML collapsed class, otherwise expand
+      if (card.classList.contains('collapsed')) {
+        collapseCollapsible(card);
+      } else {
+        expandCollapsible(card);
+      }
     }
   });
 });
