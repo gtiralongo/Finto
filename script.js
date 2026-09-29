@@ -3842,4 +3842,108 @@ document.addEventListener('click', (e) => {
   btn.addEventListener('animationend', () => btn.classList.remove('btn-click'), { once: true });
 });
 
+// ===== QUICK ACTION MENU =====
+const quickActionBtn = document.getElementById('quick-action-btn');
+const quickActionMenu = document.getElementById('quick-action-menu');
+const quickActionBackdrop = document.getElementById('quick-action-backdrop');
+
+function openQuickActionMenu() {
+  if (!quickActionMenu) return;
+  quickActionMenu.style.display = 'flex';
+  requestAnimationFrame(() => quickActionMenu.classList.add('active'));
+}
+function closeQuickActionMenu() {
+  if (!quickActionMenu) return;
+  quickActionMenu.classList.remove('active');
+  setTimeout(() => { quickActionMenu.style.display = 'none'; }, 250);
+}
+if (quickActionBtn) {
+  quickActionBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (quickActionMenu.classList.contains('active')) {
+      closeQuickActionMenu();
+    } else {
+      openQuickActionMenu();
+    }
+  });
+}
+if (quickActionBackdrop) {
+  quickActionBackdrop.addEventListener('click', closeQuickActionMenu);
+}
+if (quickActionMenu) {
+  quickActionMenu.addEventListener('click', (e) => {
+    const item = e.target.closest('.quick-action-item');
+    if (!item) return;
+    const action = item.dataset.action;
+    const tab = item.dataset.tab;
+    closeQuickActionMenu();
+    setTimeout(() => {
+      if (action === 'transactions') {
+        switchView('transactions-form');
+        if (tab) {
+          const tabBtn = document.querySelector(`.form-tab[data-tab="${tab}"]`);
+          if (tabBtn) tabBtn.click();
+          const panel = document.getElementById(`${tab}-panel`);
+          if (panel) {
+            const card = panel.querySelector('.collapsible-card');
+            if (card) expandCollapsible(card);
+          }
+        }
+      } else if (action === 'savings') {
+        switchView('savings');
+        setTimeout(() => {
+          const card = document.querySelector('#portfolio-panel .collapsible-card');
+          if (card) expandCollapsible(card);
+        }, 50);
+      } else if (action === 'platforms') {
+        switchView('platforms');
+        setTimeout(() => {
+          const card = document.querySelector('#platforms-view .collapsible-card');
+          if (card) expandCollapsible(card);
+        }, 50);
+      }
+    }, 300);
+  });
+}
+
+// ===== COLLAPSIBLE CARDS =====
+function expandCollapsible(card) {
+  if (!card) return;
+  card.classList.remove('collapsed');
+  const toggle = card.querySelector('.collapsible-toggle');
+  if (toggle) toggle.textContent = '▾';
+  localStorage.setItem('collapsible_' + card.id || card.className, 'open');
+}
+function collapseCollapsible(card) {
+  if (!card) return;
+  card.classList.add('collapsed');
+  const toggle = card.querySelector('.collapsible-toggle');
+  if (toggle) toggle.textContent = '▸';
+  localStorage.setItem('collapsible_' + card.id || card.className, 'closed');
+}
+document.addEventListener('click', (e) => {
+  const header = e.target.closest('.collapsible-header');
+  if (!header) return;
+  const card = header.closest('.collapsible-card');
+  if (!card) return;
+  e.stopPropagation();
+  if (card.classList.contains('collapsed')) {
+    expandCollapsible(card);
+  } else {
+    collapseCollapsible(card);
+  }
+});
+// Restore collapsed state on load
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.collapsible-card').forEach(card => {
+    const key = 'collapsible_' + (card.id || card.className);
+    const state = localStorage.getItem(key);
+    if (state === 'closed') {
+      collapseCollapsible(card);
+    } else {
+      expandCollapsible(card);
+    }
+  });
+});
+
 init();

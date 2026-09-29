@@ -441,8 +441,8 @@
 
                 <!-- Expense Form -->
                 <div id="expense-panel" class="form-panel" style="display:grid;">
-                    <div class="form-card expense-form-card">
-                        <div class="form-card-header">
+                    <div class="form-card expense-form-card collapsible-card">
+                        <div class="form-card-header collapsible-header">
                             <div class="form-card-icon expense-icon">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <polyline points="23 18 13.5 8.5 8.5 13.5 1 6" />
@@ -453,6 +453,7 @@
                                 <h2>Nuevo Gasto</h2>
                                 <p>Registra un egreso de dinero</p>
                             </div>
+                            <button type="button" class="collapsible-toggle" aria-label="Colapsar">▾</button>
                         </div>
                         <form id="expense-form">
                             <div class="form-grid-2">
@@ -559,8 +560,8 @@
 
                 <!-- Income Form -->
                 <div id="income-panel" class="form-panel" style="display:none;">
-                    <div class="form-card income-form-card">
-                        <div class="form-card-header">
+                    <div class="form-card income-form-card collapsible-card">
+                        <div class="form-card-header collapsible-header">
                             <div class="form-card-icon income-icon">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
@@ -571,6 +572,7 @@
                                 <h2>Nuevo Ingreso</h2>
                                 <p>Registra una entrada de dinero</p>
                             </div>
+                            <button type="button" class="collapsible-toggle" aria-label="Colapsar">▾</button>
                         </div>
                         <form id="income-form">
                             <div class="form-grid-2">
@@ -631,8 +633,8 @@
 
                 <!-- Transfer Panel (Moved from Platforms) -->
                 <div id="transfer-panel" class="form-panel" style="display:none;">
-                    <div class="form-card">
-                        <div class="form-card-header">
+                    <div class="form-card collapsible-card">
+                        <div class="form-card-header collapsible-header">
                             <div class="form-card-icon secondary-icon">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M17 10h-10l4-4" />
@@ -643,6 +645,7 @@
                                 <h2>Realizar Transferencia</h2>
                                 <p>Mueve dinero entre tus cuentas</p>
                             </div>
+                            <button type="button" class="collapsible-toggle" aria-label="Colapsar">▾</button>
                         </div>
                         <form id="transfer-form">
                             <div class="form-grid-2">
@@ -865,8 +868,15 @@
 
                 <div id="portfolio-panel" class="investment-panel">
                     <div class="form-panel">
-                        <div class="form-card investment-form-card"
+                        <div class="form-card investment-form-card collapsible-card"
                             style="border-top: 3px solid var(--primary); padding-top: 1.5rem;">
+                            <div class="form-card-header collapsible-header">
+                                <div>
+                                    <h2>Nueva Inversión</h2>
+                                    <p>Registra una compra de activo</p>
+                                </div>
+                                <button type="button" class="collapsible-toggle" aria-label="Colapsar">▾</button>
+                            </div>
                             <form id="savings-form">
                                 <div class="form-grid-2">
                                     <div class="form-group">
@@ -1136,10 +1146,10 @@
             </div>
 
             <!-- ===== PLATFORMS VIEW ===== -->
-            <div id="platforms-view" class="view-section" style="display: none;">
+                <div id="platforms-view" class="view-section" style="display: none;">
                 <div class="platforms-actions" style="margin-bottom: 1.5rem;">
-                    <div class="form-card">
-                        <div class="form-card-header">
+                    <div class="form-card collapsible-card">
+                        <div class="form-card-header collapsible-header">
                             <div class="form-card-icon primary-icon">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M12 5v14M5 12h14" />
@@ -1149,6 +1159,7 @@
                                 <h2 id="platform-form-title">Nueva Plataforma</h2>
                                 <p>Agrega una cuenta o billetera</p>
                             </div>
+                            <button type="button" class="collapsible-toggle" aria-label="Colapsar">▾</button>
                         </div>
                         <form id="platform-form">
                             <input type="hidden" id="platform-id">
@@ -1287,7 +1298,7 @@
                 </svg>
                 <span>Historial</span>
             </a>
-            <a href="#" class="mobile-nav-center" data-view="transactions-form">
+            <button type="button" class="mobile-nav-center" id="quick-action-btn" aria-label="Acciones rápidas">
                 <!-- SVG actual: solo + -->
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
                     <line x1="12" y1="5" x2="12" y2="19" />
@@ -1300,7 +1311,7 @@
                     <line x1="8" y1="12" x2="16" y2="12" />
                 </svg>
                 -->
-            </a>
+            </button>
             <a href="#" class="mobile-nav-item" data-view="savings">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                     stroke-linejoin="round">
@@ -1317,6 +1328,33 @@
                 <span>Cuentas</span>
             </a>
         </nav>
+
+        <!-- Quick Action Menu -->
+        <div id="quick-action-menu" class="quick-action-menu" style="display:none;">
+            <div class="quick-action-backdrop" id="quick-action-backdrop"></div>
+            <div class="quick-action-panel">
+                <button class="quick-action-item" data-action="transactions" data-tab="expense">
+                    <span class="qa-icon">−</span>
+                    <span>Registrar Gasto</span>
+                </button>
+                <button class="quick-action-item" data-action="transactions" data-tab="income">
+                    <span class="qa-icon">+</span>
+                    <span>Registrar Ingreso</span>
+                </button>
+                <button class="quick-action-item" data-action="transactions" data-tab="transfer">
+                    <span class="qa-icon">⇄</span>
+                    <span>Transferencia</span>
+                </button>
+                <button class="quick-action-item" data-action="savings">
+                    <span class="qa-icon">◈</span>
+                    <span>Nueva Inversión</span>
+                </button>
+                <button class="quick-action-item" data-action="platforms">
+                    <span class="qa-icon">🏦</span>
+                    <span>Nueva Cuenta</span>
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- Edit Savings Modal -->
