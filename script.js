@@ -252,6 +252,10 @@ formTabs.forEach(tab => {
     document.getElementById('income-panel').style.display = tabName === 'income' ? 'grid' : 'none';
     const transferPanel = document.getElementById('transfer-panel');
     if (transferPanel) transferPanel.style.display = tabName === 'transfer' ? 'grid' : 'none';
+    const investmentPanel = document.getElementById('investment-panel');
+    if (investmentPanel) investmentPanel.style.display = tabName === 'investment' ? 'grid' : 'none';
+    const accountPanel = document.getElementById('account-panel');
+    if (accountPanel) accountPanel.style.display = tabName === 'account' ? 'grid' : 'none';
   });
 });
 
@@ -1237,6 +1241,76 @@ if (saveForm) {
       updateSavingsUI();
       updateDashboard();
       updatePlatformsUI();
+    });
+  });
+}
+
+// ===== Transactions Tab Investment & Account Form Handlers =====
+const savingsFormTrans = document.getElementById('savings-form-in-transactions');
+if (savingsFormTrans) {
+  savingsFormTrans.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const asset = document.getElementById('savings-asset-trans').value.trim().toUpperCase();
+    const platform = document.getElementById('savings-platform-trans').value;
+    const cantidad = parseFloat(document.getElementById('savings-amount-trans').value) || 0;
+    const precioUnit = parseFloat(document.getElementById('savings-price-trans').value) || 0;
+    const currency = document.getElementById('savings-currency-trans').value || 'ARS';
+    const fecha = document.getElementById('savings-date-trans').value;
+    if (!asset || !platform || cantidad <= 0 || precioUnit <= 0 || !fecha) return;
+    const totalAmount = cantidad * precioUnit;
+
+    const btn = savingsFormTrans.querySelector('.btn-submit');
+    const originalText = btn.innerHTML;
+    animateButtonLoading(btn, 'Inversión registrada', originalText, () => {
+      const item = {
+        id: generateID(),
+        asset,
+        platform,
+        category: 'acciones',
+        quantity: cantidad,
+        price: totalAmount,
+        currency,
+        date: fecha
+      };
+      savings.push(item);
+      transactions.push({
+        id: generateID(),
+        text: `Inversión en ${asset}`,
+        amount: -totalAmount,
+        date: fecha,
+        platform,
+        currency,
+        isInvestment: true
+      });
+      updateLocalStorage();
+      savingsFormTrans.reset();
+      updateSavingsUI();
+      updateDashboard();
+      updatePlatformsUI();
+    });
+  });
+}
+
+const platformFormTrans = document.getElementById('platform-form-in-transactions');
+if (platformFormTrans) {
+  platformFormTrans.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = document.getElementById('platform-name-trans').value.trim();
+    const type = document.getElementById('platform-type-trans').value;
+    if (!name || !type) return;
+    const exists = platforms.some(p => p.name.toLowerCase() === name.toLowerCase());
+    if (exists) {
+      alert('Plataforma ya existe');
+      return;
+    }
+    const btn = platformFormTrans.querySelector('.btn-submit');
+    const originalText = btn.innerHTML;
+    animateButtonLoading(btn, 'Plataforma guardada', originalText, () => {
+      platforms.push({ name, type });
+      updateLocalStorage();
+      platformFormTrans.reset();
+      updatePlatformsUI();
+      updateDashboard();
     });
   });
 }
@@ -3650,6 +3724,7 @@ function populatePlatformsDropdowns() {
     'transfer-from',
     'transfer-to',
     'savings-platform-select',
+    'savings-platform-trans',
     'edit-savings-platform-select',
     'bulk-platform-select'
   ];
