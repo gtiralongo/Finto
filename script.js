@@ -39,6 +39,7 @@ var platforms = JSON.parse(localStorage.getItem('platforms')) || [
 ];
 var amortizations = JSON.parse(localStorage.getItem('amortizations')) || [];
 var coupons = JSON.parse(localStorage.getItem('coupons')) || [];
+var cauciones = JSON.parse(localStorage.getItem('cauciones')) || [];
 let currentPrices = JSON.parse(localStorage.getItem('latest_prices')) || {};
 
 async function refreshMarketPrices() {
@@ -1571,6 +1572,7 @@ function parseBulkPaymentsInput(text) {
     let type = '';
     if (tipoRaw.includes('amort')) type = 'amortization';
     else if (tipoRaw.includes('cup') || tipoRaw.includes('div') || tipoRaw.includes('rent')) type = 'coupon';
+    else if (tipoRaw.includes('caucion')) type = 'caucion';
     else type = tipoRaw;
 
     const validCurrency = currency === 'USD' || currency === 'ARSt' ? currency === 'ARSt' ? 'ARS' : 'USD' : (currency || 'ARS');
@@ -1586,7 +1588,7 @@ function validateBulkPayments(data) {
   const errors = [];
   data.forEach((row, i) => {
     if (!row.asset) { row.valid = false; row.error = 'Sin activo'; errors.push(`Fila ${i + 1}: sin activo`); return; }
-    if (!['amortization', 'coupon'].includes(row.type)) { row.valid = false; row.error = 'Tipo inválido'; errors.push(`Fila ${i + 1}: tipo "${row.type}" inválido (usar "Amortización" o "Cupón")`); return; }
+    if (!['amortization', 'coupon', 'caucion'].includes(row.type)) { row.valid = false; row.error = 'Tipo inválido'; errors.push(`Fila ${i + 1}: tipo "${row.type}" inválido (usar "Amortización", "Cupón" o "Caución")`); return; }
     if (!row.monto || row.monto <= 0) { row.valid = false; row.error = 'Monto inválido'; errors.push(`Fila ${i + 1}: monto inválido`); return; }
     if (!row.fecha || !row.fecha.match(/^\d{4}-\d{2}-\d{2}$/)) { row.valid = false; row.error = 'Fecha (usar YYYY-MM-DD)'; errors.push(`Fila ${i + 1}: fecha inválida (usar YYYY-MM-DD)`); return; }
     if (row.type === 'amortization') {
@@ -1610,9 +1612,10 @@ function renderBulkPaymentsPreview(data) {
     if (row.valid) validCount++;
     const tr = document.createElement('tr');
     tr.style.borderBottom = '1px solid var(--border)';
+    const typeLabel = row.type === 'amortization' ? 'Amortización' : row.type === 'caucion' ? 'Caución' : 'Cupón';
     tr.innerHTML = `
       <td style="padding:0.4rem 0.5rem;font-weight:600;color:${row.valid ? (row.warning ? '#f59e0b' : 'var(--primary-light)') : 'var(--expense-light)'};">${row.asset || '---'}${row.warning ? ' ⚠' : ''}</td>
-      <td style="padding:0.4rem 0.5rem;">${row.type === 'amortization' ? 'Amortización' : 'Cupón'}</td>
+      <td style="padding:0.4rem 0.5rem;">${typeLabel}</td>
       <td style="padding:0.4rem 0.5rem;text-align:right;">${row.monto ? fmt(row.monto) : '---'}</td>
       <td style="padding:0.4rem 0.5rem;">${row.fecha || '---'}</td>
       <td style="padding:0.4rem 0.5rem;">${row.platform || '---'}</td>
@@ -1630,6 +1633,7 @@ function renderBulkPaymentsPreview(data) {
 function processBulkPayments() {
   let addedAmort = 0;
   let addedCoupon = 0;
+  let addedCaucion = 0;
 
   bulkPaymentsData.forEach(row => {
     if (!row.valid) return;
@@ -1658,6 +1662,24 @@ function processBulkPayments() {
         currency: row.currency
       });
       addedAmort++;
+    } else if (row.type === 'caucion') {
+      transactions.push({
+        id: generateID(),
+        text: `Caución - ${row.asset}`,
+        amount: row.monto,
+        date: row.fecha,
+        platform: row.platform,
+        currency: row.currency
+      });
+      cauciones.push({
+        id: generateID(),
+        asset: row.asset,
+        amount: row.monto,
+        date: row.fecha,
+        platform: row.platform,
+        currency: row.currency
+      });
+      addedCaucion++;
     } else {
       transactions.push({
         id: generateID(),
@@ -1688,6 +1710,7 @@ function processBulkPayments() {
   const msg = [];
   if (addedAmort > 0) msg.push(`${addedAmort} amortización(es)`);
   if (addedCoupon > 0) msg.push(`${addedCoupon} cupón(es)`);
+  if (addedCaucion > 0) msg.push(`${addedCaucion} caución(es)`);
   if (msg.length > 0) alert(`Importados: ${msg.join(' y ')}`);
 }
 
@@ -1725,7 +1748,8 @@ function renderPaymentsList() {
 
   const allPayments = [
     ...amortizations.map(a => ({ ...a, type: 'amortization', typeLabel: 'Amortización' })),
-    ...coupons.map(c => ({ ...c, type: 'coupon', typeLabel: 'Dividendo / Cupón' }))
+    ...coupons.map(c => ({ ...c, type: 'coupon', typeLabel: 'Dividendo / Cupón' })),
+    ...cauciones.map(c => ({ ...c, type: 'caucion', typeLabel: 'Caución' }))
   ].sort((a, b) => new Date(b.date) - new Date(a.date));
 
   if (allPayments.length === 0) {
