@@ -76,6 +76,8 @@ let platformSortDirection = parseInt(localStorage.getItem('platformSortDirection
 
 // Chart Instances
 let monthlyChartInstance = null;
+let salaryDonutChartInstance = null;
+let dashSalaryDonutChartInstance = null;
 
 // ===== HELPERS =====
 function fmt(amount) {
@@ -171,6 +173,7 @@ function switchView(view) {
   if (view === 'dashboard') {
     populateYearFilter();
     updateDashboard();
+    initDashboardSalaryMini();
   }
 
   if (view === 'transactions-form') {
@@ -3473,6 +3476,7 @@ function seedPersonalSavings() {
 function init() {
   populateYearFilter();
   updateDashboard();
+  if (typeof initDashboardSalaryMini === 'function') initDashboardSalaryMini();
   renderHistoryList();
   updateFormSideStats();
   initPlatformTableSorting();
@@ -4048,5 +4052,67 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
+// ===== SALARY PLAN UI =====
+function initDashboardSalaryMini() {
+  const card = document.getElementById('dashboard-salary-card');
+  if (card && typeof expandCollapsible === 'function') expandCollapsible(card);
+  const amountEl = document.getElementById('dash-salary-amount');
+  const currencyEl = document.getElementById('dash-salary-currency');
+  const savePctEl = document.getElementById('dash-salary-save-percent');
+  const investPctEl = document.getElementById('dash-salary-invest-percent');
+  const summaryEl = document.getElementById('dash-salary-summary');
+  const calcBtn = document.getElementById('dash-salary-calc-btn');
+  const totalPctEl = document.getElementById('dash-salary-total-percent');
+
+  function fmtNum(n) {
+    return n.toLocaleString('es-AR', { minimumFractionDigits: 2 });
+  }
+
+  function calculate() {
+    const amount = parseFloat(amountEl?.value) || 0;
+    const currency = currencyEl?.value || 'ARS';
+    const savePct = parseFloat(savePctEl?.value) || 0;
+    const investPct = parseFloat(investPctEl?.value) || 0;
+    const needsPct = Math.max(0, 100 - savePct - investPct);
+    const saveAmt = amount * savePct / 100;
+    const investAmt = amount * investPct / 100;
+    const needsAmt = amount * needsPct / 100;
+    const sym = currency === 'USD' ? 'U$D ' : '$';
+
+    if (totalPctEl) {
+      const total = savePct + investPct + needsPct;
+      totalPctEl.textContent = `Total asignado: ${total.toFixed(1)}%`;
+      totalPctEl.style.color = Math.abs(total - 100) < 0.01 ? 'var(--income-light)' : 'var(--expense-light)';
+    }
+
+    if (summaryEl) {
+      summaryEl.innerHTML = `
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.5rem;">
+          <div style="background:var(--surface);padding:0.6rem;border-radius:10px;border:1px solid var(--border);">
+            <div style="font-size:0.7rem;color:var(--text-soft);">Necesidades</div>
+            <div style="font-weight:700;">${sym}${fmtNum(needsAmt)}</div>
+            <div style="font-size:0.7rem;color:var(--text-muted);">${needsPct.toFixed(0)}%</div>
+          </div>
+          <div style="background:var(--surface);padding:0.6rem;border-radius:10px;border:1px solid var(--border);">
+            <div style="font-size:0.7rem;color:var(--text-soft);">Ahorro</div>
+            <div style="font-weight:700;color:var(--income-light);">${sym}${fmtNum(saveAmt)}</div>
+            <div style="font-size:0.7rem;color:var(--text-muted);">${savePct.toFixed(0)}%</div>
+          </div>
+          <div style="background:var(--surface);padding:0.6rem;border-radius:10px;border:1px solid var(--border);">
+            <div style="font-size:0.7rem;color:var(--text-soft);">Inversión</div>
+            <div style="font-weight:700;color:var(--primary-light);">${sym}${fmtNum(investAmt)}</div>
+            <div style="font-size:0.7rem;color:var(--text-muted);">${investPct.toFixed(0)}%</div>
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  if (calcBtn) calcBtn.addEventListener('click', calculate);
+  [amountEl, savePctEl, investPctEl, currencyEl].forEach(el => { if (el) el.addEventListener('input', calculate); });
+  // Render initial state
+  calculate();
+}
 
 init();
