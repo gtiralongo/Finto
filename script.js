@@ -754,6 +754,99 @@ function updateCharts(displayTransactions, displaySavings) {
   }
 }
 
+// ===== GASTOS POR PLATAFORMA CHART =====
+let spendByPlatformChartInstance = null;
+function updateSpendByPlatformChart(displayTransactions) {
+  const canvas = document.getElementById('spendByPlatformChart');
+  if (!canvas) return;
+
+  // Filtrar solo gastos ARS, sin transferencias ni inversiones
+  const expenses = displayTransactions.filter(t => {
+    const isExpense = t.amount < 0 && !t.isTransfer && !t.isInvestment;
+    const currency = (t.currency || 'ARS').toUpperCase();
+    return isExpense && currency === 'ARS';
+  });
+
+  const spendByPlatform = {};
+  expenses.forEach(t => {
+    const platform = t.platform || 'Sin plataforma';
+    const amt = Math.abs(t.amount);
+    spendByPlatform[platform] = (spendByPlatform[platform] || 0) + amt;
+  });
+
+  // Personal Pay KPI
+  const personalPayName = 'Personal Pay';
+  const personalPayKey = Object.keys(spendByPlatform).find(k => k.toLowerCase().replace(/\s+/g,'') === 'personalpay') || personalPayName;
+  const personalPaySpent = spendByPlatform[personalPayKey] || 0;
+  const personalPayTarget = 300000;
+  const personalPayPercent = Math.min(100, Math.max(0, (personalPaySpent / personalPayTarget) * 100));
+
+  const spentEl = document.getElementById('personal-pay-spent');
+  const progressBar = document.getElementById('personal-pay-progress-bar');
+  const progressText = document.getElementById('personal-pay-progress-text');
+  if (spentEl) spentEl.innerText = fmt(personalPaySpent);
+  if (progressBar) {
+    progressBar.style.width = personalPayPercent + '%';
+    progressBar.style.background = personalPayPercent >= 100 ? 'var(--expense-light)' : personalPayPercent >= 80 ? 'var(--savings)' : 'var(--income-light)';
+  }
+  if (progressText) progressText.innerText = personalPayPercent.toFixed(1) + '%';
+
+  const entries = Object.entries(spendByPlatform).sort((a,b) => b[1] - a[1]);
+  const labels = entries.map(e => e[0]);
+  const values = entries.map(e => e[1]);
+
+  if (spendByPlatformChartInstance) spendByPlatformChartInstance.destroy();
+  if (labels.length === 0) return;
+
+  spendByPlatformChartInstance = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Gastos ARS',
+        data: values,
+        backgroundColor: labels.map(l => l === personalPayKey ? 'rgba(244, 63, 94, 0.9)' : 'rgba(124, 58, 237, 0.8)'),
+        borderRadius: 6,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(6,9,20,0.95)',
+          titleColor: '#f1f5f9',
+          bodyColor: '#94a3b8',
+          padding: 12,
+          callbacks: {
+            label: (ctx) => ` ${ctx.dataset.label}: $${ctx.parsed.y.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#64748b', font: { size: 11, family: 'Inter' } },
+          grid: { display: false },
+          border: { display: false }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: {
+            color: '#64748b',
+            font: { size: 10, family: 'Inter' },
+            callback: (v) => '$' + v.toLocaleString('es-AR', { maximumFractionDigits: 0 })
+          },
+          grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false },
+          border: { display: false }
+        }
+      },
+      datasets: { bar: { maxBarThickness: 40, categoryPercentage: 0.7, barPercentage: 0.9 } }
+    }
+  });
+}
+
 // ===== P&L POR ACTIVO CHART =====
 function updatePnLByAssetChart(displayTrades) {
   const canvas = document.getElementById('pnlByAssetChart');
@@ -2901,6 +2994,7 @@ function updateDashboard() {
   updateBalanceEvolutionChart(displayTransactions);
   updateRecentList(displayTransactions);
   updateSavingsUI();
+  updateSpendByPlatformChart(displayTransactions);
 }
 
 // ===== HISTORY LIST =====

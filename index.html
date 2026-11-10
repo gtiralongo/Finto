@@ -350,6 +350,36 @@
                         </div>
                     </div>
 
+                    <!-- 2. GASTOS POR PLATAFORMA -->
+                    <div class="chart-card chart-main">
+                        <div class="chart-card-header">
+                            <div>
+                                <h3>Gastos por Plataforma</h3>
+                                <p>Gasto mensual por plataforma</p>
+                            </div>
+                            <div class="chart-legend">
+                                <span class="legend-dot expense-dot"></span><span>Gastos</span>
+                            </div>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="spendByPlatformChart"></canvas>
+                        </div>
+                        <div class="personal-pay-summary" style="margin-top:1rem; padding-top:1rem; border-top:1px solid var(--border);">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+                                <strong>Personal Pay</strong>
+                                <span id="personal-pay-spent">$0,00</span>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:var(--text-muted);margin-bottom:0.5rem;">
+                                <span>Objetivo mensual</span>
+                                <span>$300.000,00</span>
+                            </div>
+                            <div class="progress-bar-bg" style="height:8px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:hidden;">
+                                <div id="personal-pay-progress-bar" style="height:100%;width:0%;background:var(--income-light);transition:width .4s;"></div>
+                            </div>
+                            <div id="personal-pay-progress-text" style="text-align:right;font-size:0.75rem;margin-top:0.25rem;color:var(--text-muted);">0%</div>
+                        </div>
+                    </div>
+
                     <!-- Portfolio: Rendimiento por Activo -->
                     <div class="chart-card chart-side">
                         <div class="chart-card-header">
