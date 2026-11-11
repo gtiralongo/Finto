@@ -633,6 +633,39 @@
                             <span class="side-stat-label">Promedio mensual</span>
                             <span class="side-stat-value" id="form-expense-avg">$0,00</span>
                         </div>
+
+                        <!-- Gastos por Plataforma (en vista Gasto) -->
+                        <div class="chart-card collapsible-card" style="margin-top: 1.5rem; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface);">
+                            <div class="chart-card-header collapsible-header" style="cursor: pointer;">
+                                <div style="display:flex;align-items:center;justify-content:space-between;">
+                                    <div>
+                                        <h4 style="margin:0;font-size:0.9rem;font-weight:700;">Gastos por Plataforma</h4>
+                                        <p style="margin:0;font-size:0.75rem;color:var(--text-muted);">Distribución del mes actual</p>
+                                    </div>
+                                    <button type="button" class="collapsible-toggle" aria-label="Colapsar" style="font-size:0.7rem;">▾</button>
+                                </div>
+                            </div>
+                            <div class="collapsible-body">
+                                <div class="chart-wrapper" style="height:160px;">
+                                    <canvas id="spendByPlatformChartForm"></canvas>
+                                </div>
+                                <div class="personal-pay-summary" style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);">
+                                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+                                        <strong>Personal Pay</strong>
+                                        <span id="personal-pay-spent-form">$0,00</span>
+                                    </div>
+                                    <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:var(--text-muted);margin-bottom:0.5rem;">
+                                        <span>Objetivo mensual</span>
+                                        <span>$300.000,00</span>
+                                    </div>
+                                    <div class="progress-bar-bg" style="height:6px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:hidden;">
+                                        <div id="personal-pay-progress-bar-form" style="height:100%;width:0%;background:var(--income-light);transition:width .4s;"></div>
+                                    </div>
+                                    <div id="personal-pay-progress-text-form" style="text-align:right;font-size:0.7rem;margin-top:0.25rem;color:var(--text-muted);">0%</div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="recent-form-list"
                             style="margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem;">
                             <h4>Últimos Gastos</h4>

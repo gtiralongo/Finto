@@ -260,6 +260,22 @@ formTabs.forEach(tab => {
     if (investmentPanel) investmentPanel.style.display = tabName === 'investment' ? 'grid' : 'none';
     const accountPanel = document.getElementById('account-panel');
     if (accountPanel) accountPanel.style.display = tabName === 'account' ? 'grid' : 'none';
+
+    // Refresh gastos por plataforma when switching to Gasto tab
+    if (tabName === 'expense') {
+      setTimeout(() => {
+        const now = new Date();
+        const thisMonth = now.getMonth();
+        const thisYear = now.getFullYear();
+        const sorted = [...transactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+        const allExpenses = sorted.filter(t => t.amount < 0 && !t.isTransfer && !t.isInvestment);
+        const expMonth = allExpenses.filter(t => {
+          const d = new Date(t.date + 'T00:00:00');
+          return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
+        });
+        updateSpendByPlatformChartForm(expMonth);
+      }, 50);
+    }
   });
 });
 
@@ -756,10 +772,9 @@ function updateCharts(displayTransactions, displaySavings) {
 
 // ===== GASTOS POR PLATAFORMA CHART =====
 let spendByPlatformChartInstance = null;
-function updateSpendByPlatformChart(displayTransactions) {
-  const canvas = document.getElementById('spendByPlatformChart');
-  if (!canvas) return;
+let spendByPlatformChartInstanceForm = null;
 
+function computeSpendByPlatform(displayTransactions) {
   // Filtrar solo gastos ARS, sin transferencias ni inversiones
   const expenses = displayTransactions.filter(t => {
     const isExpense = t.amount < 0 && !t.isTransfer && !t.isInvestment;
@@ -774,16 +789,26 @@ function updateSpendByPlatformChart(displayTransactions) {
     spendByPlatform[platform] = (spendByPlatform[platform] || 0) + amt;
   });
 
-  // Personal Pay KPI
-  const personalPayName = 'Personal Pay';
-  const personalPayKey = Object.keys(spendByPlatform).find(k => k.toLowerCase().replace(/\s+/g,'') === 'personalpay') || personalPayName;
+  // Personal Pay KPI - case-insensitive match
+  const personalPayKey = Object.keys(spendByPlatform).find(k => k.toLowerCase().replace(/\s+/g,'') === 'personalpay') || 'Personal Pay';
   const personalPaySpent = spendByPlatform[personalPayKey] || 0;
   const personalPayTarget = 300000;
   const personalPayPercent = Math.min(100, Math.max(0, (personalPaySpent / personalPayTarget) * 100));
 
-  const spentEl = document.getElementById('personal-pay-spent');
-  const progressBar = document.getElementById('personal-pay-progress-bar');
-  const progressText = document.getElementById('personal-pay-progress-text');
+  const entries = Object.entries(spendByPlatform).sort((a,b) => b[1] - a[1]);
+  const labels = entries.map(e => e[0]);
+  const values = entries.map(e => e[1]);
+
+  return { spendByPlatform, personalPayKey, personalPaySpent, personalPayPercent, labels, values };
+}
+
+function renderSpendByPlatformChart(canvas, chartInstanceRef, data, personalPayKey, personalPaySpent, personalPayPercent, spentElId, progressBarId, progressTextId) {
+  if (!canvas) return;
+
+  // Update Personal Pay KPI
+  const spentEl = document.getElementById(spentElId);
+  const progressBar = document.getElementById(progressBarId);
+  const progressText = document.getElementById(progressTextId);
   if (spentEl) spentEl.innerText = fmt(personalPaySpent);
   if (progressBar) {
     progressBar.style.width = personalPayPercent + '%';
@@ -791,21 +816,21 @@ function updateSpendByPlatformChart(displayTransactions) {
   }
   if (progressText) progressText.innerText = personalPayPercent.toFixed(1) + '%';
 
-  const entries = Object.entries(spendByPlatform).sort((a,b) => b[1] - a[1]);
-  const labels = entries.map(e => e[0]);
-  const values = entries.map(e => e[1]);
+  if (data.labels.length === 0) {
+    if (chartInstanceRef[0]) { chartInstanceRef[0].destroy(); chartInstanceRef[0] = null; }
+    return;
+  }
 
-  if (spendByPlatformChartInstance) spendByPlatformChartInstance.destroy();
-  if (labels.length === 0) return;
+  if (chartInstanceRef[0]) chartInstanceRef[0].destroy();
 
-  spendByPlatformChartInstance = new Chart(canvas, {
+  chartInstanceRef[0] = new Chart(canvas, {
     type: 'bar',
     data: {
-      labels,
+      labels: data.labels,
       datasets: [{
         label: 'Gastos ARS',
-        data: values,
-        backgroundColor: labels.map(l => l === personalPayKey ? 'rgba(244, 63, 94, 0.9)' : 'rgba(124, 58, 237, 0.8)'),
+        data: data.values,
+        backgroundColor: data.labels.map(l => l === personalPayKey ? 'rgba(244, 63, 94, 0.9)' : 'rgba(124, 58, 237, 0.8)'),
         borderRadius: 6,
         borderSkipped: false
       }]
@@ -827,7 +852,7 @@ function updateSpendByPlatformChart(displayTransactions) {
       },
       scales: {
         x: {
-          ticks: { color: '#64748b', font: { size: 11, family: 'Inter' } },
+          ticks: { color: '#64748b', font: { size: 10, family: 'Inter' } },
           grid: { display: false },
           border: { display: false }
         },
@@ -835,19 +860,38 @@ function updateSpendByPlatformChart(displayTransactions) {
           beginAtZero: true,
           ticks: {
             color: '#64748b',
-            font: { size: 10, family: 'Inter' },
+            font: { size: 9, family: 'Inter' },
             callback: (v) => '$' + v.toLocaleString('es-AR', { maximumFractionDigits: 0 })
           },
           grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false },
           border: { display: false }
         }
       },
-      datasets: { bar: { maxBarThickness: 40, categoryPercentage: 0.7, barPercentage: 0.9 } }
+      datasets: { bar: { maxBarThickness: 36, categoryPercentage: 0.8, barPercentage: 0.9 } }
     }
   });
 }
 
+function updateSpendByPlatformChart(displayTransactions) {
+  const canvas = document.getElementById('spendByPlatformChart');
+  if (!canvas) return;
+  const data = computeSpendByPlatform(displayTransactions);
+  renderSpendByPlatformChart(canvas, [spendByPlatformChartInstance], data, data.personalPayKey, data.personalPaySpent, data.personalPayPercent,
+    'personal-pay-spent', 'personal-pay-progress-bar', 'personal-pay-progress-text');
+  spendByPlatformChartInstance = [spendByPlatformChartInstance][0];
+}
+
+function updateSpendByPlatformChartForm(displayTransactions) {
+  const canvas = document.getElementById('spendByPlatformChartForm');
+  if (!canvas) return;
+  const data = computeSpendByPlatform(displayTransactions);
+  renderSpendByPlatformChart(canvas, [spendByPlatformChartInstanceForm], data, data.personalPayKey, data.personalPaySpent, data.personalPayPercent,
+    'personal-pay-spent-form', 'personal-pay-progress-bar-form', 'personal-pay-progress-text-form');
+  spendByPlatformChartInstanceForm = [spendByPlatformChartInstanceForm][0];
+}
+
 // ===== P&L POR ACTIVO CHART =====
+
 function updatePnLByAssetChart(displayTrades) {
   const canvas = document.getElementById('pnlByAssetChart');
   if (!canvas) return;
@@ -3085,6 +3129,9 @@ function updateFormSideStats() {
   fmtEl('form-expense-month', expMonthTotal);
   fmtEl('form-expense-year', expYearTotal);
   fmtEl('form-expense-avg', expAvg);
+
+  // Gastos por plataforma (para el chart en la pestaña Gasto)
+  updateSpendByPlatformChartForm(expMonth);
 
   // Incomes
   const allIncomes = sorted.filter(t => t.amount > 0 && !t.isTransfer && !t.isInvestment);
