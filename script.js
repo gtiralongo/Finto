@@ -4162,6 +4162,173 @@ function deletePlatform(id) {
   updatePlatformsUI();
 }
 
+// ===== MERGE PLATFORMS =====
+const mergePlatformsModal = document.getElementById('merge-platforms-modal');
+const mergeFromSelect = document.getElementById('merge-from-platform');
+const mergeToSelect = document.getElementById('merge-to-platform');
+const mergePreview = document.getElementById('merge-preview');
+const mergePreviewList = document.getElementById('merge-preview-list');
+const confirmMergeBtn = document.getElementById('confirm-merge-platforms');
+const closeMergeBtn = document.getElementById('close-merge-platforms');
+const cancelMergeBtn = document.getElementById('cancel-merge-platforms');
+const btnMergePlatforms = document.getElementById('btn-merge-platforms');
+
+function openMergePlatformsModal() {
+  if (!mergePlatformsModal) return;
+  
+  // Populate selects
+  const populate = (select, excludeName = null) => {
+    const current = select.value;
+    select.innerHTML = '<option value="" disabled selected>Seleccionar...</option>';
+    platforms.forEach(p => {
+      if (p.name !== excludeName) {
+        const opt = document.createElement('option');
+        opt.value = p.name;
+        opt.textContent = p.name;
+        select.appendChild(opt);
+      }
+    });
+    if (current && platforms.some(p => p.name === current && p.name !== excludeName)) {
+      select.value = current;
+    }
+  };
+  
+  populate(mergeFromSelect);
+  populate(mergeToSelect);
+  
+  mergePreview.style.display = 'none';
+  confirmMergeBtn.disabled = true;
+  mergePlatformsModal.style.display = 'flex';
+}
+
+function closeMergePlatformsModal() {
+  if (mergePlatformsModal) mergePlatformsModal.style.display = 'none';
+}
+
+function updateMergePreview() {
+  const fromName = mergeFromSelect?.value;
+  const toName = mergeToSelect?.value;
+  
+  if (!fromName || !toName || fromName === toName) {
+    mergePreview.style.display = 'none';
+    confirmMergeBtn.disabled = true;
+    return;
+  }
+  
+  const from = platforms.find(p => p.name === fromName);
+  const to = platforms.find(p => p.name === toName);
+  if (!from || !to) {
+    mergePreview.style.display = 'none';
+    confirmMergeBtn.disabled = true;
+    return;
+  }
+  
+  const txCount = transactions.filter(t => t.platform === fromName).length;
+  const savingsCount = savings.filter(s => s.platform === fromName).length;
+  const tradesCount = closedTrades.filter(t => t.platform === fromName).length;
+  const amortCount = amortizations.filter(a => a.platform === fromName).length;
+  const couponCount = coupons.filter(c => c.platform === fromName).length;
+  const caucionCount = cauciones.filter(c => c.platform === fromName).length;
+  
+  const fromBalARS = parseFloat(from.initialBalance) || 0;
+  const fromBalUSD = parseFloat(from.initialBalanceUSD) || 0;
+  const toBalARS = parseFloat(to.initialBalance) || 0;
+  const toBalUSD = parseFloat(to.initialBalanceUSD) || 0;
+  
+  let html = '';
+  if (txCount) html += `<li>${txCount} movimiento${txCount !== 1 ? 's' : ''} de transacciones</li>`;
+  if (savingsCount) html += `<li>${savingsCount} inversión${savingsCount !== 1 ? 'es' : ''}</li>`;
+  if (tradesCount) html += `<li>${tradesCount} venta${tradesCount !== 1 ? 's' : ''} realizadas</li>`;
+  if (amortCount) html += `<li>${amortCount} amortización${amortCount !== 1 ? 'es' : ''}</li>`;
+  if (couponCount) html += `<li>${couponCount} cupón${couponCount !== 1 ? 'es' : ''}/dividendo${couponCount !== 1 ? 's' : ''}</li>`;
+  if (caucionCount) html += `<li>${caucionCount} caución${caucionCount !== 1 ? 'es' : ''}</li>`;
+  if (fromBalARS || fromBalUSD) {
+    let balStr = '';
+    if (fromBalARS) balStr += `$${fromBalARS.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
+    if (fromBalARS && fromBalUSD) balStr += ' / ';
+    if (fromBalUSD) balStr += `U$D ${fromBalUSD.toLocaleString('es-AR', {minimumFractionDigits: 2})}`;
+    html += `<li>Saldo inicial: ${balStr} (se sumará a la cuenta destino)</li>`;
+  }
+  if (!html) html = '<li style="color: var(--text-muted);">Sin datos para mover</li>';
+  
+  mergePreviewList.innerHTML = html;
+  mergePreview.style.display = 'block';
+  confirmMergeBtn.disabled = false;
+}
+
+if (mergeFromSelect) mergeFromSelect.addEventListener('change', updateMergePreview);
+if (mergeToSelect) mergeToSelect.addEventListener('change', updateMergePreview);
+
+if (btnMergePlatforms) {
+  btnMergePlatforms.addEventListener('click', openMergePlatformsModal);
+}
+
+[closeMergeBtn, cancelMergeBtn].forEach(el => {
+  if (el) el.addEventListener('click', closeMergePlatformsModal);
+});
+
+if (confirmMergeBtn) {
+  confirmMergeBtn.addEventListener('click', () => {
+    const fromName = mergeFromSelect.value;
+    const toName = mergeToSelect.value;
+    if (!fromName || !toName || fromName === toName) return;
+    
+    if (!confirm(`¿Confirmar unificación?\n"${fromName}" → "${toName}"\nLa cuenta origen se eliminará permanentemente.`)) return;
+    
+    // Move transactions
+    transactions.forEach(t => {
+      if (t.platform === fromName) t.platform = toName;
+    });
+    
+    // Move savings
+    savings.forEach(s => {
+      if (s.platform === fromName) s.platform = toName;
+    });
+    
+    // Move closed trades
+    closedTrades.forEach(t => {
+      if (t.platform === fromName) t.platform = toName;
+    });
+    
+    // Move amortizations
+    amortizations.forEach(a => {
+      if (a.platform === fromName) a.platform = toName;
+    });
+    
+    // Move coupons
+    coupons.forEach(c => {
+      if (c.platform === fromName) c.platform = toName;
+    });
+    
+    // Move cauciones
+    cauciones.forEach(c => {
+      if (c.platform === fromName) c.platform = toName;
+    });
+    
+    // Merge initial balances
+    const from = platforms.find(p => p.name === fromName);
+    const to = platforms.find(p => p.name === toName);
+    if (from && to) {
+      to.initialBalance = (parseFloat(to.initialBalance) || 0) + (parseFloat(from.initialBalance) || 0);
+      to.initialBalanceUSD = (parseFloat(to.initialBalanceUSD) || 0) + (parseFloat(from.initialBalanceUSD) || 0);
+    }
+    
+    // Remove source platform
+    platforms = platforms.filter(p => p.name !== fromName);
+    
+    updateLocalStorage();
+    closeMergePlatformsModal();
+    updatePlatformsUI();
+    updateDashboard();
+    updateSavingsUI();
+    renderHistoryList();
+    updateFormSideStats();
+    populatePlatformsDropdowns();
+    
+    alert(`Cuentas unificadas: "${fromName}" → "${toName}"`);
+  });
+}
+
 // Transfer Logic
 const transferForm = document.getElementById('transfer-form');
 if (transferForm) {
