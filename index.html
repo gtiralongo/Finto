@@ -948,6 +948,49 @@
                         <input type="text" id="search-input" placeholder="Buscar movimiento...">
                     </div>
                 </div>
+
+                <!-- Resumen rápido Historial -->
+                <div id="history-quick-stats" style="margin: 1rem 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.75rem;">
+                    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 0.6rem;">
+                        <div style="font-size: 0.7rem; color: var(--text-muted);">Movimientos</div>
+                        <div id="qs-count" style="font-weight: 700; font-size: 1.1rem;">0</div>
+                    </div>
+                    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 0.6rem;">
+                        <div style="font-size: 0.7rem; color: var(--text-muted);">Ingresos</div>
+                        <div id="qs-income" class="income-color" style="font-weight: 700; font-size: 1.1rem;">$0,00</div>
+                    </div>
+                    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 0.6rem;">
+                        <div style="font-size: 0.7rem; color: var(--text-muted);">Gastos</div>
+                        <div id="qs-expense" class="expense-color" style="font-weight: 700; font-size: 1.1rem;">$0,00</div>
+                    </div>
+                    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 0.6rem;">
+                        <div style="font-size: 0.7rem; color: var(--text-muted);">Neto</div>
+                        <div id="qs-net" style="font-weight: 700; font-size: 1.1rem;">$0,00</div>
+                    </div>
+                    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 0.6rem;">
+                        <div style="font-size: 0.7rem; color: var(--text-muted);">Ticket promedio</div>
+                        <div id="qs-avg" style="font-weight: 700; font-size: 1.1rem;">$0,00</div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 0.75rem;">
+                        <h4 style="margin: 0 0 0.5rem 0; font-size: 0.85rem;">Top 5 Descripciones Gasto</h4>
+                        <div id="qs-top-desc-expense" style="font-size: 0.8rem; display: flex; flex-direction: column; gap: 0.3rem;"></div>
+                    </div>
+                    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 0.75rem;">
+                        <h4 style="margin: 0 0 0.5rem 0; font-size: 0.85rem;">Top 5 Descripciones Ingreso</h4>
+                        <div id="qs-top-desc-income" style="font-size: 0.8rem; display: flex; flex-direction: column; gap: 0.3rem;"></div>
+                    </div>
+                    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 0.75rem;">
+                        <h4 style="margin: 0 0 0.5rem 0; font-size: 0.85rem;">Top 5 Plataformas Gasto</h4>
+                        <div id="qs-top-plat-expense" style="font-size: 0.8rem; display: flex; flex-direction: column; gap: 0.3rem;"></div>
+                    </div>
+                    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 0.75rem;">
+                        <h4 style="margin: 0 0 0.5rem 0; font-size: 0.85rem;">Top 5 Plataformas Ingreso</h4>
+                        <div id="qs-top-plat-income" style="font-size: 0.8rem; display: flex; flex-direction: column; gap: 0.3rem;"></div>
+                    </div>
+                </div>
                 <div class="history-summary">
                     <span id="history-count">0 movimientos</span>
                     <span id="history-total" class="history-total-amount">Total: $0,00</span>

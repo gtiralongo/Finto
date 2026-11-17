@@ -3050,6 +3050,66 @@ function updateDashboard() {
 }
 
 // ===== HISTORY LIST =====
+
+// ===== HISTORY QUICK STATS =====
+function updateHistoryQuickStats(filtered) {
+  const qsCount = document.getElementById('qs-count');
+  const qsIncome = document.getElementById('qs-income');
+  const qsExpense = document.getElementById('qs-expense');
+  const qsNet = document.getElementById('qs-net');
+  const qsAvg = document.getElementById('qs-avg');
+  const qsTopDescExpense = document.getElementById('qs-top-desc-expense');
+  const qsTopDescIncome = document.getElementById('qs-top-desc-income');
+  const qsTopPlatExpense = document.getElementById('qs-top-plat-expense');
+  const qsTopPlatIncome = document.getElementById('qs-top-plat-income');
+
+  if (!qsCount) return;
+
+  const count = filtered.length;
+  const incomeTx = filtered.filter(t => t.amount > 0 && !t.isTransfer && !t.isInvestment);
+  const expenseTx = filtered.filter(t => t.amount < 0 && !t.isTransfer && !t.isInvestment);
+
+  const incomeTotal = incomeTx.reduce((a,t)=>a+t.amount,0);
+  const expenseTotal = Math.abs(expenseTx.reduce((a,t)=>a+t.amount,0));
+  const netTotal = incomeTotal - expenseTotal;
+  const totalAbs = filtered.reduce((a,t)=>a+Math.abs(t.amount),0);
+  const avgTicket = count ? totalAbs / count : 0;
+
+  qsCount.textContent = count;
+  qsIncome.textContent = fmt(incomeTotal);
+  qsExpense.textContent = fmt(expenseTotal);
+  qsNet.textContent = fmt(netTotal);
+  qsNet.style.color = netTotal >=0 ? 'var(--income-light)' : 'var(--expense-light)';
+  qsAvg.textContent = fmt(avgTicket);
+
+  function renderTopList(container, items, key, isExpense) {
+    if (!container) return;
+    const map = {};
+    items.forEach(t => {
+      const k = t[key] || 'Sin dato';
+      if (!map[k]) map[k] = {count:0, total:0};
+      map[k].count++;
+      map[k].total += Math.abs(t.amount);
+    });
+    const top = Object.entries(map).sort((a,b)=>b[1].total - a[1].total).slice(0,5);
+    if (top.length === 0) {
+      container.innerHTML = '<div style="color:var(--text-muted)">Sin datos</div>';
+      return;
+    }
+    container.innerHTML = top.map(([name,data]) => `
+      <div style="display:flex;justify-content:space-between;">
+        <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-right:0.5rem;">${name}</span>
+        <span>${fmt(data.total)}</span>
+      </div>
+    `).join('');
+  }
+
+  renderTopList(qsTopDescExpense, expenseTx, 'text', true);
+  renderTopList(qsTopDescIncome, incomeTx, 'text', false);
+  renderTopList(qsTopPlatExpense, expenseTx, 'platform', true);
+  renderTopList(qsTopPlatIncome, incomeTx, 'platform', false);
+}
+
 function renderHistoryList() {
   if (!list) return;
   list.innerHTML = '';
@@ -3080,6 +3140,9 @@ function renderHistoryList() {
     const total = filtered.reduce((acc, t) => acc + t.amount, 0);
     historyTotal.innerText = `Total: ${total >= 0 ? '+' : ''}${fmt(total)}`;
     historyTotal.style.color = total >= 0 ? 'var(--income-light)' : 'var(--expense-light)';
+
+  // Update quick stats
+  updateHistoryQuickStats(filtered);
   }
 
   if (filtered.length === 0) {
