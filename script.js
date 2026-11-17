@@ -79,6 +79,9 @@ let platformSortDirection = parseInt(localStorage.getItem('platformSortDirection
 let monthlyChartInstance = null;
 let salaryDonutChartInstance = null;
 let dashSalaryDonutChartInstance = null;
+let topDescExpenseChartInstance = null;
+let topPlatExpenseChartInstance = null;
+let historyChartMode = 'expense';
 
 // ===== HELPERS =====
 function fmt(amount) {
@@ -3052,16 +3055,105 @@ function updateDashboard() {
 // ===== HISTORY LIST =====
 
 // ===== HISTORY QUICK STATS =====
+function updateTopExpenseCharts(items, mode='expense') {
+  const descCanvas = document.getElementById('top-desc-expense-chart');
+  const platCanvas = document.getElementById('top-plat-expense-chart');
+  if (!descCanvas || !platCanvas) return;
+
+  const buildTop = (items, key, limit=10) => {
+    const map = {};
+    items.forEach(t => {
+      const k = t[key] || 'Sin dato';
+      if (!map[k]) map[k] = {count:0, total:0};
+      map[k].count++;
+      map[k].total += Math.abs(t.amount);
+    });
+    return Object.entries(map).sort((a,b)=>b[1].total - a[1].total).slice(0, limit);
+  };
+
+  const descTop = buildTop(items, 'text', 10);
+  const platTop = buildTop(items, 'platform', 10);
+
+  // Update titles
+  const descCard = descCanvas.closest('div');
+  const platCard = platCanvas.closest('div');
+  if (descCard) {
+    const h4 = descCard.querySelector('h4');
+    if (h4) h4.textContent = `Top Descripciones ${mode === 'income' ? 'Ingreso' : 'Gasto'}`;
+  }
+  if (platCard) {
+    const h4 = platCard.querySelector('h4');
+    if (h4) h4.textContent = `Top Plataformas ${mode === 'income' ? 'Ingreso' : 'Gasto'}`;
+  }
+
+  const color = mode === 'income' ? '#27ae60' : '#e74c3c';
+
+  const commonOptions = {
+    indexAxis: 'y',
+    responsive: true,
+    maintainAspectRatio: false,
+    barThickness: 16,
+    plugins: {
+      legend: {display:false},
+      tooltip: {
+        callbacks: {
+          label: ctx => `$${Number(ctx.raw).toLocaleString('es-AR', {minimumFractionDigits:2})}`
+        }
+      }
+    },
+    scales: {
+      x: {
+        ticks: {
+          callback: v => `$${Number(v).toLocaleString('es-AR', {maximumFractionDigits:0})}`,
+          font: {size:11}
+        }
+      },
+      y: {
+        ticks:{autoSkip:false, font:{size:11}},
+        grid:{display:false}
+      }
+    }
+  };
+
+  const createBarChart = (canvas, labels, data, instanceRef) => {
+    if (instanceRef) {
+      instanceRef.destroy();
+    }
+    return new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: mode === 'income' ? 'Ingreso' : 'Gasto',
+          data,
+          backgroundColor: color
+        }]
+      },
+      options: commonOptions
+    });
+  };
+
+  topDescExpenseChartInstance = createBarChart(
+    descCanvas,
+    descTop.map(([n])=>n),
+    descTop.map(([,d])=>d.total),
+    topDescExpenseChartInstance
+  );
+
+  topPlatExpenseChartInstance = createBarChart(
+    platCanvas,
+    platTop.map(([n])=>n),
+    platTop.map(([,d])=>d.total),
+    topPlatExpenseChartInstance
+  );
+}
+
 function updateHistoryQuickStats(filtered) {
   const qsCount = document.getElementById('qs-count');
   const qsIncome = document.getElementById('qs-income');
   const qsExpense = document.getElementById('qs-expense');
   const qsNet = document.getElementById('qs-net');
   const qsAvg = document.getElementById('qs-avg');
-  const qsTopDescExpense = document.getElementById('qs-top-desc-expense');
-  const qsTopDescIncome = document.getElementById('qs-top-desc-income');
-  const qsTopPlatExpense = document.getElementById('qs-top-plat-expense');
-  const qsTopPlatIncome = document.getElementById('qs-top-plat-income');
 
   if (!qsCount) return;
 
@@ -3082,32 +3174,8 @@ function updateHistoryQuickStats(filtered) {
   qsNet.style.color = netTotal >=0 ? 'var(--income-light)' : 'var(--expense-light)';
   qsAvg.textContent = fmt(avgTicket);
 
-  function renderTopList(container, items, key, isExpense) {
-    if (!container) return;
-    const map = {};
-    items.forEach(t => {
-      const k = t[key] || 'Sin dato';
-      if (!map[k]) map[k] = {count:0, total:0};
-      map[k].count++;
-      map[k].total += Math.abs(t.amount);
-    });
-    const top = Object.entries(map).sort((a,b)=>b[1].total - a[1].total).slice(0,5);
-    if (top.length === 0) {
-      container.innerHTML = '<div style="color:var(--text-muted)">Sin datos</div>';
-      return;
-    }
-    container.innerHTML = top.map(([name,data]) => `
-      <div style="display:flex;justify-content:space-between;">
-        <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-right:0.5rem;">${name}</span>
-        <span>${fmt(data.total)}</span>
-      </div>
-    `).join('');
-  }
-
-  renderTopList(qsTopDescExpense, expenseTx, 'text', true);
-  renderTopList(qsTopDescIncome, incomeTx, 'text', false);
-  renderTopList(qsTopPlatExpense, expenseTx, 'platform', true);
-  renderTopList(qsTopPlatIncome, incomeTx, 'platform', false);
+  const items = historyChartMode === 'income' ? incomeTx : expenseTx;
+  updateTopExpenseCharts(items, historyChartMode);
 }
 
 function renderHistoryList() {
@@ -3130,6 +3198,17 @@ function renderHistoryList() {
 
   if (transactionsFilterPlatform) {
     filtered = filtered.filter(t => (t.platform || '') === transactionsFilterPlatform);
+  }
+
+  const yearEl = document.getElementById('history-year');
+  const monthEl = document.getElementById('history-month');
+  const year = yearEl?.value;
+  const month = monthEl?.value;
+  if (year) {
+    filtered = filtered.filter(t => new Date(t.date).getFullYear() == Number(year));
+  }
+  if (month) {
+    filtered = filtered.filter(t => (new Date(t.date).getMonth() + 1) == Number(month));
   }
 
   // Update summary
@@ -3392,6 +3471,245 @@ if (transactionsFilterPlatformEl) {
     renderHistoryList();
   });
 }
+
+const historyYearEl = document.getElementById('history-year');
+const historyMonthEl = document.getElementById('history-month');
+if (historyYearEl) {
+  historyYearEl.addEventListener('change', renderHistoryList);
+}
+if (historyMonthEl) {
+  historyMonthEl.addEventListener('change', renderHistoryList);
+}
+
+function populateHistoryYearMonth() {
+  const yearEl = document.getElementById('history-year');
+  const monthEl = document.getElementById('history-month');
+  if (!yearEl || !monthEl) return;
+  const years = [...new Set(transactions.map(t => new Date(t.date).getFullYear()))].sort((a,b)=>b-a);
+  yearEl.innerHTML = '<option value="">Todos los años</option>' + years.map(y=>`<option value="${y}">${y}</option>`).join('');
+  const months = [...new Set(transactions.map(t => new Date(t.date).getMonth()+1))].sort((a,b)=>a-b);
+  const monthNames = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  monthEl.innerHTML = '<option value="">Todos los meses</option>' + months.map(m=>`<option value="${m}">${monthNames[m]}</option>`).join('');
+}
+populateHistoryYearMonth();
+
+// Description catalog for forms
+function loadDescriptionCatalog() {
+  const raw = localStorage.getItem('descriptionCatalog');
+  if (raw) {
+    try { return JSON.parse(raw); } catch {}
+  }
+  return { expense: [], income: [] };
+}
+function saveDescriptionCatalog(catalog) {
+  localStorage.setItem('descriptionCatalog', JSON.stringify(catalog));
+}
+function populateDescriptionSelects() {
+  const expenseSelect = document.getElementById('expense-text');
+  const incomeSelect = document.getElementById('income-text');
+  if (!expenseSelect || !incomeSelect) return;
+  const catalog = loadDescriptionCatalog();
+  // Fill from catalog or from transactions if empty
+  const expenseDescs = new Set([...catalog.expense]);
+  transactions.filter(t => t.amount < 0 && !t.isTransfer && !t.isInvestment).forEach(t => expenseDescs.add(t.text));
+  const incomeDescs = new Set([...catalog.income]);
+  transactions.filter(t => t.amount > 0 && !t.isTransfer && !t.isInvestment).forEach(t => incomeDescs.add(t.text));
+  const expenseOptions = [...expenseDescs].sort().filter(Boolean).map(d => `<option value="${d}">${d}</option>`).join('') + '<option value="__new__">+ Nueva descripción...</option>';
+  const incomeOptions = [...incomeDescs].sort().filter(Boolean).map(d => `<option value="${d}">${d}</option>`).join('') + '<option value="__new__">+ Nueva descripción...</option>';
+  expenseSelect.innerHTML = expenseOptions;
+  incomeSelect.innerHTML = incomeOptions;
+  // Handler for new description
+  const handleNew = (select, type) => {
+    select.addEventListener('change', () => {
+      if (select.value === '__new__') {
+        const newDesc = prompt('Nueva descripción:');
+        if (newDesc && newDesc.trim()) {
+          const cat = loadDescriptionCatalog();
+          if (!cat[type].includes(newDesc.trim())) {
+            cat[type].push(newDesc.trim());
+            saveDescriptionCatalog(cat);
+          }
+          populateDescriptionSelects();
+          select.value = newDesc.trim();
+        } else {
+          // revert
+          populateDescriptionSelects();
+        }
+      }
+    });
+  };
+  handleNew(expenseSelect, 'expense');
+  handleNew(incomeSelect, 'income');
+}
+populateDescriptionSelects();
+
+const chartModeExpenseBtn = document.getElementById('chart-mode-expense');
+const chartModeIncomeBtn = document.getElementById('chart-mode-income');
+if (chartModeExpenseBtn) {
+  chartModeExpenseBtn.addEventListener('click', () => {
+    historyChartMode = 'expense';
+    chartModeExpenseBtn.classList.add('active');
+    chartModeIncomeBtn.classList.remove('active');
+    renderHistoryList();
+  });
+}
+if (chartModeIncomeBtn) {
+  chartModeIncomeBtn.addEventListener('click', () => {
+    historyChartMode = 'income';
+    chartModeIncomeBtn.classList.add('active');
+    chartModeExpenseBtn.classList.remove('active');
+    renderHistoryList();
+  });
+}
+
+// Unificar descripciones
+const btnUnifyDesc = document.getElementById('btn-unify-desc');
+const btnManageDesc = document.getElementById('btn-manage-descriptions');
+const modalUnifyDesc = document.getElementById('modal-unify-desc');
+const selectFrom = document.getElementById('unify-desc-from');
+const selectTo = document.getElementById('unify-desc-to');
+const btnUnifyCancel = document.getElementById('unify-desc-cancel');
+const btnUnifyConfirm = document.getElementById('unify-desc-confirm');
+
+function openUnifyModal() {
+  if (!modalUnifyDesc) return;
+  const descSet = [...new Set(transactions.map(t => t.text).filter(Boolean))].sort();
+  const options = descSet.map(d => `<option value="${d}">${d}</option>`).join('');
+  if (selectFrom) selectFrom.innerHTML = options;
+  if (selectTo) selectTo.innerHTML = options;
+  // Populate list with counts and delete actions, split by type
+  const descListEl = document.getElementById('desc-list');
+  if (descListEl) {
+    const countsExpense = {};
+    const countsIncome = {};
+    const expenseSet = new Set();
+    const incomeSet = new Set();
+    transactions.forEach(t => {
+      const d = t.text || 'Sin descripción';
+      if (t.amount < 0 && !t.isTransfer && !t.isInvestment) {
+        expenseSet.add(d);
+        countsExpense[d] = (countsExpense[d] || 0) + 1;
+      } else if (t.amount > 0 && !t.isTransfer && !t.isInvestment) {
+        incomeSet.add(d);
+        countsIncome[d] = (countsIncome[d] || 0) + 1;
+      }
+    });
+    const renderSection = (title, set, counts) => {
+      const items = [...set].sort();
+      if (items.length === 0) return '';
+      return `<div style="margin-bottom:1rem;">
+        <h5 style="margin:0 0 0.5rem 0;font-size:0.85rem;color:var(--text-muted);">${title}</h5>
+        ${items.map(d => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0.5rem;border:1px solid var(--border);border-radius:var(--radius-sm);background:#222;margin-bottom:0.35rem;">
+            <div>
+              <div style="font-weight:600;">${d}</div>
+              <div style="font-size:0.75rem;color:var(--text-muted);">${counts[d]||0} movimiento(s)</div>
+            </div>
+            <div style="display:flex;gap:0.35rem;">
+              <button data-desc="${d}" class="btn-edit-desc" style="padding:0.3rem 0.6rem;border:1px solid var(--border);border-radius:var(--radius-sm);background:transparent;color:#8ab4f8;cursor:pointer;font-size:0.75rem;">Editar</button>
+              <button data-desc="${d}" class="btn-delete-desc" style="padding:0.3rem 0.6rem;border:1px solid var(--border);border-radius:var(--radius-sm);background:transparent;color:var(--expense-light);cursor:pointer;font-size:0.75rem;">Eliminar</button>
+            </div>
+          </div>
+        `).join('')}
+      </div>`;
+    };
+    descListEl.innerHTML = renderSection('Gastos', expenseSet, countsExpense) + renderSection('Ingresos', incomeSet, countsIncome);
+    // Attach delete handlers
+    descListEl.querySelectorAll('.btn-delete-desc').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const d = btn.getAttribute('data-desc');
+        if (!confirm(`¿Eliminar todos los movimientos con descripción "${d}"?`)) return;
+        const before = transactions.length;
+        for (let i = transactions.length - 1; i >= 0; i--) {
+          if (transactions[i].text === d) transactions.splice(i, 1);
+        }
+        saveTransactions();
+        openUnifyModal(); // refresh list
+        renderHistoryList();
+        alert(`Se eliminaron ${before - transactions.length} movimiento(s).`);
+      });
+    });
+    // Attach edit handlers
+    descListEl.querySelectorAll('.btn-edit-desc').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const oldD = btn.getAttribute('data-desc');
+        const newD = prompt('Editar descripción:', oldD);
+        if (!newD || !newD.trim() || newD.trim() === oldD) return;
+        if (!confirm(`¿Renombrar "${oldD}" a "${newD.trim()}" en todos los movimientos?`)) return;
+        let changed = 0;
+        transactions.forEach(t => {
+          if (t.text === oldD) { t.text = newD.trim(); changed++; }
+        });
+        // Update description catalog
+        const cat = loadDescriptionCatalog();
+        for (const type of ['expense','income']) {
+          const idx = cat[type].indexOf(oldD);
+          if (idx !== -1) {
+            cat[type][idx] = newD.trim();
+          }
+          if (!cat[type].includes(newD.trim())) {
+            cat[type].push(newD.trim());
+          }
+        }
+        saveDescriptionCatalog(cat);
+        saveTransactions();
+        populateDescriptionSelects();
+        openUnifyModal();
+        renderHistoryList();
+        alert(`Se renombraron ${changed} movimiento(s).`);
+      });
+    });
+  }
+  // Add description handler
+  const addBtn = document.getElementById('add-desc-btn');
+  const newDescInput = document.getElementById('new-desc-input');
+  const newDescType = document.getElementById('new-desc-type');
+  if (addBtn && newDescInput && newDescType) {
+    addBtn.onclick = () => {
+      const val = newDescInput.value.trim();
+      if (!val) return alert('Ingresá una descripción.');
+      const cat = loadDescriptionCatalog();
+      const type = newDescType.value;
+      if (!cat[type].includes(val)) {
+        cat[type].push(val);
+        saveDescriptionCatalog(cat);
+        populateDescriptionSelects();
+        alert('Descripción agregada al catálogo.');
+        newDescInput.value = '';
+        openUnifyModal();
+      } else {
+        alert('Descripción ya existe en el catálogo.');
+      }
+    };
+  }
+  modalUnifyDesc.style.display = 'flex';
+}
+function closeUnifyModal() {
+  if (modalUnifyDesc) modalUnifyDesc.style.display = 'none';
+}
+if (btnUnifyDesc) btnUnifyDesc.addEventListener('click', openUnifyModal);
+if (btnManageDesc) btnManageDesc.addEventListener('click', openUnifyModal);
+if (btnUnifyCancel) btnUnifyCancel.addEventListener('click', closeUnifyModal);
+if (btnUnifyConfirm) btnUnifyConfirm.addEventListener('click', () => {
+  const from = selectFrom?.value;
+  const to = selectTo?.value;
+  if (!from || !to || from === to) {
+    alert('Seleccioná dos descripciones distintas.');
+    return;
+  }
+  if (!confirm(`¿Unificar ${from} en ${to}? Esta acción afecta a todos los movimientos.`)) return;
+  let changed = 0;
+  transactions.forEach(t => {
+    if (t.text === from) {
+      t.text = to;
+      changed++;
+    }
+  });
+  saveTransactions();
+  closeUnifyModal();
+  renderHistoryList();
+  alert(`Unificados ${changed} movimiento(s).`);
+});
 
 if (savingsSearchInput) {
   savingsSearchInput.addEventListener('input', () => {

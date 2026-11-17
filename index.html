@@ -542,7 +542,7 @@
                             <div class="form-grid-2">
                                 <div class="form-group">
                                     <label>Descripción</label>
-                                    <input type="text" id="expense-text" placeholder="Ej. Super, Alquiler..." required>
+                                    <select id="expense-text" required></select>
                                 </div>
                                 <div class="form-group">
                                     <label>Monto</label>
@@ -694,7 +694,7 @@
                             <div class="form-grid-2">
                                 <div class="form-group">
                                     <label>Descripción</label>
-                                    <input type="text" id="income-text" placeholder="Ej. Sueldo, Venta..." required>
+                                    <select id="income-text" required></select>
                                 </div>
                                 <div class="form-group">
                                     <label>Monto</label>
@@ -940,6 +940,15 @@
                         style="padding: 0.4rem 0.6rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font-size: 0.8rem; min-width: 130px;">
                         <option value="">Todas las cuentas</option>
                     </select>
+                    <select id="history-year"
+                        style="padding: 0.4rem 0.6rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font-size: 0.8rem; min-width: 110px;">
+                        <option value="">Todos los años</option>
+                    </select>
+                    <select id="history-month"
+                        style="padding: 0.4rem 0.6rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font-size: 0.8rem; min-width: 120px;">
+                        <option value="">Todos los meses</option>
+                    </select>
+                    <button id="btn-unify-desc" type="button" style="padding:0.4rem 0.6rem; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--surface); color:var(--text); font-size:0.8rem; cursor:pointer;">Unificar descripciones</button>
                     <div class="history-search">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="11" cy="11" r="8" />
@@ -973,22 +982,23 @@
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                <div style="display:flex;gap:0.5rem;margin:0.75rem 0 0.5rem 0;">
+                    <button id="chart-mode-expense" class="pill active" style="padding:0.3rem 0.6rem;font-size:0.75rem;">Gasto</button>
+                    <button id="chart-mode-income" class="pill" style="padding:0.3rem 0.6rem;font-size:0.75rem;">Ingreso</button>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
                     <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 0.75rem;">
-                        <h4 style="margin: 0 0 0.5rem 0; font-size: 0.85rem;">Top 5 Descripciones Gasto</h4>
-                        <div id="qs-top-desc-expense" style="font-size: 0.8rem; display: flex; flex-direction: column; gap: 0.3rem;"></div>
+                        <h4 style="margin: 0 0 0.5rem 0; font-size: 0.85rem;">Top Descripciones Gasto</h4>
+                        <div style="height:320px; position:relative;">
+                            <canvas id="top-desc-expense-chart"></canvas>
+                        </div>
                     </div>
                     <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 0.75rem;">
-                        <h4 style="margin: 0 0 0.5rem 0; font-size: 0.85rem;">Top 5 Descripciones Ingreso</h4>
-                        <div id="qs-top-desc-income" style="font-size: 0.8rem; display: flex; flex-direction: column; gap: 0.3rem;"></div>
-                    </div>
-                    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 0.75rem;">
-                        <h4 style="margin: 0 0 0.5rem 0; font-size: 0.85rem;">Top 5 Plataformas Gasto</h4>
-                        <div id="qs-top-plat-expense" style="font-size: 0.8rem; display: flex; flex-direction: column; gap: 0.3rem;"></div>
-                    </div>
-                    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 0.75rem;">
-                        <h4 style="margin: 0 0 0.5rem 0; font-size: 0.85rem;">Top 5 Plataformas Ingreso</h4>
-                        <div id="qs-top-plat-income" style="font-size: 0.8rem; display: flex; flex-direction: column; gap: 0.3rem;"></div>
+                        <h4 style="margin: 0 0 0.5rem 0; font-size: 0.85rem;">Top Plataformas Gasto</h4>
+                        <div style="height:320px; position:relative;">
+                            <canvas id="top-plat-expense-chart"></canvas>
+                        </div>
                     </div>
                 </div>
                 <div class="history-summary">
@@ -999,6 +1009,40 @@
                     <!-- Dynamic content -->
                 </ul>
                 <p id="empty-msg" class="empty-msg" style="display:none;">Sin movimientos registrados.</p>
+            </div>
+
+            <!-- Modal Gestionar Descripciones -->
+            <div id="modal-unify-desc" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:1000; align-items:center; justify-content:center;">
+                <div style="background:#1e1e1e; border:1px solid #333; border-radius:var(--radius-md); padding:1.5rem; width:min(700px,95vw); max-height:80vh; display:flex; flex-direction:column;">
+                    <h3 style="margin:0 0 0.5rem 0;">Gestionar descripciones</h3>
+                    <p style="margin:0 0 1rem 0; color:var(--text-muted); font-size:0.85rem;">Unifica, agrega o elimina descripciones usadas en los movimientos.</p>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem;">
+                        <div>
+                            <label style="font-size:0.75rem;color:var(--text-muted);">Descripción origen</label>
+                            <select id="unify-desc-from" style="width:100%;margin-top:0.25rem;padding:0.4rem;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);"></select>
+                        </div>
+                        <div>
+                            <label style="font-size:0.75rem;color:var(--text-muted);">Descripción destino</label>
+                            <select id="unify-desc-to" style="width:100%;margin-top:0.25rem;padding:0.4rem;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);"></select>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-bottom:1rem;">
+                        <button id="unify-desc-cancel" type="button" style="padding:0.5rem 1rem;border:1px solid var(--border);border-radius:var(--radius-sm);background:transparent;color:var(--text);cursor:pointer;">Cerrar</button>
+                        <button id="unify-desc-confirm" type="button" style="padding:0.5rem 1rem;border:none;border-radius:var(--radius-sm);background:var(--primary);color:white;cursor:pointer;">Unificar</button>
+                    </div>
+                    <div style="border-top:1px solid var(--border);padding-top:1rem;flex:1;overflow:auto;">
+                        <h4 style="margin:0 0 0.5rem 0; font-size:0.9rem;">Descripciones existentes</h4>
+                        <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;align-items:center;">
+                            <input id="new-desc-input" placeholder="Nueva descripción..." style="flex:1 1 auto;min-width:0;padding:0.5rem;border:1px solid var(--border);border-radius:var(--radius-sm);background:#222;color:var(--text);font-size:0.9rem;">
+                            <select id="new-desc-type" style="width:110px;padding:0.5rem;border:1px solid var(--border);border-radius:var(--radius-sm);background:#222;color:var(--text);font-size:0.85rem;">
+                                <option value="expense">Gasto</option>
+                                <option value="income">Ingreso</option>
+                            </select>
+                            <button id="add-desc-btn" type="button" style="padding:0.5rem 1rem;border:none;border-radius:var(--radius-sm);background:var(--primary);color:white;cursor:pointer;font-size:0.85rem;white-space:nowrap;">Agregar</button>
+                        </div>
+                        <div id="desc-list" style="display:grid;gap:0.5rem;"></div>
+                    </div>
+                </div>
             </div>
 
             <!-- ===== INVESTMENTS (SAVINGS) VIEW ===== -->
@@ -1416,6 +1460,9 @@
 
             <!-- ===== PLATFORMS VIEW ===== -->
                 <div id="platforms-view" class="view-section" style="display: none;">
+                <div style="display:flex;justify-content:flex-end;margin-bottom:1rem;">
+                    <button id="btn-manage-descriptions" type="button" style="padding:0.5rem 1rem;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text);cursor:pointer;font-size:0.85rem;">Gestionar descripciones</button>
+                </div>
                 <div class="platforms-actions" style="margin-bottom: 1.5rem;">
                     <div class="form-card collapsible-card collapsed">
                         <div class="form-card-header collapsible-header">
